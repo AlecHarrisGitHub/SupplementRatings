@@ -92,7 +92,7 @@ function UploadCSV({ type }) {
     <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Upload {type === 'condition' ? 'Conditions' : 'Supplements'} CSV
+          Upload {type === 'conditions' ? 'Conditions' : 'Supplements'} CSV
         </Typography>
         
         <Box sx={{ my: 3 }}>
