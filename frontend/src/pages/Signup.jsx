@@ -20,7 +20,8 @@ function Signup() {
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.response?.data?.error || 'Registration failed');
+      const errorMessage = error.response?.data?.error || 'Registration failed';
+      toast.error(errorMessage);
     }
   };
 

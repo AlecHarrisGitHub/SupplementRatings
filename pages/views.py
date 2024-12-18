@@ -12,7 +12,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import IsAdminUser, AllowAny
 import pandas as pd
 from django.db import transaction
 from rest_framework import status
@@ -169,6 +169,7 @@ def get_user_details(request):
     })
 
 @api_view(['POST'])
+@permission_classes([AllowAny])
 def register_user(request):
     try:
         username = request.data.get('username')
@@ -197,7 +198,6 @@ def register_user(request):
             'message': 'User registered successfully',
             'user_id': user.id
         }, status=status.HTTP_201_CREATED)
-
     except Exception as e:
         return Response(
             {'error': str(e)}, 
