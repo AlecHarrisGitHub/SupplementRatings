@@ -18,11 +18,12 @@ function SearchableSupplementList() {
     const [supplements, setSupplements] = useState([]);
     const [selectedSupplement, setSelectedSupplement] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [currentSearch, setCurrentSearch] = useState('');
 
     useEffect(() => {
         const fetchSupplements = async () => {
             try {
-                const params = searchTerm ? { name: searchTerm } : {};
+                const params = currentSearch ? { name: currentSearch } : {};
                 const data = await getSupplements(params);
                 setSupplements(data);
                 setSelectedSupplement(null); // Clear selected supplement when search changes
@@ -31,7 +32,13 @@ function SearchableSupplementList() {
             }
         };
         fetchSupplements();
-    }, [searchTerm]);
+    }, [currentSearch]);
+
+    const handleKeyDown = (event) => {
+        if (event.key === 'Enter') {
+            setCurrentSearch(searchTerm);
+        }
+    };
 
     const handleSupplementClick = async (supplementId) => {
         try {
@@ -53,6 +60,7 @@ function SearchableSupplementList() {
                 variant="outlined"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleKeyDown}
                 sx={{ mb: 3 }}
             />
 
