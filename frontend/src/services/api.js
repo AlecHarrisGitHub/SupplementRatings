@@ -38,8 +38,16 @@ export const loginUser = async (credentials) => {
         const response = await API.post('token/obtain/', credentials);
         if (response.data.access) {
             localStorage.setItem('token', response.data.access);
-            // Set the token in axios defaults immediately after login
             API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
+            
+            // Get user details immediately after login
+            const userDetailsResponse = await API.get('user/me/');
+            const isAdmin = userDetailsResponse.data.is_staff;
+            
+            return {
+                access: response.data.access,
+                is_staff: isAdmin
+            };
         }
         return response.data;
     } catch (error) {
