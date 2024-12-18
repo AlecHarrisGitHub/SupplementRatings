@@ -2,40 +2,45 @@
 
 import axios from 'axios';
 
+// Create an axios instance with a base URL
 const API = axios.create({
-    baseURL: 'http://localhost:8000/api',
+    baseURL: 'http://localhost:8000/api/'
 });
 
-// Add an interceptor to include the auth token
+// Add a request interceptor to include the auth token
 API.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    console.log('Request config:', config); // Debug log
     return config;
+}, (error) => {
+    return Promise.reject(error);
 });
+
+// Add a response interceptor to handle errors
+API.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error('API Error:', error.response); // Debug log
+        if (error.response?.status === 401) {
+            // Clear token and redirect to login if unauthorized
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
 
 export const loginUser = async (credentials) => {
     try {
-        const response = await API.post('/token/obtain/', credentials);
-        
+        const response = await API.post('token/obtain/', credentials);
         if (response.data.access) {
-            // Set the token in localStorage and headers
             localStorage.setItem('token', response.data.access);
+            // Set the token in axios defaults immediately after login
             API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-            
-            // Make an additional request to get user details
-            const userResponse = await API.get('/user/me/');
-            const isAdmin = userResponse.data.is_staff;
-            
-            console.log('User details:', userResponse.data); // Debug log
-            
-            return {
-                access: response.data.access,
-                is_admin: isAdmin
-            };
         }
-        
         return response.data;
     } catch (error) {
         console.error('Login error:', error);
@@ -59,15 +64,15 @@ export const registerUser = async (userData) => {
     }
 };
 
-export const getSupplements = async (searchParams) => {
+export const getSupplements = async (params = {}) => {
     try {
-        const response = await API.get('supplements/', { params: searchParams });
-        console.log('Raw API response:', response);
-        console.log('Supplements data:', response.data);
-        return response.data || [];
+        const token = localStorage.getItem('token');
+        console.log('Current token:', token); // Debug log
+        const response = await API.get('supplements/', { params });
+        return response.data;
     } catch (error) {
         console.error('Error fetching supplements:', error);
-        return [];  // Return empty array on error
+        throw error;
     }
 };
 
