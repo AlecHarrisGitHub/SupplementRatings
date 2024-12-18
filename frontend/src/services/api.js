@@ -24,11 +24,24 @@ API.interceptors.response.use(
     (response) => response,
     (error) => {
         console.error('API Error:', error.response); // Debug log
-        if (error.response?.status === 401) {
+
+        // Extract the request URL
+        const requestUrl = error.config.url;
+
+        // Define endpoints that should not trigger a redirect
+        const authEndpoints = ['token/obtain/', 'register/'];
+
+        // Check if the error is 401 and the request is not to an auth endpoint
+        if (
+            error.response?.status === 401 &&
+            !authEndpoints.some((endpoint) => requestUrl.includes(endpoint))
+        ) {
             // Clear token and redirect to login if unauthorized
             localStorage.removeItem('token');
+            localStorage.removeItem('isAdmin');
             window.location.href = '/login';
         }
+
         return Promise.reject(error);
     }
 );
