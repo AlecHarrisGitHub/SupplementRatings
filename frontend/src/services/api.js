@@ -164,9 +164,11 @@ export const getComments = async (ratingId) => {
     }
 };
 
-export const getConditions = async () => {
+export const getConditions = async (searchTerm) => {
     try {
-        const response = await API.get('conditions/');
+        const response = await API.get('conditions/', {
+            params: { search: searchTerm }
+        });
         return response.data;
     } catch (error) {
         console.error('Error fetching conditions:', error);
