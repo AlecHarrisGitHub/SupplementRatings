@@ -104,7 +104,7 @@ function SearchableSupplementList() {
             // Update the selected supplement's ratings
             setSelectedSupplement(prev => ({
                 ...prev,
-                ratings: [response.data, ...(prev.ratings || [])]
+                ratings: [response, ...(prev.ratings || [])]
             }));
 
             // Reset form
