@@ -5,7 +5,8 @@ import { useParams } from 'react-router-dom';
 import { getSupplement, getRatings, addRating, addComment, getConditions } from '../services/api';
 import { AuthContext } from '../context/AuthContext';
 import { toast } from 'react-toastify';
-import { Container, Typography, List, ListItem, ListItemText, TextField, Button, Box, Rating as MuiRating, Autocomplete } from '@mui/material';
+import { Container, Typography, List, ListItem, ListItemText, TextField, Button, Box, Rating as MuiRating, Autocomplete, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
 
 function SupplementDetail() {
   const { id } = useParams();
@@ -21,6 +22,7 @@ function SupplementDetail() {
   const [conditions, setConditions] = useState([]);
   const [selectedCondition, setSelectedCondition] = useState(null);
   const [searchCondition, setSearchCondition] = useState('');
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,19 +62,19 @@ function SupplementDetail() {
 
   const handleRatingSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate required fields
     if (!selectedCondition) {
       toast.error('Please select a condition');
       return;
     }
 
-    try {
-      console.log('Sending rating data:', {
-        supplement: id,
-        condition: selectedCondition.id,
-        score: ratingScore,
-        comment: ratingComment
-      });
+    if (!ratingScore) {
+      toast.error('Please select a rating score');
+      return;
+    }
 
+    try {
       const response = await addRating({
         supplement: id,
         condition: selectedCondition.id,
@@ -80,8 +82,6 @@ function SupplementDetail() {
         comment: ratingComment || null,
       });
       
-      console.log('Rating response:', response);
-
       setRatings([response.data, ...ratings]);
       setRatingScore(1);
       setRatingComment('');
@@ -134,57 +134,85 @@ function SupplementDetail() {
         <strong>Category:</strong> {supplement.category}
       </Typography>
 
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
-        Ratings & Reviews
-      </Typography>
-
-      {auth.access ? (
-        <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2, mb: 4 }}>
-          <Typography variant="h6">Add Your Rating</Typography>
-          <Autocomplete
-            options={conditions}
-            getOptionLabel={(option) => option.name}
-            value={selectedCondition}
-            onChange={(_, newValue) => setSelectedCondition(newValue)}
-            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Condition"
-                required
-                margin="normal"
-              />
-            )}
-          />
-          <MuiRating
-            value={ratingScore}
-            onChange={(_, newValue) => {
-              if (newValue !== null) {
-                setRatingScore(newValue);
-              }
-            }}
-            size="large"
-            sx={{ mb: 2 }}
-            required
-          />
-          <TextField
-            label="Review (optional)"
-            value={ratingComment}
-            onChange={(e) => setRatingComment(e.target.value)}
-            multiline
-            rows={4}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <Button type="submit" variant="contained" color="primary">
-            Submit Rating
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, mb: 2 }}>
+        <Typography variant="h5">Ratings & Reviews</Typography>
+        {auth.access && (
+          <Button 
+            variant="contained" 
+            onClick={() => setRatingDialogOpen(true)}
+            startIcon={<AddIcon />}
+          >
+            Add Rating
           </Button>
-        </Box>
-      ) : (
-        <Typography variant="body2" sx={{ mt: 2 }}>
-          <em>Login to add a rating.</em>
-        </Typography>
-      )}
+        )}
+      </Box>
+
+      <Dialog open={ratingDialogOpen} onClose={() => setRatingDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Add Your Rating</DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
+            <Autocomplete
+              options={conditions}
+              getOptionLabel={(option) => option.name}
+              value={selectedCondition}
+              onChange={(_, newValue) => setSelectedCondition(newValue)}
+              onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Condition *"
+                  required
+                  margin="normal"
+                  error={!selectedCondition}
+                  helperText={!selectedCondition ? "Condition is required" : ""}
+                />
+              )}
+            />
+            
+            <Box sx={{ my: 2 }}>
+              <Typography component="legend">Rating *</Typography>
+              <MuiRating
+                value={ratingScore}
+                onChange={(_, newValue) => {
+                  if (newValue !== null) {
+                    setRatingScore(newValue);
+                  }
+                }}
+                size="large"
+                required
+              />
+              {!ratingScore && (
+                <Typography color="error" variant="caption" sx={{ display: 'block' }}>
+                  Please select a rating
+                </Typography>
+              )}
+            </Box>
+            
+            <TextField
+              label="Review (optional)"
+              value={ratingComment}
+              onChange={(e) => setRatingComment(e.target.value)}
+              multiline
+              rows={4}
+              fullWidth
+              sx={{ mb: 2 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRatingDialogOpen(false)}>Cancel</Button>
+          <Button 
+            onClick={(e) => {
+              handleRatingSubmit(e);
+              setRatingDialogOpen(false);
+            }}
+            variant="contained" 
+            disabled={!selectedCondition || !ratingScore}
+          >
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {ratings.length === 0 ? (
         <Typography variant="body2">No ratings yet.</Typography>

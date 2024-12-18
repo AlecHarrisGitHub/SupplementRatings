@@ -9,9 +9,18 @@ import {
     Paper,
     Rating,
     Button,
-    Collapse
+    Collapse,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Autocomplete
 } from '@mui/material';
-import { getSupplements, getSupplement } from '../services/api';
+import { getSupplements, getSupplement, getConditions, addRating } from '../services/api';
+import { useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-hot-toast';
+import AddIcon from '@mui/icons-material/Add';
 
 function SearchableSupplementList() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -19,6 +28,13 @@ function SearchableSupplementList() {
     const [selectedSupplement, setSelectedSupplement] = useState(null);
     const [loading, setLoading] = useState(false);
     const [currentSearch, setCurrentSearch] = useState('');
+    const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+    const [ratingScore, setRatingScore] = useState(1);
+    const [ratingComment, setRatingComment] = useState('');
+    const [conditions, setConditions] = useState([]);
+    const [selectedCondition, setSelectedCondition] = useState(null);
+    const [searchCondition, setSearchCondition] = useState('');
+    const { isAuthenticated } = useContext(AuthContext);
 
     useEffect(() => {
         const fetchSupplements = async () => {
@@ -33,6 +49,21 @@ function SearchableSupplementList() {
         };
         fetchSupplements();
     }, [currentSearch]);
+
+    useEffect(() => {
+        const fetchConditions = async () => {
+            try {
+                const response = await getConditions(searchCondition);
+                setConditions(response.data);
+            } catch (error) {
+                console.error('Error fetching conditions:', error);
+            }
+        };
+
+        if (searchCondition) {
+            fetchConditions();
+        }
+    }, [searchCondition]);
 
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
@@ -49,6 +80,43 @@ function SearchableSupplementList() {
             console.error('Error fetching supplement details:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRatingSubmit = async () => {
+        if (!selectedCondition) {
+            toast.error('Please select a condition');
+            return;
+        }
+
+        if (!ratingScore) {
+            toast.error('Please select a rating score');
+            return;
+        }
+
+        try {
+            const response = await addRating({
+                supplement: selectedSupplement.id,
+                condition: selectedCondition.id,
+                score: ratingScore,
+                comment: ratingComment || null,
+            });
+            
+            // Update the selected supplement's ratings
+            setSelectedSupplement(prev => ({
+                ...prev,
+                ratings: [response.data, ...(prev.ratings || [])]
+            }));
+
+            // Reset form
+            setRatingScore(1);
+            setRatingComment('');
+            setSelectedCondition(null);
+            setRatingDialogOpen(false);
+            toast.success('Rating added successfully!');
+        } catch (error) {
+            console.error('Error details:', error.response?.data || error);
+            toast.error(error.response?.data?.detail || 'Failed to add rating.');
         }
     };
 
@@ -77,7 +145,83 @@ function SearchableSupplementList() {
                     </Typography>
                     
                     {/* Ratings Section */}
-                    <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Ratings & Reviews</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 2 }}>
+                        <Typography variant="h6">Ratings & Reviews</Typography>
+                        {isAuthenticated && (
+                            <Button 
+                                variant="contained" 
+                                onClick={() => setRatingDialogOpen(true)}
+                                startIcon={<AddIcon />}
+                            >
+                                Add Rating
+                            </Button>
+                        )}
+                    </Box>
+
+                    <Dialog open={ratingDialogOpen} onClose={() => setRatingDialogOpen(false)} maxWidth="sm" fullWidth>
+                        <DialogTitle>Add Your Rating</DialogTitle>
+                        <DialogContent>
+                            <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
+                                <Autocomplete
+                                    options={conditions}
+                                    getOptionLabel={(option) => option.name}
+                                    value={selectedCondition}
+                                    onChange={(_, newValue) => setSelectedCondition(newValue)}
+                                    onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Condition *"
+                                            required
+                                            margin="normal"
+                                            error={!selectedCondition}
+                                            helperText={!selectedCondition ? "Condition is required" : ""}
+                                        />
+                                    )}
+                                />
+                                
+                                <Box sx={{ my: 2 }}>
+                                    <Typography component="legend">Rating *</Typography>
+                                    <Rating
+                                        value={ratingScore}
+                                        onChange={(_, newValue) => {
+                                            if (newValue !== null) {
+                                                setRatingScore(newValue);
+                                            }
+                                        }}
+                                        size="large"
+                                        required
+                                    />
+                                    {!ratingScore && (
+                                        <Typography color="error" variant="caption" sx={{ display: 'block' }}>
+                                            Please select a rating
+                                        </Typography>
+                                    )}
+                                </Box>
+                                
+                                <TextField
+                                    label="Review (optional)"
+                                    value={ratingComment}
+                                    onChange={(e) => setRatingComment(e.target.value)}
+                                    multiline
+                                    rows={4}
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                />
+                            </Box>
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setRatingDialogOpen(false)}>Cancel</Button>
+                            <Button 
+                                onClick={handleRatingSubmit}
+                                variant="contained" 
+                                disabled={!selectedCondition || !ratingScore}
+                            >
+                                Submit
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+
                     {selectedSupplement.ratings && selectedSupplement.ratings.length > 0 ? (
                         <List>
                             {selectedSupplement.ratings.map((rating) => (
