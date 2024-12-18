@@ -182,7 +182,7 @@ export const uploadConditionsCSV = async (file) => {
         // Log the auth header for debugging
         console.log('Auth header:', API.defaults.headers.common['Authorization']);
         
-        const response = await API.post('/upload-supplements-csv/', formData, {
+        const response = await API.post('upload-conditions-csv/', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
