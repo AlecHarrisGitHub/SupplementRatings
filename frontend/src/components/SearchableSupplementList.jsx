@@ -270,16 +270,15 @@ function SearchableSupplementList() {
                                                 value={supplement.avg_rating || 0} 
                                                 readOnly 
                                                 precision={0.1}
+                                                size="small"
                                             />
-                                            {supplement.avg_rating ? (
-                                                <Typography variant="body2" sx={{ ml: 1 }}>
-                                                    ({supplement.avg_rating.toFixed(1)})
-                                                </Typography>
-                                            ) : (
-                                                <Typography variant="body2" sx={{ ml: 1, color: 'text.secondary' }}>
-                                                    (No ratings)
-                                                </Typography>
-                                            )}
+                                            <Typography variant="body2" sx={{ ml: 1 }}>
+                                                {supplement.avg_rating ? (
+                                                    `(${supplement.avg_rating.toFixed(1)})`
+                                                ) : (
+                                                    <span style={{ color: 'text.secondary' }}>No ratings</span>
+                                                )}
+                                            </Typography>
                                         </Box>
                                     </Box>
                                     <Typography variant="body2" color="text.secondary">
