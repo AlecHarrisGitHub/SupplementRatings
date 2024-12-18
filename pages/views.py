@@ -11,7 +11,7 @@ from .serializers import (
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAdminUser, AllowAny
 import pandas as pd
 from django.db import transaction
@@ -170,6 +170,7 @@ def get_user_details(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def register_user(request):
     try:
         username = request.data.get('username')
