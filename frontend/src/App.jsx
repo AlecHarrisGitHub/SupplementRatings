@@ -5,7 +5,6 @@ import Login from './pages/Login';
 import Logout from './pages/Logout';
 import Signup from './pages/Signup';
 import SearchableSupplementList from './components/SearchableSupplementList';
-import SupplementDetail from './pages/SupplementDetail';
 import UploadCSV from './components/UploadCSV';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
