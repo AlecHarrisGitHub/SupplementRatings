@@ -53,10 +53,11 @@ function UploadCSV({ type }) {
     setProgress(0);
 
     try {
-      const uploadFunction = type === 'condition' ? uploadConditionsCSV : uploadSupplementsCSV;
+      const uploadFunction = type === 'conditions' ? uploadConditionsCSV : uploadSupplementsCSV;
       
       console.log('Starting upload for type:', type);
       console.log('File being uploaded:', file);
+      console.log('Upload function being used:', uploadFunction.name);
       
       // Simulate progress
       const progressInterval = setInterval(() => {
@@ -70,16 +71,17 @@ function UploadCSV({ type }) {
       clearInterval(progressInterval);
       setProgress(100);
       
-      toast.success(`${type === 'condition' ? 'Conditions' : 'Supplements'} uploaded successfully!`);
+      toast.success(`${type === 'conditions' ? 'Conditions' : 'Supplements'} uploaded successfully!`);
       setFile(null);
       setProgress(0);
     } catch (error) {
-      console.error('Upload error details:', error.response || error);
-      toast.error(`Failed to upload ${type}: ${error.message}`);
+      console.error('Upload error details:', error.response?.data || error);
+      const errorMessage = error.response?.data?.error || error.message;
+      toast.error(`Failed to upload ${type}: ${errorMessage}`);
     } finally {
       setUploading(false);
     }
-  };
+};
 
   const clearFile = () => {
     setFile(null);

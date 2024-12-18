@@ -6,7 +6,7 @@ function UploadConditions() {
   return (
     <Container>
       <Typography variant="h4" sx={{ my: 4 }}>Upload Conditions</Typography>
-      <UploadCSV type="condition" />
+      <UploadCSV type="conditions" />
     </Container>
   );
 }
