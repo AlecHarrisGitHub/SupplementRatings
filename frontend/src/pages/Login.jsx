@@ -24,14 +24,10 @@ function Login() {
     e.preventDefault();
     try {
       const response = await loginUser({ username, password });
-      console.log('Login Response:', response);
+      console.log('Login response:', response);
       
       if (response.access) {
-        login(response.access, response.is_admin);
-        console.log('Post-login state:', { 
-          token: response.access, 
-          isAdmin: response.is_admin 
-        });
+        login(response.access, response.is_staff);
         toast.success('Logged in successfully!');
         navigate('/supplements');
       }

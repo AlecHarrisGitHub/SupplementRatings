@@ -4,7 +4,7 @@ import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
 import Signup from './pages/Signup';
-import SupplementList from './pages/SupplementList';
+import SearchableSupplementList from './components/SearchableSupplementList';
 import SupplementDetail from './pages/SupplementDetail';
 import UploadCSV from './components/UploadCSV';
 import { ToastContainer } from 'react-toastify';
@@ -17,9 +17,8 @@ function App() {
             <Navbar />
             <ToastContainer />
             <Routes>
-                <Route path="/" element={<SupplementList />} />
-                <Route path="/supplements" element={<SupplementList />} />
-                <Route path="/supplements/:id" element={<SupplementDetail />} />
+                <Route path="/" element={<SearchableSupplementList />} />
+                <Route path="/supplements" element={<SearchableSupplementList />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />
