@@ -1,9 +1,10 @@
 // frontend/src/pages/Signup.jsx
 
 import React, { useState } from 'react';
-import { registerUser } from '../services/api';
 import { useNavigate } from 'react-router-dom';
-import { toast, ToastContainer } from 'react-toastify';
+import { Container, Box, TextField, Button, Typography, Paper } from '@mui/material';
+import { registerUser } from '../services/api';
+import { toast } from 'react-toastify';
 
 function Signup() {
   const [username, setUsername] = useState('');
@@ -15,43 +16,65 @@ function Signup() {
     e.preventDefault();
     try {
       await registerUser({ username, email, password });
-      toast.success('Registered successfully! Please log in.');
+      toast.success('Registration successful! Please login.');
       navigate('/login');
     } catch (error) {
-      console.error('Registration failed', error);
-      toast.error('Registration failed. Please try again.');
+      console.error('Registration error:', error);
+      toast.error(error.response?.data?.error || 'Registration failed');
     }
   };
 
   return (
-    <div>
-      <ToastContainer />
-      <form onSubmit={handleSubmit}>
-        <h2>Signup</h2>
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          required
-        />
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit">Signup</button>
-      </form>
-    </div>
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 8, mb: 4 }}>
+        <Paper elevation={3} sx={{ p: 4 }}>
+          <Typography variant="h4" component="h1" gutterBottom align="center">
+            Sign Up
+          </Typography>
+          <form onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="Username"
+              variant="outlined"
+              margin="normal"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              variant="outlined"
+              margin="normal"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              type="password"
+              variant="outlined"
+              margin="normal"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={{ mt: 3, mb: 2 }}
+            >
+              Sign Up
+            </Button>
+          </form>
+        </Paper>
+      </Box>
+    </Container>
   );
 }
 
