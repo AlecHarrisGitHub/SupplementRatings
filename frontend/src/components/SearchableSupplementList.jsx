@@ -54,15 +54,14 @@ function SearchableSupplementList() {
         const fetchConditions = async () => {
             try {
                 const response = await getConditions(searchCondition);
-                setConditions(response.data);
+                setConditions(Array.isArray(response) ? response : []);
             } catch (error) {
                 console.error('Error fetching conditions:', error);
+                setConditions([]);
             }
         };
 
-        if (searchCondition) {
-            fetchConditions();
-        }
+        fetchConditions();
     }, [searchCondition]);
 
     const handleKeyDown = (event) => {
