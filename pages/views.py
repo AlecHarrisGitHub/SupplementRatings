@@ -1,6 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
-from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper
+from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
 from .models import Supplement, Rating, Comment, Condition
 from .serializers import (
@@ -48,11 +48,16 @@ class SupplementViewSet(viewsets.ModelViewSet):
                         default=None,
                         output_field=FloatField(),
                     )
+                ),
+                rating_count=Count(
+                    'ratings',
+                    filter=Q(ratings__condition__name__iexact=condition_search)
                 )
             ).order_by('-has_condition_rating', F('avg_rating').desc(nulls_last=True))
         else:
             queryset = queryset.annotate(
                 avg_rating=Avg('ratings__score'),
+                rating_count=Count('ratings'),
                 has_condition_rating=Value(True, output_field=BooleanField())
             ).order_by(F('avg_rating').desc(nulls_last=True))
 

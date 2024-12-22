@@ -31,10 +31,11 @@ class RatingSerializer(serializers.ModelSerializer):
 class SupplementSerializer(serializers.ModelSerializer):
     ratings = RatingSerializer(many=True, read_only=True)
     avg_rating = serializers.FloatField(read_only=True)
+    rating_count = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = Supplement
-        fields = ['id', 'name', 'category', 'ratings', 'avg_rating']
+        fields = ['id', 'name', 'category', 'ratings', 'avg_rating', 'rating_count']
 
 
 class ConditionSerializer(serializers.ModelSerializer):
