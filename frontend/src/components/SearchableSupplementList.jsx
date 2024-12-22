@@ -300,7 +300,13 @@ function SearchableSupplementList() {
                                     />
                                     <Typography variant="body2" color="text.secondary">
                                         {supplement.avg_rating ? (
-                                            `${supplement.avg_rating.toFixed(1)} (${supplement.ratings?.length || 0} ratings)`
+                                            `${supplement.avg_rating.toFixed(1)} (${
+                                                appliedFilter 
+                                                ? supplement.ratings.filter(rating => 
+                                                    rating.condition_name === appliedFilter.name
+                                                ).length 
+                                                : supplement.ratings.length
+                                            } ratings)`
                                         ) : (
                                             'No ratings'
                                         )}
