@@ -24,6 +24,7 @@ import { AuthContext } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import ReviewDetail from './ReviewDetail';
 
 function SearchableSupplementList() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -43,6 +44,8 @@ function SearchableSupplementList() {
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [filterCondition, setFilterCondition] = useState(null);
     const [appliedFilter, setAppliedFilter] = useState(null);
+
+    const [selectedReview, setSelectedReview] = useState(null);
 
     useEffect(() => {
         const fetchSupplements = async () => {
@@ -181,6 +184,23 @@ function SearchableSupplementList() {
             console.log('Updated supplement data:', refreshedData); // Debug log
         } catch (error) {
             console.error('Error refreshing supplement data:', error);
+        }
+    };
+
+    const refreshSupplementData = async () => {
+        if (selectedSupplement) {
+            try {
+                const updatedSupplement = await getSupplement(selectedSupplement.id);
+                setSelectedSupplement(updatedSupplement);
+                // Update the selected review with fresh data
+                if (selectedReview) {
+                    const updatedReview = updatedSupplement.ratings.find(r => r.id === selectedReview.id);
+                    setSelectedReview(updatedReview);
+                }
+            } catch (error) {
+                console.error('Error refreshing supplement data:', error);
+                toast.error('Failed to refresh data');
+            }
         }
     };
 
@@ -377,38 +397,59 @@ function SearchableSupplementList() {
                         </Box>
 
                         <List>
-                            {selectedSupplement.ratings
-                                .filter(rating => rating.comment) // Only show ratings with comments
-                                .map((rating) => (
-                                    <ListItem 
-                                        key={rating.id}
-                                        sx={{ 
-                                            mb: 2,
-                                            flexDirection: 'column',
-                                            alignItems: 'flex-start',
-                                            bgcolor: 'background.paper',
-                                            borderRadius: 1,
-                                            boxShadow: 1,
-                                            p: 2
-                                        }}
-                                    >
-                                        <Box sx={{ 
-                                            width: '100%',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            mb: 1
-                                        }}>
-                                            <Typography variant="subtitle2">
-                                                {rating.user.username}
+                            {!selectedReview ? (
+                                selectedSupplement.ratings
+                                    .filter(rating => rating.comment)
+                                    .map((rating) => (
+                                        <ListItem 
+                                            key={rating.id}
+                                            onClick={() => setSelectedReview(rating)}
+                                            sx={{ 
+                                                mb: 2,
+                                                flexDirection: 'column',
+                                                alignItems: 'flex-start',
+                                                bgcolor: 'background.paper',
+                                                borderRadius: 1,
+                                                boxShadow: 1,
+                                                p: 2,
+                                                cursor: 'pointer',
+                                                '&:hover': {
+                                                    bgcolor: 'action.hover'
+                                                }
+                                            }}
+                                        >
+                                            <Box sx={{ 
+                                                width: '100%',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                mb: 1
+                                            }}>
+                                                <Typography variant="subtitle2">
+                                                    {rating.user.username}
+                                                </Typography>
+                                                <Rating value={rating.score} readOnly />
+                                            </Box>
+                                            <Typography variant="body2" color="text.secondary">
+                                                {rating.comment}
                                             </Typography>
-                                            <Rating value={rating.score} readOnly />
-                                        </Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {rating.comment}
-                                        </Typography>
-                                    </ListItem>
-                                ))}
+                                            {rating.comments?.length > 0 && (
+                                                <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
+                                                    {rating.comments.length} comment(s)
+                                                </Typography>
+                                            )}
+                                        </ListItem>
+                                    ))
+                            ) : (
+                                <ReviewDetail 
+                                    rating={selectedReview}
+                                    onBack={() => setSelectedReview(null)}
+                                    onCommentAdded={async (newComment) => {
+                                        await refreshSupplementData();
+                                        toast.success('Comment added successfully!');
+                                    }}
+                                />
+                            )}
                         </List>
                     </Paper>
                 </Box>
