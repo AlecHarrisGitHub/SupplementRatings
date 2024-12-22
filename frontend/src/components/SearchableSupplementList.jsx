@@ -274,7 +274,7 @@ function SearchableSupplementList() {
                                             />
                                             <Typography variant="body2" sx={{ ml: 1 }}>
                                                 {supplement.avg_rating ? (
-                                                    `(${supplement.avg_rating.toFixed(1)})`
+                                                    `(${supplement.avg_rating.toFixed(2)})`
                                                 ) : (
                                                     <span style={{ color: 'text.secondary' }}>No ratings</span>
                                                 )}

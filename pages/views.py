@@ -39,22 +39,20 @@ class SupplementViewSet(viewsets.ModelViewSet):
                         condition__name__iexact=condition_search
                     )
                 ),
-                avg_rating=Round(
-                    Avg(
-                        Case(
-                            When(
-                                ratings__condition__name__iexact=condition_search,
-                                then='ratings__score'
-                            ),
-                            default=None,
-                            output_field=FloatField(),
-                        )
+                avg_rating=Avg(
+                    Case(
+                        When(
+                            ratings__condition__name__iexact=condition_search,
+                            then='ratings__score'
+                        ),
+                        default=None,
+                        output_field=FloatField(),
                     )
                 )
             ).order_by('-has_condition_rating', F('avg_rating').desc(nulls_last=True))
         else:
             queryset = queryset.annotate(
-                avg_rating=Round(Avg('ratings__score')),
+                avg_rating=Avg('ratings__score'),
                 has_condition_rating=Value(True, output_field=BooleanField())
             ).order_by(F('avg_rating').desc(nulls_last=True))
 
