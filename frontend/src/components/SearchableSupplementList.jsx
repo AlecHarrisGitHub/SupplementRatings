@@ -301,7 +301,11 @@ function SearchableSupplementList() {
 
                         <Box sx={{ mb: 3 }}>
                             <Typography variant="subtitle1" gutterBottom>
-                                Average Rating: {selectedSupplement.avg_rating?.toFixed(1) || 'No ratings yet'}
+                                Average Rating: {
+                                    selectedSupplement.ratings.length > 0
+                                        ? (selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)
+                                        : 'No ratings yet'
+                                }
                             </Typography>
                             {isAuthenticated && (
                                 <Button
