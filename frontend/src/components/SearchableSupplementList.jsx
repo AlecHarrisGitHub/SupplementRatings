@@ -85,6 +85,11 @@ function SearchableSupplementList() {
         try {
             setLoading(true);
             const data = await getSupplement(supplementId);
+            if (appliedFilter) {
+                data.ratings = data.ratings.filter(
+                    rating => rating.condition_name === appliedFilter.name
+                );
+            }
             setSelectedSupplement(data);
         } catch (error) {
             console.error('Error fetching supplement details:', error);
@@ -214,105 +219,122 @@ function SearchableSupplementList() {
                 </Box>
             </Drawer>
 
-            {selectedSupplement ? (
-                <Paper elevation={3} sx={{ mb: 3, p: 3 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="h5">{selectedSupplement.name}</Typography>
-                        <Button onClick={() => setSelectedSupplement(null)}>
-                            Back to Search
-                        </Button>
-                    </Box>
-                    <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                        Category: {selectedSupplement.category}
-                    </Typography>
-                    
-                    {/* Ratings Section */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3, mb: 2 }}>
-                        <Typography variant="h6">Ratings & Reviews</Typography>
-                        {isAuthenticated && (
-                            <Button 
-                                variant="contained" 
-                                onClick={() => setRatingDialogOpen(true)}
-                                startIcon={<AddIcon />}
-                            >
-                                Add Rating
-                            </Button>
-                        )}
-                    </Box>
-
-                    <Dialog open={ratingDialogOpen} onClose={() => setRatingDialogOpen(false)} maxWidth="sm" fullWidth>
-                        <DialogTitle>Add Your Rating</DialogTitle>
-                        <DialogContent>
-                            <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
-                                <Autocomplete
-                                    options={conditions}
-                                    getOptionLabel={(option) => option.name}
-                                    value={selectedCondition}
-                                    onChange={(_, newValue) => setSelectedCondition(newValue)}
-                                    onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            label="Condition *"
-                                            required
-                                            margin="normal"
-                                            error={!selectedCondition}
-                                            helperText={!selectedCondition ? "Condition is required" : ""}
-                                        />
-                                    )}
-                                />
-                                
-                                <Box sx={{ my: 2 }}>
-                                    <Typography component="legend">Rating *</Typography>
-                                    <Rating
-                                        value={ratingScore}
-                                        onChange={(_, newValue) => {
-                                            if (newValue !== null) {
-                                                setRatingScore(newValue);
-                                            }
-                                        }}
-                                        size="large"
-                                        required
-                                    />
-                                    {!ratingScore && (
-                                        <Typography color="error" variant="caption" sx={{ display: 'block' }}>
-                                            Please select a rating
-                                        </Typography>
+            {/* Main Content */}
+            {!selectedSupplement ? (
+                // Supplement List
+                <List>
+                    {supplements.map((supplement) => (
+                        <ListItem 
+                            key={supplement.id}
+                            onClick={() => handleSupplementClick(supplement.id)}
+                            sx={{
+                                mb: 1,
+                                cursor: 'pointer',
+                                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+                            }}
+                            component={Paper}
+                            elevation={1}
+                        >
+                            <Box sx={{ width: '100%' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                    <ListItemText primary={supplement.name} />
+                                    {appliedFilter && (
+                                        <Box
+                                            sx={{
+                                                ml: 2,
+                                                px: 1,
+                                                py: 0.5,
+                                                bgcolor: 'primary.main',
+                                                color: 'white',
+                                                borderRadius: 1,
+                                                fontSize: '0.8rem',
+                                            }}
+                                        >
+                                            {appliedFilter.name}
+                                        </Box>
                                     )}
                                 </Box>
-                                
-                                <TextField
-                                    label="Review (optional)"
-                                    value={ratingComment}
-                                    onChange={(e) => setRatingComment(e.target.value)}
-                                    multiline
-                                    rows={4}
-                                    fullWidth
-                                    sx={{ mb: 2 }}
+                                <Rating 
+                                    value={supplement.avg_rating || 0} 
+                                    readOnly 
+                                    precision={0.1}
                                 />
                             </Box>
-                        </DialogContent>
-                        <DialogActions>
-                            <Button onClick={() => setRatingDialogOpen(false)}>Cancel</Button>
-                            <Button 
-                                onClick={handleRatingSubmit}
-                                variant="contained" 
-                                disabled={!selectedCondition || !ratingScore}
-                            >
-                                Submit
-                            </Button>
-                        </DialogActions>
-                    </Dialog>
+                        </ListItem>
+                    ))}
+                </List>
+            ) : (
+                // Supplement Detail View
+                <Box>
+                    <Button 
+                        onClick={() => setSelectedSupplement(null)}
+                        sx={{ mb: 2 }}
+                    >
+                        Back to List
+                    </Button>
+                    
+                    <Paper sx={{ p: 3, mb: 3 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                            <Typography variant="h5">
+                                {selectedSupplement.name}
+                            </Typography>
+                            {appliedFilter && (
+                                <Box
+                                    sx={{
+                                        px: 2,
+                                        py: 0.5,
+                                        bgcolor: 'primary.main',
+                                        color: 'white',
+                                        borderRadius: 1,
+                                        fontSize: '0.9rem',
+                                    }}
+                                >
+                                    Showing ratings for: {appliedFilter.name}
+                                </Box>
+                            )}
+                        </Box>
 
-                    {selectedSupplement.ratings && selectedSupplement.ratings.length > 0 ? (
+                        <Box sx={{ mb: 3 }}>
+                            <Typography variant="subtitle1" gutterBottom>
+                                Average Rating: {selectedSupplement.avg_rating?.toFixed(1) || 'No ratings yet'}
+                            </Typography>
+                            {isAuthenticated && (
+                                <Button
+                                    startIcon={<AddIcon />}
+                                    variant="contained"
+                                    onClick={() => setRatingDialogOpen(true)}
+                                    sx={{ mt: 1 }}
+                                >
+                                    Add Rating
+                                </Button>
+                            )}
+                        </Box>
+
                         <List>
                             {selectedSupplement.ratings.map((rating) => (
-                                <ListItem key={rating.id} sx={{ display: 'block', mb: 2 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                        <Rating value={rating.score} readOnly />
-                                        <Typography variant="body2" sx={{ ml: 1 }}>
-                                            by {rating.user.username} for {rating.condition_name}
+                                <ListItem 
+                                    key={rating.id}
+                                    sx={{ 
+                                        mb: 2,
+                                        flexDirection: 'column',
+                                        alignItems: 'flex-start',
+                                        bgcolor: 'background.paper',
+                                        borderRadius: 1,
+                                        boxShadow: 1,
+                                        p: 2
+                                    }}
+                                >
+                                    <Box sx={{ 
+                                        width: '100%',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        mb: 1
+                                    }}>
+                                        <Typography variant="subtitle2">
+                                            {rating.user.username}
                                         </Typography>
+                                        <Rating value={rating.score} readOnly />
                                     </Box>
                                     {rating.comment && (
                                         <Typography variant="body2" color="text.secondary">
@@ -322,61 +344,73 @@ function SearchableSupplementList() {
                                 </ListItem>
                             ))}
                         </List>
-                    ) : (
-                        <Typography variant="body2" color="text.secondary">
-                            No ratings yet
-                        </Typography>
-                    )}
-                </Paper>
-            ) : (
-                <Paper elevation={2}>
-                    <List>
-                        {supplements.length > 0 ? (
-                            supplements.map((supplement) => (
-                                <ListItem
-                                    key={supplement.id}
-                                    onClick={() => handleSupplementClick(supplement.id)}
-                                    sx={{
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                                        },
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-start',
-                                    }}
-                                >
-                                    <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Typography variant="h6">{supplement.name}</Typography>
-                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                            <Rating 
-                                                value={supplement.avg_rating || 0} 
-                                                readOnly 
-                                                precision={0.1}
-                                                size="small"
-                                            />
-                                            <Typography variant="body2" sx={{ ml: 1 }}>
-                                                {supplement.avg_rating ? (
-                                                    `(${supplement.avg_rating.toFixed(2)})`
-                                                ) : (
-                                                    <span style={{ color: 'text.secondary' }}>No ratings</span>
-                                                )}
-                                            </Typography>
-                                        </Box>
-                                    </Box>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Category: {supplement.category}
-                                    </Typography>
-                                </ListItem>
-                            ))
-                        ) : (
-                            <ListItem>
-                                <ListItemText primary="No supplements found" />
-                            </ListItem>
-                        )}
-                    </List>
-                </Paper>
+                    </Paper>
+                </Box>
             )}
+
+            <Dialog open={ratingDialogOpen} onClose={() => setRatingDialogOpen(false)}>
+                <DialogTitle>Add Your Rating</DialogTitle>
+                <DialogContent>
+                    <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
+                        <Autocomplete
+                            options={conditions}
+                            getOptionLabel={(option) => option.name}
+                            value={selectedCondition}
+                            onChange={(_, newValue) => setSelectedCondition(newValue)}
+                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Condition *"
+                                    required
+                                    margin="normal"
+                                    error={!selectedCondition}
+                                    helperText={!selectedCondition ? "Condition is required" : ""}
+                                />
+                            )}
+                        />
+                        
+                        <Box sx={{ my: 2 }}>
+                            <Typography component="legend">Rating *</Typography>
+                            <Rating
+                                value={ratingScore}
+                                onChange={(_, newValue) => {
+                                    if (newValue !== null) {
+                                        setRatingScore(newValue);
+                                    }
+                                }}
+                                size="large"
+                                required
+                            />
+                            {!ratingScore && (
+                                <Typography color="error" variant="caption" sx={{ display: 'block' }}>
+                                    Please select a rating
+                                </Typography>
+                            )}
+                        </Box>
+                        
+                        <TextField
+                            label="Review (optional)"
+                            value={ratingComment}
+                            onChange={(e) => setRatingComment(e.target.value)}
+                            multiline
+                            rows={4}
+                            fullWidth
+                            sx={{ mb: 2 }}
+                        />
+                    </Box>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setRatingDialogOpen(false)}>Cancel</Button>
+                    <Button 
+                        onClick={handleRatingSubmit}
+                        variant="contained" 
+                        disabled={!selectedCondition || !ratingScore}
+                    >
+                        Submit
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }
