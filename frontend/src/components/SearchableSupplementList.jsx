@@ -14,13 +14,16 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Autocomplete
+    Autocomplete,
+    Drawer,
+    IconButton
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, addRating } from '../services/api';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import AddIcon from '@mui/icons-material/Add';
+import FilterListIcon from '@mui/icons-material/FilterList';
 
 function SearchableSupplementList() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -35,20 +38,28 @@ function SearchableSupplementList() {
     const [selectedCondition, setSelectedCondition] = useState(null);
     const [searchCondition, setSearchCondition] = useState('');
     const { isAuthenticated } = useContext(AuthContext);
+    
+    // New state for filter drawer
+    const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    const [filterCondition, setFilterCondition] = useState(null);
+    const [appliedFilter, setAppliedFilter] = useState(null);
 
     useEffect(() => {
         const fetchSupplements = async () => {
             try {
-                const params = currentSearch ? { name: currentSearch } : {};
+                const params = {
+                    ...(currentSearch ? { name: currentSearch } : {}),
+                    ...(appliedFilter ? { condition: appliedFilter.name } : {})
+                };
                 const data = await getSupplements(params);
                 setSupplements(data);
-                setSelectedSupplement(null); // Clear selected supplement when search changes
+                setSelectedSupplement(null);
             } catch (error) {
                 console.error('Error fetching supplements:', error);
             }
         };
         fetchSupplements();
-    }, [currentSearch]);
+    }, [currentSearch, appliedFilter]);
 
     useEffect(() => {
         const fetchConditions = async () => {
@@ -119,17 +130,89 @@ function SearchableSupplementList() {
         }
     };
 
+    const handleApplyFilter = () => {
+        setAppliedFilter(filterCondition);
+        setFilterDrawerOpen(false);
+    };
+
+    const handleClearFilter = () => {
+        setFilterCondition(null);
+        setAppliedFilter(null);
+        setFilterDrawerOpen(false);
+    };
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
-            <TextField
-                fullWidth
-                label="Search Supplements"
-                variant="outlined"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleKeyDown}
-                sx={{ mb: 3 }}
-            />
+            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+                <TextField
+                    fullWidth
+                    label="Search Supplements"
+                    variant="outlined"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && setCurrentSearch(searchTerm)}
+                />
+                <Button
+                    variant="outlined"
+                    startIcon={<FilterListIcon />}
+                    onClick={() => setFilterDrawerOpen(true)}
+                >
+                    Filter
+                </Button>
+            </Box>
+
+            {/* Filter Drawer */}
+            <Drawer
+                anchor="left"
+                open={filterDrawerOpen}
+                onClose={() => setFilterDrawerOpen(false)}
+            >
+                <Box sx={{ width: 300, p: 3 }}>
+                    <Typography variant="h6" gutterBottom>
+                        Filter Supplements
+                    </Typography>
+                    
+                    <Autocomplete
+                        options={conditions}
+                        getOptionLabel={(option) => option.name}
+                        value={filterCondition}
+                        onChange={(_, newValue) => setFilterCondition(newValue)}
+                        onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Filter by Condition"
+                                margin="normal"
+                            />
+                        )}
+                        sx={{ mb: 2 }}
+                    />
+
+                    {appliedFilter && (
+                        <Typography variant="body2" color="primary" sx={{ mb: 2 }}>
+                            Currently filtering by: {appliedFilter.name}
+                        </Typography>
+                    )}
+
+                    <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
+                        <Button
+                            variant="outlined"
+                            onClick={handleClearFilter}
+                            fullWidth
+                        >
+                            Clear
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleApplyFilter}
+                            fullWidth
+                            disabled={!filterCondition}
+                        >
+                            Apply
+                        </Button>
+                    </Box>
+                </Box>
+            </Drawer>
 
             {selectedSupplement ? (
                 <Paper elevation={3} sx={{ mb: 3, p: 3 }}>
