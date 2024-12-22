@@ -143,6 +143,7 @@ export const addComment = async (commentData) => {
     try {
         const response = await API.post('comments/', {
             rating: commentData.rating,
+            parent_comment: commentData.parent_comment,
             content: commentData.content.trim()
         });
         return response.data;

@@ -11,10 +11,15 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    replies = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'rating', 'content', 'created_at']
+        fields = ['id', 'user', 'rating', 'parent_comment', 'content', 'created_at', 'replies']
+
+    def get_replies(self, obj):
+        replies = Comment.objects.filter(parent_comment=obj)
+        return CommentSerializer(replies, many=True).data
 
 
 class RatingSerializer(serializers.ModelSerializer):
