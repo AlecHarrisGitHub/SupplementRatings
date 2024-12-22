@@ -299,7 +299,11 @@ function SearchableSupplementList() {
                                         precision={0.1}
                                     />
                                     <Typography variant="body2" color="text.secondary">
-                                        {supplement.avg_rating ? supplement.avg_rating.toFixed(1) : 'No ratings'}
+                                        {supplement.avg_rating ? (
+                                            `${supplement.avg_rating.toFixed(1)} (${supplement.ratings?.length || 0} ratings)`
+                                        ) : (
+                                            'No ratings'
+                                        )}
                                     </Typography>
                                 </Box>
                             </Box>
@@ -348,11 +352,11 @@ function SearchableSupplementList() {
 
                         <Box sx={{ mb: 3 }}>
                             <Typography variant="subtitle1" gutterBottom>
-                                Average Rating: {
-                                    selectedSupplement.ratings.length > 0
-                                        ? (selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)
-                                        : 'No ratings yet'
-                                }
+                                {selectedSupplement.ratings.length > 0 ? (
+                                    `Average Rating: ${(selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)} (${selectedSupplement.ratings.length} ratings)`
+                                ) : (
+                                    'No ratings yet'
+                                )}
                             </Typography>
                             {isAuthenticated && (
                                 <Button
