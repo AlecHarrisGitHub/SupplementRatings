@@ -34,9 +34,12 @@ class Rating(models.Model):
 
 class Comment(models.Model):
     rating = models.ForeignKey(Rating, related_name='comments', on_delete=models.CASCADE, null=True, blank=True)
+    parent_comment = models.ForeignKey('self', related_name='replies', on_delete=models.CASCADE, null=True, blank=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Comment on {self.rating}"
+        if self.rating:
+            return f"Comment on rating {self.rating}"
+        return f"Reply to comment {self.parent_comment_id}"
