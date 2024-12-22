@@ -53,7 +53,6 @@ function SearchableSupplementList() {
                 };
                 const data = await getSupplements(params);
                 setSupplements(data);
-                setSelectedSupplement(null);
             } catch (error) {
                 console.error('Error fetching supplements:', error);
             }
@@ -75,6 +74,24 @@ function SearchableSupplementList() {
         fetchConditions();
     }, [searchCondition]);
 
+    useEffect(() => {
+        if (selectedSupplement && selectedSupplement.originalRatings) {
+            if (appliedFilter) {
+                setSelectedSupplement(prev => ({
+                    ...prev,
+                    ratings: prev.originalRatings.filter(
+                        rating => rating.condition_name === appliedFilter.name
+                    )
+                }));
+            } else {
+                setSelectedSupplement(prev => ({
+                    ...prev,
+                    ratings: prev.originalRatings
+                }));
+            }
+        }
+    }, [appliedFilter]);
+
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
             setCurrentSearch(searchTerm);
@@ -90,7 +107,10 @@ function SearchableSupplementList() {
                     rating => rating.condition_name === appliedFilter.name
                 );
             }
-            setSelectedSupplement(data);
+            setSelectedSupplement({
+                ...data,
+                originalRatings: data.ratings // Store original unfiltered ratings
+            });
         } catch (error) {
             console.error('Error fetching supplement details:', error);
         } finally {
@@ -144,6 +164,24 @@ function SearchableSupplementList() {
         setFilterCondition(null);
         setAppliedFilter(null);
         setFilterDrawerOpen(false);
+    };
+
+    const handleFilterClick = async (e) => {
+        e.stopPropagation();
+        try {
+            // Fetch fresh data for the supplement
+            const refreshedData = await getSupplement(selectedSupplement.id);
+            
+            setAppliedFilter(null);
+            setSelectedSupplement({
+                ...refreshedData,
+                originalRatings: refreshedData.ratings
+            });
+            
+            console.log('Updated supplement data:', refreshedData); // Debug log
+        } catch (error) {
+            console.error('Error refreshing supplement data:', error);
+        }
     };
 
     return (
@@ -285,6 +323,7 @@ function SearchableSupplementList() {
                             </Typography>
                             {appliedFilter && (
                                 <Box
+                                    onClick={handleFilterClick}
                                     sx={{
                                         px: 2,
                                         py: 0.5,
@@ -292,9 +331,17 @@ function SearchableSupplementList() {
                                         color: 'white',
                                         borderRadius: 1,
                                         fontSize: '0.9rem',
+                                        cursor: 'pointer',
+                                        '&:hover': {
+                                            bgcolor: 'primary.dark',
+                                        },
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1
                                     }}
                                 >
                                     Showing ratings for: {appliedFilter.name}
+                                    <span style={{ fontSize: '0.8rem' }}>(click to clear)</span>
                                 </Box>
                             )}
                         </Box>
