@@ -254,11 +254,16 @@ function SearchableSupplementList() {
                                         </Box>
                                     )}
                                 </Box>
-                                <Rating 
-                                    value={supplement.avg_rating || 0} 
-                                    readOnly 
-                                    precision={0.1}
-                                />
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Rating 
+                                        value={supplement.avg_rating || 0} 
+                                        readOnly 
+                                        precision={0.1}
+                                    />
+                                    <Typography variant="body2" color="text.secondary">
+                                        {supplement.avg_rating ? supplement.avg_rating.toFixed(1) : 'No ratings'}
+                                    </Typography>
+                                </Box>
                             </Box>
                         </ListItem>
                     ))}
