@@ -367,38 +367,38 @@ function SearchableSupplementList() {
                         </Box>
 
                         <List>
-                            {selectedSupplement.ratings.map((rating) => (
-                                <ListItem 
-                                    key={rating.id}
-                                    sx={{ 
-                                        mb: 2,
-                                        flexDirection: 'column',
-                                        alignItems: 'flex-start',
-                                        bgcolor: 'background.paper',
-                                        borderRadius: 1,
-                                        boxShadow: 1,
-                                        p: 2
-                                    }}
-                                >
-                                    <Box sx={{ 
-                                        width: '100%',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        mb: 1
-                                    }}>
-                                        <Typography variant="subtitle2">
-                                            {rating.user.username}
-                                        </Typography>
-                                        <Rating value={rating.score} readOnly />
-                                    </Box>
-                                    {rating.comment && (
+                            {selectedSupplement.ratings
+                                .filter(rating => rating.comment) // Only show ratings with comments
+                                .map((rating) => (
+                                    <ListItem 
+                                        key={rating.id}
+                                        sx={{ 
+                                            mb: 2,
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-start',
+                                            bgcolor: 'background.paper',
+                                            borderRadius: 1,
+                                            boxShadow: 1,
+                                            p: 2
+                                        }}
+                                    >
+                                        <Box sx={{ 
+                                            width: '100%',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            mb: 1
+                                        }}>
+                                            <Typography variant="subtitle2">
+                                                {rating.user.username}
+                                            </Typography>
+                                            <Rating value={rating.score} readOnly />
+                                        </Box>
                                         <Typography variant="body2" color="text.secondary">
                                             {rating.comment}
                                         </Typography>
-                                    )}
-                                </ListItem>
-                            ))}
+                                    </ListItem>
+                                ))}
                         </List>
                     </Paper>
                 </Box>
