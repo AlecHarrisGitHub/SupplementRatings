@@ -1,4 +1,4 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, serializers
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
@@ -86,8 +86,8 @@ class RatingViewSet(viewsets.ModelViewSet):
 
         if existing_rating:
             raise serializers.ValidationError({
-                'detail': 'You have already rated this supplement'
-            })
+                'detail': 'You have already rated this supplement. You can only rate each supplement once.'
+            }, code=400)
 
         serializer.save(user=self.request.user)
 

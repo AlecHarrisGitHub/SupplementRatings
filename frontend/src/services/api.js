@@ -108,7 +108,11 @@ export const addRating = async (ratingData) => {
         const response = await API.post('ratings/', ratingData);
         return response.data;
     } catch (error) {
-        console.error('Error adding rating:', error);
+        // Format error message
+        const errorMessage = error.response?.data?.detail || 
+                           error.response?.data?.message || 
+                           'Failed to add rating.';
+        error.userMessage = errorMessage; // Attach user-friendly message
         throw error;
     }
 };

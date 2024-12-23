@@ -22,7 +22,7 @@ import {
 import { getSupplements, getSupplement, getConditions, addRating } from '../services/api';
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ReviewDetail from './ReviewDetail';
@@ -146,12 +146,28 @@ function SearchableSupplementList() {
 
     const handleRatingSubmit = async () => {
         if (selectedConditions.length === 0) {
-            toast.error('Please select at least one condition');
+            toast.error('Please select at least one condition', {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
             return;
         }
 
         if (!ratingScore) {
-            toast.error('Please select a rating score');
+            toast.error('Please select a rating score', {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
             return;
         }
 
@@ -163,21 +179,40 @@ function SearchableSupplementList() {
                 comment: ratingComment || null,
             });
             
-            // Update the display with the new rating
             setSelectedSupplement(prev => ({
                 ...prev,
                 ratings: [response, ...(prev.ratings || [])]
             }));
 
-            // Reset form
             setRatingScore(1);
             setRatingComment('');
             setSelectedConditions([]);
             setRatingDialogOpen(false);
-            toast.success('Rating added successfully!');
+            toast.success('Rating added successfully!', {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
         } catch (error) {
-            console.error('Error details:', error.response?.data || error);
-            toast.error(error.response?.data?.detail || 'Failed to add rating.');
+            const errorMessage = error.userMessage || 
+                               error.response?.data?.detail || 
+                               'Failed to add rating.';
+            
+            toast.error(errorMessage, {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+                progress: undefined,
+            });
+            
+            console.error('Error details:', error);
         }
     };
 
