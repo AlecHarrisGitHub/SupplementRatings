@@ -218,13 +218,30 @@ def register_user(request):
         # Send verification email
         verification_url = f"http://localhost:5173/verify-email/{verification_token.token}"
         
-        send_mail(
-            'Verify your email',
-            f'Click the following link to verify your email: {verification_url}',
-            settings.EMAIL_HOST_USER,
-            [email],
-            fail_silently=False,
-        )
+        try:
+            print("Email settings:")
+            print(f"Backend: {settings.EMAIL_BACKEND}")
+            print(f"Host: {settings.EMAIL_HOST}")
+            print(f"Port: {settings.EMAIL_PORT}")
+            print(f"TLS: {settings.EMAIL_USE_TLS}")
+            print(f"User: {settings.EMAIL_HOST_USER}")
+            print(f"Password length: {len(settings.EMAIL_HOST_PASSWORD)}")
+            
+            send_mail(
+                'Verify your email',
+                f'Click the following link to verify your email: {verification_url}',
+                settings.EMAIL_HOST_USER,
+                [email],
+                fail_silently=False,
+            )
+        except Exception as mail_error:
+            # If email sending fails, delete the user and token
+            user.delete()
+            print(f"Detailed email error: {str(mail_error)}")
+            return Response(
+                {'error': f'Failed to send verification email: {str(mail_error)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
         return Response({
             'message': 'User registered successfully. Please check your email to verify your account.',
