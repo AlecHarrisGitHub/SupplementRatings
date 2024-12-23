@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
   const login = (token, isAdmin) => {
     console.log('AuthContext login called with:', { token, isAdmin });
     localStorage.setItem('token', token);
-    localStorage.setItem('isAdmin', isAdmin);
+    localStorage.setItem('isAdmin', String(isAdmin));
     setIsAuthenticated(true);
     setIsAdmin(isAdmin);
   };
