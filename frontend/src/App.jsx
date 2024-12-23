@@ -9,6 +9,7 @@ import UploadCSV from './components/UploadCSV';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import NotFound from './pages/NotFound';
+import EmailVerification from './pages/EmailVerification';
 
 function App() {
     return (
@@ -24,6 +25,7 @@ function App() {
                 <Route path="/upload-supplements" element={<UploadCSV type="supplements" />} />
                 <Route path="/upload-conditions" element={<UploadCSV type="conditions" />} />
                 <Route path="*" element={<NotFound />} />
+                <Route path="/verify-email/:token" element={<EmailVerification />} />
             </Routes>
         </div>
     );
