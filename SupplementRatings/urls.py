@@ -27,7 +27,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
-            response.data['is_staff'] = request.user.is_staff
+            # Get the user from the token
+            from rest_framework_simplejwt.tokens import AccessToken
+            token = response.data['access']
+            user_id = AccessToken(token)['user_id']
+            from django.contrib.auth.models import User
+            user = User.objects.get(id=user_id)
+            response.data['is_staff'] = user.is_staff
         return response
 
 # Define API URLs
