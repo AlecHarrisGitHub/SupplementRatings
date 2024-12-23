@@ -71,9 +71,24 @@ class RatingViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Rating.objects.all()
+        queryset = Rating.objects.all()
+        supplement_id = self.request.query_params.get('supplement', None)
+        if supplement_id:
+            queryset = queryset.filter(supplement_id=supplement_id)
+        return queryset.prefetch_related('conditions', 'comments')
 
     def perform_create(self, serializer):
+        # Check if user already rated this supplement
+        existing_rating = Rating.objects.filter(
+            user=self.request.user,
+            supplement_id=serializer.validated_data['supplement'].id
+        ).first()
+
+        if existing_rating:
+            raise serializers.ValidationError({
+                'detail': 'You have already rated this supplement'
+            })
+
         serializer.save(user=self.request.user)
 
 class CommentViewSet(viewsets.ModelViewSet):

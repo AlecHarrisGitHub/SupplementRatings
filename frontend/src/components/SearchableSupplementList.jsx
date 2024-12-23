@@ -38,7 +38,7 @@ function SearchableSupplementList() {
     const [ratingScore, setRatingScore] = useState(1);
     const [ratingComment, setRatingComment] = useState('');
     const [conditions, setConditions] = useState([]);
-    const [selectedCondition, setSelectedCondition] = useState(null);
+    const [selectedConditions, setSelectedConditions] = useState([]);
     const [searchCondition, setSearchCondition] = useState('');
     const { isAuthenticated } = useContext(AuthContext);
     
@@ -145,37 +145,34 @@ function SearchableSupplementList() {
     };
 
     const handleRatingSubmit = async () => {
-        if (!selectedCondition) {
-            toast.error('Please select a condition');
+        if (selectedConditions.length === 0) {
+            toast.error('Please select at least one condition');
             return;
         }
-    
+
         if (!ratingScore) {
             toast.error('Please select a rating score');
             return;
         }
-    
+
         try {
             const response = await addRating({
                 supplement: selectedSupplement.id,
-                condition: selectedCondition.id,
+                conditions: selectedConditions.map(condition => condition.id),
                 score: ratingScore,
                 comment: ratingComment || null,
             });
             
-            // Only add the new rating to the display if it matches the current filter
-            // or if there is no filter applied
-            if (!appliedFilter || response.condition_name === appliedFilter.name) {
-                setSelectedSupplement(prev => ({
-                    ...prev,
-                    ratings: [response, ...(prev.ratings || [])]
-                }));
-            }
-    
+            // Update the display with the new rating
+            setSelectedSupplement(prev => ({
+                ...prev,
+                ratings: [response, ...(prev.ratings || [])]
+            }));
+
             // Reset form
             setRatingScore(1);
             setRatingComment('');
-            setSelectedCondition(null);
+            setSelectedConditions([]);
             setRatingDialogOpen(false);
             toast.success('Rating added successfully!');
         } catch (error) {
@@ -497,24 +494,30 @@ function SearchableSupplementList() {
                 </Box>
             )}
 
-            <Dialog open={ratingDialogOpen} onClose={() => setRatingDialogOpen(false)}>
+            <Dialog 
+                open={ratingDialogOpen} 
+                onClose={() => setRatingDialogOpen(false)}
+                maxWidth="md"
+                fullWidth
+            >
                 <DialogTitle>Add Your Rating</DialogTitle>
                 <DialogContent>
                     <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
                         <Autocomplete
+                            multiple
                             options={conditions}
                             getOptionLabel={(option) => option.name}
-                            value={selectedCondition}
-                            onChange={(_, newValue) => setSelectedCondition(newValue)}
+                            value={selectedConditions}
+                            onChange={(_, newValue) => setSelectedConditions(newValue)}
                             onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Condition *"
+                                    label="Conditions *"
                                     required
                                     margin="normal"
-                                    error={!selectedCondition}
-                                    helperText={!selectedCondition ? "Condition is required" : ""}
+                                    error={selectedConditions.length === 0}
+                                    helperText={selectedConditions.length === 0 ? "At least one condition is required" : ""}
                                 />
                             )}
                         />
@@ -554,7 +557,7 @@ function SearchableSupplementList() {
                     <Button 
                         onClick={handleRatingSubmit}
                         variant="contained" 
-                        disabled={!selectedCondition || !ratingScore}
+                        disabled={selectedConditions.length === 0 || !ratingScore}
                     >
                         Submit
                     </Button>

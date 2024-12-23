@@ -23,14 +23,23 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class RatingSerializer(serializers.ModelSerializer):
-    comments = CommentSerializer(many=True, read_only=True)
     user = UserSerializer(read_only=True)
-    condition_name = serializers.CharField(source='condition.name', read_only=True)
+    condition_names = serializers.SerializerMethodField()
+    comments = CommentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Rating
-        fields = ['id', 'user', 'supplement', 'condition', 'condition_name', 
-                 'score', 'comment', 'created_at', 'comments']
+        fields = ['id', 'user', 'supplement', 'conditions', 'condition_names', 'score', 'comment', 'created_at', 'comments']
+        read_only_fields = ['user']
+
+    def get_condition_names(self, obj):
+        return [condition.name for condition in obj.conditions.all()]
+
+    def create(self, validated_data):
+        conditions = validated_data.pop('conditions', [])
+        rating = Rating.objects.create(**validated_data)
+        rating.conditions.set(conditions)
+        return rating
 
 
 class SupplementSerializer(serializers.ModelSerializer):
