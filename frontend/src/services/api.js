@@ -219,4 +219,14 @@ export const registerUser = async (userData) => {
     }
 };
 
+export const verifyEmail = async (token) => {
+    try {
+        const response = await API.get(`verify-email/${token}/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error verifying email:', error);
+        throw error;
+    }
+};
+
 export default API;

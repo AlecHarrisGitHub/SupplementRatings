@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+import uuid
+from datetime import datetime, timedelta
 
 
 class Supplement(models.Model):
@@ -43,3 +45,18 @@ class Comment(models.Model):
         if self.rating:
             return f"Comment on rating {self.rating}"
         return f"Reply to comment {self.parent_comment_id}"
+
+
+class EmailVerificationToken(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.expires_at:
+            self.expires_at = datetime.now() + timedelta(hours=24)
+        super().save(*args, **kwargs)
+
+    def is_valid(self):
+        return datetime.now() <= self.expires_at

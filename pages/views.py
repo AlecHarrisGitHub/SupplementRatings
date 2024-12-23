@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
-from .models import Supplement, Rating, Comment, Condition
+from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken
 from .serializers import (
     SupplementSerializer, 
     RatingSerializer, 
@@ -17,6 +17,9 @@ from rest_framework.permissions import IsAdminUser, AllowAny
 import pandas as pd
 from django.db import transaction
 from rest_framework import status
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.conf import settings
 
 class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
@@ -183,9 +186,9 @@ def register_user(request):
         email = request.data.get('email')
         password = request.data.get('password')
 
-        if not username or not password:
+        if not username or not password or not email:
             return Response(
-                {'error': 'Username and password are required'}, 
+                {'error': 'Username, email and password are required'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -194,15 +197,37 @@ def register_user(request):
                 {'error': 'Username already exists'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+        
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'error': 'Email already exists'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
+        # Create user but set as inactive
         user = User.objects.create_user(
             username=username,
             email=email,
-            password=password
+            password=password,
+            is_active=False
+        )
+
+        # Create verification token
+        verification_token = EmailVerificationToken.objects.create(user=user)
+
+        # Send verification email
+        verification_url = f"http://localhost:5173/verify-email/{verification_token.token}"
+        
+        send_mail(
+            'Verify your email',
+            f'Click the following link to verify your email: {verification_url}',
+            settings.EMAIL_HOST_USER,
+            [email],
+            fail_silently=False,
         )
 
         return Response({
-            'message': 'User registered successfully',
+            'message': 'User registered successfully. Please check your email to verify your account.',
             'user_id': user.id
         }, status=status.HTTP_201_CREATED)
     except Exception as e:
@@ -210,4 +235,25 @@ def register_user(request):
             {'error': str(e)}, 
             status=status.HTTP_400_BAD_REQUEST
         )
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def verify_email(request, token):
+    try:
+        verification = EmailVerificationToken.objects.get(token=token)
+        
+        if not verification.is_valid():
+            return Response({'error': 'Verification link has expired'}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+
+        user = verification.user
+        user.is_active = True
+        user.save()
+        
+        verification.delete()
+        
+        return Response({'message': 'Email verified successfully'})
+    except EmailVerificationToken.DoesNotExist:
+        return Response({'error': 'Invalid verification token'}, 
+                       status=status.HTTP_400_BAD_REQUEST)
 

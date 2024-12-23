@@ -16,7 +16,7 @@ function Signup() {
     e.preventDefault();
     try {
       await registerUser({ username, email, password });
-      toast.success('Registration successful! Please login.');
+      toast.success('Registration successful! Please check your email to verify your account.');
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
