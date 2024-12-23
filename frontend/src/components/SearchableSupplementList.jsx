@@ -149,12 +149,12 @@ function SearchableSupplementList() {
             toast.error('Please select a condition');
             return;
         }
-
+    
         if (!ratingScore) {
             toast.error('Please select a rating score');
             return;
         }
-
+    
         try {
             const response = await addRating({
                 supplement: selectedSupplement.id,
@@ -163,12 +163,15 @@ function SearchableSupplementList() {
                 comment: ratingComment || null,
             });
             
-            // Update the selected supplement's ratings
-            setSelectedSupplement(prev => ({
-                ...prev,
-                ratings: [response, ...(prev.ratings || [])]
-            }));
-
+            // Only add the new rating to the display if it matches the current filter
+            // or if there is no filter applied
+            if (!appliedFilter || response.condition_name === appliedFilter.name) {
+                setSelectedSupplement(prev => ({
+                    ...prev,
+                    ratings: [response, ...(prev.ratings || [])]
+                }));
+            }
+    
             // Reset form
             setRatingScore(1);
             setRatingComment('');
