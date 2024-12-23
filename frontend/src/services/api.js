@@ -46,50 +46,24 @@ API.interceptors.response.use(
     }
 );
 
-export const loginUser = async (credentials) => {
-    try {
-        const response = await API.post('token/obtain/', credentials);
-        if (response.data.access) {
-            localStorage.setItem('token', response.data.access);
-            API.defaults.headers.common['Authorization'] = `Bearer ${response.data.access}`;
-            
-            // Get user details immediately after login
-            const userDetailsResponse = await API.get('user/me/');
-            const isAdmin = userDetailsResponse.data.is_staff;
-            
-            return {
-                access: response.data.access,
-                is_staff: isAdmin
-            };
-        }
-        return response.data;
-    } catch (error) {
-        console.error('Login error:', error);
-        throw error;
-    }
-};
-
-export const logoutUser = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('isAdmin');
-    delete API.defaults.headers.common['Authorization'];
-};
-
-export const registerUser = async (userData) => {
-    try {
-        const response = await API.post('register/', userData);
-        return response.data;
-    } catch (error) {
-        console.error('Registration error:', error);
-        throw error;
-    }
-};
+// Add caching to the API service
+const cache = new Map();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const getSupplements = async (params = {}) => {
+    const cacheKey = JSON.stringify(params);
+    const cached = cache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        return cached.data;
+    }
+
     try {
-        const token = localStorage.getItem('token');
-        console.log('Current token:', token); // Debug log
         const response = await API.get('supplements/', { params });
+        cache.set(cacheKey, {
+            data: response.data,
+            timestamp: Date.now()
+        });
         return response.data;
     } catch (error) {
         console.error('Error fetching supplements:', error);
@@ -210,6 +184,37 @@ export const uploadSupplementsCSV = async (file) => {
         return response.data;
     } catch (error) {
         console.error('Error uploading supplements CSV:', error);
+        throw error;
+    }
+};
+
+export const loginUser = async (credentials) => {
+    try {
+        const response = await API.post('token/obtain/', credentials);
+        return response.data;
+    } catch (error) {
+        console.error('Login error:', error);
+        throw error;
+    }
+};
+
+export const logoutUser = async () => {
+    try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('isAdmin');
+        return true;
+    } catch (error) {
+        console.error('Logout error:', error);
+        throw error;
+    }
+};
+
+export const registerUser = async (userData) => {
+    try {
+        const response = await API.post('register/', userData);
+        return response.data;
+    } catch (error) {
+        console.error('Registration error:', error);
         throw error;
     }
 };

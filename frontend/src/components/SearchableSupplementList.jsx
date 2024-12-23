@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     TextField, 
     List, 
@@ -16,7 +16,8 @@ import {
     DialogActions,
     Autocomplete,
     Drawer,
-    IconButton
+    IconButton,
+    Skeleton
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, addRating } from '../services/api';
 import { useContext } from 'react';
@@ -25,6 +26,7 @@ import { toast } from 'react-hot-toast';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ReviewDetail from './ReviewDetail';
+import debounce from 'lodash/debounce';
 
 function SearchableSupplementList() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,18 +48,38 @@ function SearchableSupplementList() {
     const [appliedFilter, setAppliedFilter] = useState(null);
 
     const [selectedReview, setSelectedReview] = useState(null);
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
+    // Debounced search function
+    const debouncedSearch = useCallback(
+        debounce((term) => {
+            setCurrentSearch(term);
+        }, 300),
+        []
+    );
+
+    // Add this near the top of the component, after the state declarations
+    const memoizedHandleSearchChange = useCallback((e) => {
+        setSearchTerm(e.target.value);
+        debouncedSearch(e.target.value);
+    }, [debouncedSearch]);
 
     useEffect(() => {
         const fetchSupplements = async () => {
             try {
+                setLoading(true);
                 const params = {
                     ...(currentSearch ? { name: currentSearch } : {}),
-                    ...(appliedFilter ? { condition: appliedFilter.name } : {})
+                    ...(appliedFilter ? { condition: appliedFilter.name } : {}),
+                    limit: 20 // Limit initial load
                 };
                 const data = await getSupplements(params);
                 setSupplements(data);
             } catch (error) {
                 console.error('Error fetching supplements:', error);
+                toast.error('Failed to fetch supplements');
+            } finally {
+                setLoading(false);
             }
         };
         fetchSupplements();
@@ -204,6 +226,18 @@ function SearchableSupplementList() {
         }
     };
 
+    // Loading skeleton component
+    const LoadingSkeleton = () => (
+        <Box>
+            {[...Array(5)].map((_, i) => (
+                <Paper key={i} sx={{ mb: 1, p: 2 }}>
+                    <Skeleton animation="wave" height={24} width="60%" />
+                    <Skeleton animation="wave" height={20} width="40%" />
+                </Paper>
+            ))}
+        </Box>
+    );
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -212,8 +246,7 @@ function SearchableSupplementList() {
                     label="Search Supplements"
                     variant="outlined"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && setCurrentSearch(searchTerm)}
+                    onChange={memoizedHandleSearchChange}
                 />
                 <Button
                     variant="outlined"
@@ -281,60 +314,64 @@ function SearchableSupplementList() {
             {!selectedSupplement ? (
                 // Supplement List
                 <List>
-                    {supplements.map((supplement) => (
-                        <ListItem 
-                            key={supplement.id}
-                            onClick={() => handleSupplementClick(supplement.id)}
-                            sx={{
-                                mb: 1,
-                                cursor: 'pointer',
-                                '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-                            }}
-                            component={Paper}
-                            elevation={1}
-                        >
-                            <Box sx={{ width: '100%' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <ListItemText primary={supplement.name} />
-                                    {appliedFilter && (
-                                        <Box
-                                            sx={{
-                                                ml: 2,
-                                                px: 1,
-                                                py: 0.5,
-                                                bgcolor: 'primary.main',
-                                                color: 'white',
-                                                borderRadius: 1,
-                                                fontSize: '0.8rem',
-                                            }}
-                                        >
-                                            {appliedFilter.name}
-                                        </Box>
-                                    )}
-                                </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Rating 
-                                        value={supplement.avg_rating || 0} 
-                                        readOnly 
-                                        precision={0.1}
-                                    />
-                                    <Typography variant="body2" color="text.secondary">
-                                        {supplement.avg_rating ? (
-                                            `${supplement.avg_rating.toFixed(1)} (${
-                                                appliedFilter 
-                                                ? supplement.ratings.filter(rating => 
-                                                    rating.condition_name === appliedFilter.name
-                                                ).length 
-                                                : supplement.ratings.length
-                                            } ratings)`
-                                        ) : (
-                                            'No ratings'
+                    {loading ? (
+                        <LoadingSkeleton />
+                    ) : (
+                        supplements.map((supplement) => (
+                            <ListItem 
+                                key={supplement.id}
+                                onClick={() => handleSupplementClick(supplement.id)}
+                                sx={{
+                                    mb: 1,
+                                    cursor: 'pointer',
+                                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+                                }}
+                                component={Paper}
+                                elevation={1}
+                            >
+                                <Box sx={{ width: '100%' }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                        <ListItemText primary={supplement.name} />
+                                        {appliedFilter && (
+                                            <Box
+                                                sx={{
+                                                    ml: 2,
+                                                    px: 1,
+                                                    py: 0.5,
+                                                    bgcolor: 'primary.main',
+                                                    color: 'white',
+                                                    borderRadius: 1,
+                                                    fontSize: '0.8rem',
+                                                }}
+                                            >
+                                                {appliedFilter.name}
+                                            </Box>
                                         )}
-                                    </Typography>
+                                    </Box>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Rating 
+                                            value={supplement.avg_rating || 0} 
+                                            readOnly 
+                                            precision={0.1}
+                                        />
+                                        <Typography variant="body2" color="text.secondary">
+                                            {supplement.avg_rating ? (
+                                                `${supplement.avg_rating.toFixed(1)} (${
+                                                    appliedFilter 
+                                                    ? supplement.ratings.filter(rating => 
+                                                        rating.condition_name === appliedFilter.name
+                                                    ).length 
+                                                    : supplement.ratings.length
+                                                } ratings)`
+                                            ) : (
+                                                'No ratings'
+                                            )}
+                                        </Typography>
+                                    </Box>
                                 </Box>
-                            </Box>
-                        </ListItem>
-                    ))}
+                            </ListItem>
+                        ))
+                    )}
                 </List>
             ) : (
                 // Supplement Detail View
