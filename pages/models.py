@@ -54,9 +54,11 @@ class EmailVerificationToken(models.Model):
     expires_at = models.DateTimeField()
 
     def save(self, *args, **kwargs):
+        from django.utils import timezone
         if not self.expires_at:
-            self.expires_at = datetime.now() + timedelta(hours=24)
+            self.expires_at = timezone.now() + timedelta(hours=24)
         super().save(*args, **kwargs)
 
     def is_valid(self):
-        return datetime.now() <= self.expires_at
+        from django.utils import timezone
+        return timezone.now() <= self.expires_at
