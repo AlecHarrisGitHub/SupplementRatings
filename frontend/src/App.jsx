@@ -10,12 +10,24 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import NotFound from './pages/NotFound';
 import EmailVerification from './pages/EmailVerification';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
     return (
         <div>
             <Navbar />
-            <ToastContainer />
+            <ToastContainer
+                position="top-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+            />
+            <Toaster position="top-center" />
             <Routes>
                 <Route path="/" element={<SearchableSupplementList />} />
                 <Route path="/supplements" element={<SearchableSupplementList />} />
