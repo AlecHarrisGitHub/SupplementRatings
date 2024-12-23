@@ -120,6 +120,7 @@ function SearchableSupplementList() {
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
             setCurrentSearch(searchTerm);
+            setSelectedSupplement(null);
         }
     };
 
@@ -247,6 +248,7 @@ function SearchableSupplementList() {
                     variant="outlined"
                     value={searchTerm}
                     onChange={memoizedHandleSearchChange}
+                    onKeyDown={handleKeyDown}
                 />
                 <Button
                     variant="outlined"
