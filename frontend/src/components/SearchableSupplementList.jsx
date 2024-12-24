@@ -274,6 +274,30 @@ function SearchableSupplementList() {
         </Box>
     );
 
+    const RatingDisplay = ({ rating }) => (
+        <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle1" fontWeight="bold">
+                    {rating.user.username}
+                </Typography>
+                <MuiRating value={rating.score} readOnly />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Conditions: {rating.condition_names.join(', ')}
+            </Typography>
+            {rating.comment && (
+                <Typography variant="body1">
+                    {rating.comment}
+                </Typography>
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <Button size="small" onClick={() => handleReviewClick(rating)}>
+                    View Details
+                </Button>
+            </Box>
+        </Paper>
+    );
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -504,6 +528,9 @@ function SearchableSupplementList() {
                                                 </Typography>
                                                 <Rating value={rating.score} readOnly />
                                             </Box>
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                Conditions: {rating.condition_names.join(', ')}
+                                            </Typography>
                                             <Typography variant="body2" color="text.secondary">
                                                 {rating.comment}
                                             </Typography>
