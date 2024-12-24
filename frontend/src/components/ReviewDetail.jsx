@@ -94,7 +94,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded }) {
 
             <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
                 {!isShowingComment ? (
-                    // Show Rating
                     <Box sx={{ mb: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" fontWeight="bold">
@@ -103,7 +102,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded }) {
                             <MuiRating value={rating.score} readOnly />
                         </Box>
                         <Typography variant="body1" sx={{ mb: 1 }}>
-                            Condition: {rating.condition_name}
+                            Conditions: {rating.condition_names.join(', ')}
                         </Typography>
                         <Typography variant="body1">
                             {rating.comment}
