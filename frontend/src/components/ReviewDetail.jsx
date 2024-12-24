@@ -67,9 +67,8 @@ function ReviewDetail({ rating, onBack, onCommentAdded }) {
             });
             
             setNewComment('');
-            // Call the parent's refresh function
+            // Call the parent's refresh function without showing toast
             await onCommentAdded();
-            toast.success('Comment added successfully!');
         } catch (error) {
             console.error('Error adding comment:', error);
             toast.error('Failed to add comment');
