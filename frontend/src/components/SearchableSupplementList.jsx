@@ -144,30 +144,33 @@ function SearchableSupplementList() {
         }
     };
 
+    const refreshSupplementsList = async () => {
+        try {
+            setLoading(true);
+            const params = {
+                ...(currentSearch ? { name: currentSearch } : {}),
+                ...(appliedFilter ? { condition: appliedFilter.name } : {}),
+                limit: 20
+            };
+            // Force skip cache when refreshing
+            const data = await getSupplements(params, true);
+            setSupplements(data);
+        } catch (error) {
+            console.error('Error refreshing supplements:', error);
+            toast.error('Failed to refresh supplements list');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleRatingSubmit = async () => {
         if (selectedConditions.length === 0) {
-            toast.error('Please select at least one condition', {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-            });
+            toast.error('Please select at least one condition');
             return;
         }
 
         if (!ratingScore) {
-            toast.error('Please select a rating score', {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-            });
+            toast.error('Please select a rating score');
             return;
         }
 
@@ -184,34 +187,20 @@ function SearchableSupplementList() {
                 ratings: [response, ...(prev.ratings || [])]
             }));
 
+            // Refresh the supplements list
+            await refreshSupplementsList();
+
             setRatingScore(1);
             setRatingComment('');
             setSelectedConditions([]);
             setRatingDialogOpen(false);
-            toast.success('Rating added successfully!', {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-            });
+            toast.success('Rating added successfully!');
         } catch (error) {
             const errorMessage = error.userMessage || 
                                error.response?.data?.detail || 
                                'Failed to add rating.';
             
-            toast.error(errorMessage, {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                progress: undefined,
-            });
-            
+            toast.error(errorMessage);
             console.error('Error details:', error);
         }
     };
@@ -438,7 +427,10 @@ function SearchableSupplementList() {
                 // Supplement Detail View
                 <Box>
                     <Button 
-                        onClick={() => setSelectedSupplement(null)}
+                        onClick={async () => {
+                            await refreshSupplementsList();
+                            setSelectedSupplement(null);
+                        }}
                         sx={{ mb: 2 }}
                     >
                         Back to List

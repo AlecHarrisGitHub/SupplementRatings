@@ -50,11 +50,11 @@ API.interceptors.response.use(
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-export const getSupplements = async (params = {}) => {
+export const getSupplements = async (params = {}, skipCache = false) => {
     const cacheKey = JSON.stringify(params);
     const cached = cache.get(cacheKey);
     
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    if (!skipCache && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
         return cached.data;
     }
 
@@ -106,13 +106,14 @@ export const getRatings = async (supplementId) => {
 export const addRating = async (ratingData) => {
     try {
         const response = await API.post('ratings/', ratingData);
+        // Clear the cache for this supplement's data
+        cache.clear(); // Clear all cache when a rating is added
         return response.data;
     } catch (error) {
-        // Format error message
         const errorMessage = error.response?.data?.detail || 
                            error.response?.data?.message || 
                            'Failed to add rating.';
-        error.userMessage = errorMessage; // Attach user-friendly message
+        error.userMessage = errorMessage;
         throw error;
     }
 };
