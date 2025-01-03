@@ -28,6 +28,33 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ReviewDetail from './ReviewDetail';
 import debounce from 'lodash/debounce';
 
+const ConditionTag = ({ condition, onRemove }) => (
+    <Box
+        onClick={(e) => {
+            e.stopPropagation();
+            onRemove(condition);
+        }}
+        sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            m: 0.5,
+            px: 1,
+            py: 0.5,
+            bgcolor: 'primary.main',
+            color: 'white',
+            borderRadius: 1,
+            fontSize: '0.8rem',
+            cursor: 'pointer',
+            '&:hover': {
+                bgcolor: 'primary.dark',
+            },
+        }}
+    >
+        {condition.name}
+        <span style={{ marginLeft: '4px' }}>×</span>
+    </Box>
+);
+
 function SearchableSupplementList() {
     const [searchTerm, setSearchTerm] = useState('');
     const [supplements, setSupplements] = useState([]);
@@ -130,17 +157,24 @@ function SearchableSupplementList() {
         try {
             setLoading(true);
             const data = await getSupplement(supplementId);
+            let filteredRatings = data.ratings;
+            let ratingCount = data.rating_count;
+            
             if (appliedFilterConditions.length > 0) {
                 const conditionNames = appliedFilterConditions.map(c => c.name.toLowerCase());
-                data.ratings = data.ratings.filter(rating => 
+                filteredRatings = data.ratings.filter(rating => 
                     rating.condition_names.some(condition => 
                         conditionNames.includes(condition.toLowerCase())
                     )
                 );
+                ratingCount = filteredRatings.length;
             }
+            
             setSelectedSupplement({
                 ...data,
-                originalRatings: data.ratings
+                originalRatings: data.ratings,
+                ratings: filteredRatings,
+                rating_count: ratingCount
             });
         } catch (error) {
             console.error('Error fetching supplement details:', error);
@@ -292,6 +326,14 @@ function SearchableSupplementList() {
         </Paper>
     );
 
+    const handleRemoveCondition = (conditionToRemove) => {
+        const updatedConditions = appliedFilterConditions.filter(
+            c => c.id !== conditionToRemove.id
+        );
+        setAppliedFilterConditions(updatedConditions);
+        setSelectedFilterConditions(updatedConditions);
+    };
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -389,31 +431,14 @@ function SearchableSupplementList() {
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                         <ListItemText primary={supplement.name} />
                                         {appliedFilterConditions.length > 0 && (
-                                            <Box
-                                                onClick={(e) => {
-                                                    e.stopPropagation(); // Prevent triggering the ListItem click
-                                                    setAppliedFilterConditions([]);
-                                                    setSelectedFilterConditions([]);
-                                                }}
-                                                sx={{
-                                                    ml: 2,
-                                                    px: 1,
-                                                    py: 0.5,
-                                                    bgcolor: 'primary.main',
-                                                    color: 'white',
-                                                    borderRadius: 1,
-                                                    fontSize: '0.8rem',
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 1,
-                                                    '&:hover': {
-                                                        bgcolor: 'primary.dark',
-                                                    },
-                                                }}
-                                            >
-                                                {appliedFilterConditions.map(c => c.name).join(', ')}
-                                                <span style={{ fontSize: '0.8rem' }}>(click to clear)</span>
+                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
+                                                {appliedFilterConditions.map(condition => (
+                                                    <ConditionTag
+                                                        key={condition.id}
+                                                        condition={condition}
+                                                        onRemove={handleRemoveCondition}
+                                                    />
+                                                ))}
                                             </Box>
                                         )}
                                     </Box>
@@ -425,7 +450,7 @@ function SearchableSupplementList() {
                                         />
                                         <Typography variant="body2" color="text.secondary">
                                             {supplement.avg_rating ? (
-                                                `${supplement.avg_rating.toFixed(1)} (${supplement.rating_count} ratings)`
+                                                `${supplement.avg_rating.toFixed(1)} (${supplement.rating_count} ${supplement.rating_count === 1 ? 'rating' : 'ratings'})`
                                             ) : (
                                                 'No ratings'
                                             )}
@@ -441,8 +466,23 @@ function SearchableSupplementList() {
                 <Box>
                     <Button 
                         onClick={async () => {
-                            await refreshSupplementsList();
-                            setSelectedSupplement(null);
+                            try {
+                                setLoading(true);
+                                const params = {
+                                    ...(currentSearch ? { name: currentSearch } : {}),
+                                    ...(appliedFilterConditions.length > 0 ? { 
+                                        conditions: appliedFilterConditions.map(c => c.name).join(',') 
+                                    } : {})
+                                };
+                                const data = await getSupplements(params);
+                                setSupplements(data);
+                                setSelectedSupplement(null);
+                            } catch (error) {
+                                console.error('Error refreshing supplements:', error);
+                                toast.error('Failed to refresh supplements list');
+                            } finally {
+                                setLoading(false);
+                            }
                         }}
                         sx={{ mb: 2 }}
                     >
@@ -455,26 +495,17 @@ function SearchableSupplementList() {
                                 {selectedSupplement.name}
                             </Typography>
                             {appliedFilterConditions.length > 0 && (
-                                <Box
-                                    onClick={handleFilterClick}
-                                    sx={{
-                                        px: 2,
-                                        py: 0.5,
-                                        bgcolor: 'primary.main',
-                                        color: 'white',
-                                        borderRadius: 1,
-                                        fontSize: '0.9rem',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                            bgcolor: 'primary.dark',
-                                        },
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1
-                                    }}
-                                >
-                                    Showing ratings for: {appliedFilterConditions.map(c => c.name).join(', ')}
-                                    <span style={{ fontSize: '0.8rem' }}>(click to clear)</span>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
+                                    <Typography variant="body2" sx={{ mr: 1 }}>
+                                        Showing ratings for:
+                                    </Typography>
+                                    {appliedFilterConditions.map(condition => (
+                                        <ConditionTag
+                                            key={condition.id}
+                                            condition={condition}
+                                            onRemove={handleRemoveCondition}
+                                        />
+                                    ))}
                                 </Box>
                             )}
                         </Box>
@@ -482,7 +513,7 @@ function SearchableSupplementList() {
                         <Box sx={{ mb: 3 }}>
                             <Typography variant="subtitle1" gutterBottom>
                                 {selectedSupplement.ratings.length > 0 ? (
-                                    `Average Rating: ${(selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)} (${selectedSupplement.ratings.length} ratings)`
+                                    `Average Rating: ${(selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)} (${selectedSupplement.ratings.length} ${selectedSupplement.ratings.length === 1 ? 'rating' : 'ratings'})`
                                 ) : (
                                     'No ratings yet'
                                 )}
