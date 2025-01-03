@@ -129,8 +129,11 @@ function SearchableSupplementList() {
             setLoading(true);
             const data = await getSupplement(supplementId);
             if (appliedFilter) {
-                data.ratings = data.ratings.filter(
-                    rating => rating.condition_name === appliedFilter.name
+                // Filter ratings that include the selected condition
+                data.ratings = data.ratings.filter(rating => 
+                    rating.condition_names.some(condition => 
+                        condition.toLowerCase() === appliedFilter.name.toLowerCase()
+                    )
                 );
             }
             setSelectedSupplement({
@@ -406,13 +409,7 @@ function SearchableSupplementList() {
                                         />
                                         <Typography variant="body2" color="text.secondary">
                                             {supplement.avg_rating ? (
-                                                `${supplement.avg_rating.toFixed(1)} (${
-                                                    appliedFilter 
-                                                    ? supplement.ratings.filter(rating => 
-                                                        rating.condition_name === appliedFilter.name
-                                                    ).length 
-                                                    : supplement.ratings.length
-                                                } ratings)`
+                                                `${supplement.avg_rating.toFixed(1)} (${supplement.rating_count} ratings)`
                                             ) : (
                                                 'No ratings'
                                             )}

@@ -53,13 +53,14 @@ class SupplementViewSet(viewsets.ModelViewSet):
                 ),
                 rating_count=Count(
                     'ratings',
-                    filter=Q(ratings__conditions__name__iexact=condition_search)
+                    filter=Q(ratings__conditions__name__iexact=condition_search),
+                    distinct=True
                 )
             ).order_by('-has_condition_rating', F('avg_rating').desc(nulls_last=True))
         else:
             queryset = queryset.annotate(
                 avg_rating=Avg('ratings__score'),
-                rating_count=Count('ratings'),
+                rating_count=Count('ratings', distinct=True),
                 has_condition_rating=Value(True, output_field=BooleanField())
             ).order_by(F('avg_rating').desc(nulls_last=True))
 
