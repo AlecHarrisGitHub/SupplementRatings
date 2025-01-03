@@ -44,8 +44,8 @@ function SearchableSupplementList() {
     
     // New state for filter drawer
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
-    const [filterCondition, setFilterCondition] = useState(null);
-    const [appliedFilter, setAppliedFilter] = useState(null);
+    const [selectedFilterConditions, setSelectedFilterConditions] = useState([]);
+    const [appliedFilterConditions, setAppliedFilterConditions] = useState([]);
 
     const [selectedReview, setSelectedReview] = useState(null);
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -70,8 +70,10 @@ function SearchableSupplementList() {
                 setLoading(true);
                 const params = {
                     ...(currentSearch ? { name: currentSearch } : {}),
-                    ...(appliedFilter ? { condition: appliedFilter.name } : {}),
-                    limit: 20 // Limit initial load
+                    ...(appliedFilterConditions.length > 0 ? { 
+                        conditions: appliedFilterConditions.map(c => c.name).join(',') 
+                    } : {}),
+                    limit: 20
                 };
                 const data = await getSupplements(params);
                 setSupplements(data);
@@ -83,7 +85,7 @@ function SearchableSupplementList() {
             }
         };
         fetchSupplements();
-    }, [currentSearch, appliedFilter]);
+    }, [currentSearch, appliedFilterConditions]);
 
     useEffect(() => {
         const fetchConditions = async () => {
@@ -101,11 +103,11 @@ function SearchableSupplementList() {
 
     useEffect(() => {
         if (selectedSupplement && selectedSupplement.originalRatings) {
-            if (appliedFilter) {
+            if (appliedFilterConditions.length > 0) {
                 setSelectedSupplement(prev => ({
                     ...prev,
                     ratings: prev.originalRatings.filter(
-                        rating => rating.condition_name === appliedFilter.name
+                        rating => appliedFilterConditions.some(c => c.name === rating.condition_name)
                     )
                 }));
             } else {
@@ -115,7 +117,7 @@ function SearchableSupplementList() {
                 }));
             }
         }
-    }, [appliedFilter]);
+    }, [appliedFilterConditions]);
 
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
@@ -128,17 +130,17 @@ function SearchableSupplementList() {
         try {
             setLoading(true);
             const data = await getSupplement(supplementId);
-            if (appliedFilter) {
-                // Filter ratings that include the selected condition
+            if (appliedFilterConditions.length > 0) {
+                const conditionNames = appliedFilterConditions.map(c => c.name.toLowerCase());
                 data.ratings = data.ratings.filter(rating => 
                     rating.condition_names.some(condition => 
-                        condition.toLowerCase() === appliedFilter.name.toLowerCase()
+                        conditionNames.includes(condition.toLowerCase())
                     )
                 );
             }
             setSelectedSupplement({
                 ...data,
-                originalRatings: data.ratings // Store original unfiltered ratings
+                originalRatings: data.ratings
             });
         } catch (error) {
             console.error('Error fetching supplement details:', error);
@@ -152,7 +154,7 @@ function SearchableSupplementList() {
             setLoading(true);
             const params = {
                 ...(currentSearch ? { name: currentSearch } : {}),
-                ...(appliedFilter ? { condition: appliedFilter.name } : {}),
+                ...(appliedFilterConditions.length > 0 ? { conditions: appliedFilterConditions.map(c => c.name) } : {}),
                 limit: 20
             };
             // Force skip cache when refreshing
@@ -209,13 +211,13 @@ function SearchableSupplementList() {
     };
 
     const handleApplyFilter = () => {
-        setAppliedFilter(filterCondition);
+        setAppliedFilterConditions(selectedFilterConditions);
         setFilterDrawerOpen(false);
     };
 
     const handleClearFilter = () => {
-        setFilterCondition(null);
-        setAppliedFilter(null);
+        setSelectedFilterConditions([]);
+        setAppliedFilterConditions([]);
         setFilterDrawerOpen(false);
     };
 
@@ -225,7 +227,7 @@ function SearchableSupplementList() {
             // Fetch fresh data for the supplement
             const refreshedData = await getSupplement(selectedSupplement.id);
             
-            setAppliedFilter(null);
+            setAppliedFilterConditions([]);
             setSelectedSupplement({
                 ...refreshedData,
                 originalRatings: refreshedData.ratings
@@ -322,24 +324,25 @@ function SearchableSupplementList() {
                     </Typography>
                     
                     <Autocomplete
+                        multiple
                         options={conditions}
                         getOptionLabel={(option) => option.name}
-                        value={filterCondition}
-                        onChange={(_, newValue) => setFilterCondition(newValue)}
+                        value={selectedFilterConditions}
+                        onChange={(_, newValue) => setSelectedFilterConditions(newValue)}
                         onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
                         renderInput={(params) => (
                             <TextField
                                 {...params}
-                                label="Filter by Condition"
+                                label="Filter by Conditions"
                                 margin="normal"
                             />
                         )}
                         sx={{ mb: 2 }}
                     />
 
-                    {appliedFilter && (
+                    {appliedFilterConditions.length > 0 && (
                         <Typography variant="body2" color="primary" sx={{ mb: 2 }}>
-                            Currently filtering by: {appliedFilter.name}
+                            Currently filtering by: {appliedFilterConditions.map(c => c.name).join(', ')}
                         </Typography>
                     )}
 
@@ -355,7 +358,7 @@ function SearchableSupplementList() {
                             variant="contained"
                             onClick={handleApplyFilter}
                             fullWidth
-                            disabled={!filterCondition}
+                            disabled={selectedFilterConditions.length === 0}
                         >
                             Apply
                         </Button>
@@ -385,12 +388,12 @@ function SearchableSupplementList() {
                                 <Box sx={{ width: '100%' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                         <ListItemText primary={supplement.name} />
-                                        {appliedFilter && (
+                                        {appliedFilterConditions.length > 0 && (
                                             <Box
                                                 onClick={(e) => {
                                                     e.stopPropagation(); // Prevent triggering the ListItem click
-                                                    setAppliedFilter(null);
-                                                    setFilterCondition(null);
+                                                    setAppliedFilterConditions([]);
+                                                    setSelectedFilterConditions([]);
                                                 }}
                                                 sx={{
                                                     ml: 2,
@@ -409,7 +412,7 @@ function SearchableSupplementList() {
                                                     },
                                                 }}
                                             >
-                                                {appliedFilter.name}
+                                                {appliedFilterConditions.map(c => c.name).join(', ')}
                                                 <span style={{ fontSize: '0.8rem' }}>(click to clear)</span>
                                             </Box>
                                         )}
@@ -451,7 +454,7 @@ function SearchableSupplementList() {
                             <Typography variant="h5">
                                 {selectedSupplement.name}
                             </Typography>
-                            {appliedFilter && (
+                            {appliedFilterConditions.length > 0 && (
                                 <Box
                                     onClick={handleFilterClick}
                                     sx={{
@@ -470,7 +473,7 @@ function SearchableSupplementList() {
                                         gap: 1
                                     }}
                                 >
-                                    Showing ratings for: {appliedFilter.name}
+                                    Showing ratings for: {appliedFilterConditions.map(c => c.name).join(', ')}
                                     <span style={{ fontSize: '0.8rem' }}>(click to clear)</span>
                                 </Box>
                             )}
