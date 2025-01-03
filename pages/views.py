@@ -26,9 +26,16 @@ class SupplementViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
+        # If this is a detail view (retrieving single supplement), return full queryset
+        if self.action == 'retrieve':
+            return Supplement.objects.all()
+
+        # For list view, apply pagination and filters
         queryset = Supplement.objects.all()
         name_search = self.request.query_params.get('name', None)
         conditions_search = self.request.query_params.get('conditions', None)
+        offset = int(self.request.query_params.get('offset', 0))
+        limit = int(self.request.query_params.get('limit', 10))
 
         if name_search:
             queryset = queryset.filter(name__icontains=name_search)
@@ -65,7 +72,10 @@ class SupplementViewSet(viewsets.ModelViewSet):
                 has_condition_rating=Value(True, output_field=BooleanField())
             ).order_by(F('avg_rating').desc(nulls_last=True))
 
-        return queryset.distinct()
+        # Only apply pagination for list view
+        if self.action == 'list':
+            return queryset[offset:offset + limit]
+        return queryset
 
 class RatingViewSet(viewsets.ModelViewSet):
     serializer_class = RatingSerializer

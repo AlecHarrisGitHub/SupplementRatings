@@ -76,6 +76,8 @@ function SearchableSupplementList() {
 
     const [selectedReview, setSelectedReview] = useState(null);
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [offset, setOffset] = useState(0);
+    const [hasMore, setHasMore] = useState(true);
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -100,10 +102,13 @@ function SearchableSupplementList() {
                     ...(appliedFilterConditions.length > 0 ? { 
                         conditions: appliedFilterConditions.map(c => c.name).join(',') 
                     } : {}),
-                    limit: 20
+                    offset: 0,
+                    limit: 10
                 };
                 const data = await getSupplements(params);
                 setSupplements(data);
+                setOffset(10);
+                setHasMore(data.length === 10);
             } catch (error) {
                 console.error('Error fetching supplements:', error);
                 toast.error('Failed to fetch supplements');
@@ -334,6 +339,41 @@ function SearchableSupplementList() {
         setSelectedFilterConditions(updatedConditions);
     };
 
+    const loadMore = async () => {
+        try {
+            setLoading(true);
+            const params = {
+                ...(currentSearch ? { name: currentSearch } : {}),
+                ...(appliedFilterConditions.length > 0 ? { 
+                    conditions: appliedFilterConditions.map(c => c.name).join(',') 
+                } : {}),
+                offset: offset,
+                limit: 10
+            };
+            const newData = await getSupplements(params);
+            setSupplements(prev => [...prev, ...newData]);
+            setOffset(prev => prev + 10);
+            setHasMore(newData.length === 10);
+        } catch (error) {
+            console.error('Error loading more supplements:', error);
+            toast.error('Failed to load more supplements');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const LoadMoreButton = () => (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
+            <Button
+                variant="contained"
+                onClick={loadMore}
+                disabled={loading || !hasMore}
+            >
+                {loading ? 'Loading...' : hasMore ? 'Load More' : 'No More Results'}
+            </Button>
+        </Box>
+    );
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -411,56 +451,59 @@ function SearchableSupplementList() {
             {/* Main Content */}
             {!selectedSupplement ? (
                 // Supplement List
-                <List>
-                    {loading ? (
-                        <LoadingSkeleton />
-                    ) : (
-                        supplements.map((supplement) => (
-                            <ListItem 
-                                key={supplement.id}
-                                onClick={() => handleSupplementClick(supplement.id)}
-                                sx={{
-                                    mb: 1,
-                                    cursor: 'pointer',
-                                    '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
-                                }}
-                                component={Paper}
-                                elevation={1}
-                            >
-                                <Box sx={{ width: '100%' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                        <ListItemText primary={supplement.name} />
-                                        {appliedFilterConditions.length > 0 && (
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
-                                                {appliedFilterConditions.map(condition => (
-                                                    <ConditionTag
-                                                        key={condition.id}
-                                                        condition={condition}
-                                                        onRemove={handleRemoveCondition}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        )}
-                                    </Box>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Rating 
-                                            value={supplement.avg_rating || 0} 
-                                            readOnly 
-                                            precision={0.1}
-                                        />
-                                        <Typography variant="body2" color="text.secondary">
-                                            {supplement.avg_rating ? (
-                                                `${supplement.avg_rating.toFixed(1)} (${supplement.rating_count} ${supplement.rating_count === 1 ? 'rating' : 'ratings'})`
-                                            ) : (
-                                                'No ratings'
+                <>
+                    <List>
+                        {loading ? (
+                            <LoadingSkeleton />
+                        ) : (
+                            supplements.map((supplement) => (
+                                <ListItem 
+                                    key={supplement.id}
+                                    onClick={() => handleSupplementClick(supplement.id)}
+                                    sx={{
+                                        mb: 1,
+                                        cursor: 'pointer',
+                                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+                                    }}
+                                    component={Paper}
+                                    elevation={1}
+                                >
+                                    <Box sx={{ width: '100%' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                                            <ListItemText primary={supplement.name} />
+                                            {appliedFilterConditions.length > 0 && (
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
+                                                    {appliedFilterConditions.map(condition => (
+                                                        <ConditionTag
+                                                            key={condition.id}
+                                                            condition={condition}
+                                                            onRemove={handleRemoveCondition}
+                                                        />
+                                                    ))}
+                                                </Box>
                                             )}
-                                        </Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Rating 
+                                                value={supplement.avg_rating || 0} 
+                                                readOnly 
+                                                precision={0.1}
+                                            />
+                                            <Typography variant="body2" color="text.secondary">
+                                                {supplement.avg_rating ? (
+                                                    `${supplement.avg_rating.toFixed(1)} (${supplement.rating_count} ${supplement.rating_count === 1 ? 'rating' : 'ratings'})`
+                                                ) : (
+                                                    'No ratings'
+                                                )}
+                                            </Typography>
+                                        </Box>
                                     </Box>
-                                </Box>
-                            </ListItem>
-                        ))
-                    )}
-                </List>
+                                </ListItem>
+                            ))
+                        )}
+                    </List>
+                    <LoadMoreButton />
+                </>
             ) : (
                 // Supplement Detail View
                 <Box>
