@@ -387,6 +387,11 @@ function SearchableSupplementList() {
                                         <ListItemText primary={supplement.name} />
                                         {appliedFilter && (
                                             <Box
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Prevent triggering the ListItem click
+                                                    setAppliedFilter(null);
+                                                    setFilterCondition(null);
+                                                }}
                                                 sx={{
                                                     ml: 2,
                                                     px: 1,
@@ -395,9 +400,17 @@ function SearchableSupplementList() {
                                                     color: 'white',
                                                     borderRadius: 1,
                                                     fontSize: '0.8rem',
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1,
+                                                    '&:hover': {
+                                                        bgcolor: 'primary.dark',
+                                                    },
                                                 }}
                                             >
                                                 {appliedFilter.name}
+                                                <span style={{ fontSize: '0.8rem' }}>(click to clear)</span>
                                             </Box>
                                         )}
                                     </Box>
