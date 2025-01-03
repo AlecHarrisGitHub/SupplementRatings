@@ -60,10 +60,12 @@ export const getSupplements = async (params = {}, skipCache = false) => {
 
     try {
         const response = await API.get('supplements/', { params });
-        cache.set(cacheKey, {
-            data: response.data,
-            timestamp: Date.now()
-        });
+        if (params.offset === 0) {  // Only cache first page
+            cache.set(cacheKey, {
+                data: response.data,
+                timestamp: Date.now()
+            });
+        }
         return response.data;
     } catch (error) {
         console.error('Error fetching supplements:', error);
