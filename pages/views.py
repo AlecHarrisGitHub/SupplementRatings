@@ -34,18 +34,17 @@ class SupplementViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(name__icontains=name_search)
 
         if condition_search:
-            matching_supplements = queryset
-            queryset = matching_supplements.annotate(
+            queryset = queryset.annotate(
                 has_condition_rating=Exists(
                     Rating.objects.filter(
                         supplement_id=OuterRef('id'),
-                        condition__name__iexact=condition_search
+                        conditions__name__iexact=condition_search
                     )
                 ),
                 avg_rating=Avg(
                     Case(
                         When(
-                            ratings__condition__name__iexact=condition_search,
+                            ratings__conditions__name__iexact=condition_search,
                             then='ratings__score'
                         ),
                         default=None,
@@ -54,7 +53,7 @@ class SupplementViewSet(viewsets.ModelViewSet):
                 ),
                 rating_count=Count(
                     'ratings',
-                    filter=Q(ratings__condition__name__iexact=condition_search)
+                    filter=Q(ratings__conditions__name__iexact=condition_search)
                 )
             ).order_by('-has_condition_rating', F('avg_rating').desc(nulls_last=True))
         else:
