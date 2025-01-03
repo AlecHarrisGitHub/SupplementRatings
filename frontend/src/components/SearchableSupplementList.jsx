@@ -78,6 +78,7 @@ function SearchableSupplementList() {
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [batchSize, setBatchSize] = useState(20);
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -97,13 +98,14 @@ function SearchableSupplementList() {
         const fetchSupplements = async () => {
             try {
                 setLoading(true);
+                setBatchSize(20); // Reset batch size on new search
                 const params = {
                     ...(currentSearch ? { name: currentSearch } : {}),
                     ...(appliedFilterConditions.length > 0 ? { 
                         conditions: appliedFilterConditions.map(c => c.name).join(',') 
                     } : {}),
                     offset: 0,
-                    limit: 10
+                    limit: 10 // Initial load is always 10
                 };
                 const data = await getSupplements(params);
                 setSupplements(data);
@@ -348,12 +350,13 @@ function SearchableSupplementList() {
                     conditions: appliedFilterConditions.map(c => c.name).join(',') 
                 } : {}),
                 offset: offset,
-                limit: 10
+                limit: batchSize
             };
             const newData = await getSupplements(params);
             setSupplements(prev => [...prev, ...newData]);
-            setOffset(prev => prev + 10);
-            setHasMore(newData.length === 10);
+            setOffset(prev => prev + batchSize);
+            setBatchSize(prev => prev * 2); // Double the batch size for next load
+            setHasMore(newData.length === batchSize);
         } catch (error) {
             console.error('Error loading more supplements:', error);
             toast.error('Failed to load more supplements');
