@@ -27,8 +27,13 @@ function Login() {
       console.log('Login response:', response);
       
       if (response.access) {
-        const isAdmin = response.is_staff === true;
-        login(response.access, isAdmin);
+        const userData = {
+          username: username,
+          id: response.id,
+          is_staff: response.is_staff
+        };
+        console.log('Setting user data:', userData);
+        login(response.access, response.is_staff, userData);
         toast.success('Logged in successfully!');
         navigate('/supplements');
       }

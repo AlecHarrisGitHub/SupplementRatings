@@ -26,6 +26,7 @@ class Rating(models.Model):
     score = models.IntegerField(default=0)
     comment = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    is_edited = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('user', 'supplement')
@@ -40,6 +41,7 @@ class Comment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    is_edited = models.BooleanField(default=False)
 
     def __str__(self):
         if self.rating:

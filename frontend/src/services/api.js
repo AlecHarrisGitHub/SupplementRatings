@@ -236,4 +236,29 @@ export const verifyEmail = async (token) => {
     }
 };
 
+export const updateComment = async (commentId, content) => {
+    try {
+        const response = await API.patch(`comments/${commentId}/`, {
+            content: content.trim(),
+            is_edited: true
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating comment:', error);
+        throw error;
+    }
+};
+
+export const updateRating = async (ratingId, ratingData) => {
+    try {
+        const response = await API.patch(`ratings/${ratingId}/`, ratingData);
+        // Clear the cache for this supplement's data
+        cache.clear();
+        return response.data;
+    } catch (error) {
+        console.error('Error updating rating:', error);
+        throw error;
+    }
+};
+
 export default API;

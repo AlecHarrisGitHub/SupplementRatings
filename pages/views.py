@@ -88,6 +88,14 @@ class RatingViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(supplement_id=supplement_id)
         return queryset.prefetch_related('conditions', 'comments')
 
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.user != request.user:
+            return Response({'error': 'You can only edit your own ratings'}, status=403)
+        
+        instance.is_edited = True
+        return super().update(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         # Check if user already rated this supplement
         existing_rating = Rating.objects.filter(
@@ -108,6 +116,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return Comment.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.user != request.user:
+            return Response({'error': 'You can only edit your own comments'}, status=403)
+        
+        instance.is_edited = True
+        return super().update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)

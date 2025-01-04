@@ -19,9 +19,8 @@ import {
     IconButton,
     Skeleton
 } from '@mui/material';
-import { getSupplements, getSupplement, getConditions, addRating } from '../services/api';
-import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { getSupplements, getSupplement, getConditions, addRating, updateRating } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
@@ -67,7 +66,7 @@ function SearchableSupplementList() {
     const [conditions, setConditions] = useState([]);
     const [selectedConditions, setSelectedConditions] = useState([]);
     const [searchCondition, setSearchCondition] = useState('');
-    const { isAuthenticated } = useContext(AuthContext);
+    const { user } = useAuth();
     
     // New state for filter drawer
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -79,6 +78,7 @@ function SearchableSupplementList() {
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [batchSize, setBatchSize] = useState(20);
+    const [editingRating, setEditingRating] = useState(null);
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -87,6 +87,10 @@ function SearchableSupplementList() {
         }, 300),
         []
     );
+
+    // Add console log for debugging
+    console.log('User in SearchableSupplementList:', user);
+    console.log('Rating user:', selectedSupplement?.ratings?.[0]?.user);
 
     // Add this near the top of the component, after the state declarations
     const memoizedHandleSearchChange = useCallback((e) => {
@@ -209,6 +213,14 @@ function SearchableSupplementList() {
         }
     };
 
+    const handleEditRating = (rating) => {
+        setRatingScore(rating.score);
+        setRatingComment(rating.comment || '');
+        setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
+        setEditingRating(rating);
+        setRatingDialogOpen(true);
+    };
+
     const handleRatingSubmit = async () => {
         if (selectedConditions.length === 0) {
             toast.error('Please select at least one condition');
@@ -221,30 +233,45 @@ function SearchableSupplementList() {
         }
 
         try {
-            const response = await addRating({
+            const ratingData = {
                 supplement: selectedSupplement.id,
                 conditions: selectedConditions.map(condition => condition.id),
                 score: ratingScore,
                 comment: ratingComment || null,
-            });
+                is_edited: editingRating ? true : false
+            };
+
+            if (editingRating) {
+                const updatedRating = await updateRating(editingRating.id, ratingData);
+                setSelectedSupplement(prev => ({
+                    ...prev,
+                    ratings: prev.ratings.map(r => 
+                        r.id === editingRating.id ? {...updatedRating, is_edited: true} : r
+                    ),
+                    originalRatings: prev.originalRatings.map(r => 
+                        r.id === editingRating.id ? {...updatedRating, is_edited: true} : r
+                    )
+                }));
+                toast.success('Rating updated successfully!');
+            } else {
+                const response = await addRating(ratingData);
+                setSelectedSupplement(prev => ({
+                    ...prev,
+                    ratings: [response, ...(prev.ratings || [])],
+                    originalRatings: [response, ...(prev.originalRatings || [])]
+                }));
+                toast.success('Rating added successfully!');
+            }
             
-            setSelectedSupplement(prev => ({
-                ...prev,
-                ratings: [response, ...(prev.ratings || [])]
-            }));
-
-            // Refresh the supplements list
-            await refreshSupplementsList();
-
             setRatingScore(1);
             setRatingComment('');
             setSelectedConditions([]);
+            setEditingRating(null);
             setRatingDialogOpen(false);
-            toast.success('Rating added successfully!');
         } catch (error) {
             const errorMessage = error.userMessage || 
                                error.response?.data?.detail || 
-                               'Failed to add rating.';
+                               'Failed to save rating.';
             
             toast.error(errorMessage);
             console.error('Error details:', error);
@@ -282,18 +309,12 @@ function SearchableSupplementList() {
 
     const refreshSupplementData = async () => {
         if (selectedSupplement) {
-            try {
-                const updatedSupplement = await getSupplement(selectedSupplement.id);
-                setSelectedSupplement(updatedSupplement);
-                // Update the selected review with fresh data
-                if (selectedReview) {
-                    const updatedReview = updatedSupplement.ratings.find(r => r.id === selectedReview.id);
-                    setSelectedReview(updatedReview);
-                }
-            } catch (error) {
-                console.error('Error refreshing supplement data:', error);
-                toast.error('Failed to refresh data');
-            }
+            const updatedData = await getSupplement(selectedSupplement.id);
+            setSelectedSupplement(prev => ({
+                ...updatedData,
+                originalRatings: updatedData.ratings,
+                ratings: updatedData.ratings,
+            }));
         }
     };
 
@@ -314,8 +335,26 @@ function SearchableSupplementList() {
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle1" fontWeight="bold">
                     {rating.user.username}
+                    {rating.is_edited && (
+                        <Typography component="span" variant="caption" color="text.secondary">
+                            {" (edited)"}
+                        </Typography>
+                    )}
                 </Typography>
-                <MuiRating value={rating.score} readOnly />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {user && user.id === rating.user.id && (
+                        <Button 
+                            size="small" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditRating(rating);
+                            }}
+                        >
+                            Edit
+                        </Button>
+                    )}
+                    <Rating value={rating.score} readOnly />
+                </Box>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Conditions: {rating.condition_names.join(', ')}
@@ -376,6 +415,14 @@ function SearchableSupplementList() {
             </Button>
         </Box>
     );
+
+    const handleCloseRatingDialog = () => {
+        setRatingDialogOpen(false);
+        setEditingRating(null);
+        setRatingScore(1);
+        setRatingComment('');
+        setSelectedConditions([]);
+    };
 
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
@@ -473,18 +520,20 @@ function SearchableSupplementList() {
                                 >
                                     <Box sx={{ width: '100%' }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                            <ListItemText primary={supplement.name} />
-                                            {appliedFilterConditions.length > 0 && (
-                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', mb: 2 }}>
-                                                    {appliedFilterConditions.map(condition => (
-                                                        <ConditionTag
-                                                            key={condition.id}
-                                                            condition={condition}
-                                                            onRemove={handleRemoveCondition}
-                                                        />
-                                                    ))}
-                                                </Box>
-                                            )}
+                                            <ListItemText 
+                                                primary={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                        <Typography variant="subtitle1">
+                                                            {supplement.name}
+                                                        </Typography>
+                                                        {supplement.is_edited && (
+                                                            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                                                (edited)
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                }
+                                            />
                                         </Box>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Rating 
@@ -564,7 +613,7 @@ function SearchableSupplementList() {
                                     'No ratings yet'
                                 )}
                             </Typography>
-                            {isAuthenticated && (
+                            {user && user.id === selectedSupplement.ratings[0].user.id && (
                                 <Button
                                     startIcon={<AddIcon />}
                                     variant="contained"
@@ -607,8 +656,26 @@ function SearchableSupplementList() {
                                             }}>
                                                 <Typography variant="subtitle2">
                                                     {rating.user.username}
+                                                    {rating.is_edited && (
+                                                        <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                                            (edited)
+                                                        </Typography>
+                                                    )}
                                                 </Typography>
-                                                <Rating value={rating.score} readOnly />
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    {user && user.id === rating.user.id && (
+                                                        <Button 
+                                                            size="small" 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleEditRating(rating);
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                    )}
+                                                    <Rating value={rating.score} readOnly />
+                                                </Box>
                                             </Box>
                                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                                 Conditions: {rating.condition_names.join(', ')}
@@ -627,6 +694,7 @@ function SearchableSupplementList() {
                                 <ReviewDetail 
                                     rating={selectedReview}
                                     onBack={() => setSelectedReview(null)}
+                                    onEditRating={handleEditRating}
                                     onCommentAdded={async (newComment) => {
                                         await refreshSupplementData();
                                         toast.success('Comment added successfully!');
@@ -640,11 +708,13 @@ function SearchableSupplementList() {
 
             <Dialog 
                 open={ratingDialogOpen} 
-                onClose={() => setRatingDialogOpen(false)}
+                onClose={handleCloseRatingDialog}
                 maxWidth="md"
                 fullWidth
             >
-                <DialogTitle>Add Your Rating</DialogTitle>
+                <DialogTitle>
+                    {editingRating ? 'Edit Your Rating' : 'Add Your Rating'}
+                </DialogTitle>
                 <DialogContent>
                     <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
                         <Autocomplete

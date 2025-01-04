@@ -9,14 +9,28 @@ import {
     List,
     ListItem,
 } from '@mui/material';
-import { addComment } from '../services/api';
+import { addComment, updateComment } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
-function CommentBox({ comment, onCommentClick, isNested = false }) {
+function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser }) {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState(comment.content);
+
+    console.log('CommentBox currentUser:', currentUser); // Debug log
+    console.log('CommentBox comment.user:', comment.user); // Debug log
+
+    const handleEdit = async () => {
+        try {
+            await onEdit(comment.id, editedContent);
+            setIsEditing(false);
+        } catch (error) {
+            toast.error('Failed to update comment');
+        }
+    };
+
     return (
         <ListItem 
-            onClick={() => onCommentClick(comment)}
             sx={{ 
                 mb: 2,
                 flexDirection: 'column',
@@ -25,19 +39,51 @@ function CommentBox({ comment, onCommentClick, isNested = false }) {
                 borderRadius: 1,
                 boxShadow: 1,
                 p: 2,
-                cursor: 'pointer',
-                '&:hover': {
-                    bgcolor: 'action.hover'
-                },
                 ml: isNested ? 3 : 0
             }}
         >
             <Typography variant="subtitle2" fontWeight="bold">
                 {comment.user.username}
+                {comment.is_edited && (
+                    <Typography component="span" variant="caption" color="text.secondary">
+                        {" (edited)"}
+                    </Typography>
+                )}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
-                {comment.content}
-            </Typography>
+            
+            {isEditing ? (
+                <Box sx={{ width: '100%', mt: 1 }}>
+                    <TextField
+                        fullWidth
+                        multiline
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        sx={{ mb: 1 }}
+                    />
+                    <Button onClick={handleEdit} variant="contained" size="small" sx={{ mr: 1 }}>
+                        Save
+                    </Button>
+                    <Button onClick={() => setIsEditing(false)} size="small">
+                        Cancel
+                    </Button>
+                </Box>
+            ) : (
+                <>
+                    <Typography variant="body2" color="text.secondary" onClick={() => onCommentClick(comment)}>
+                        {comment.content}
+                    </Typography>
+                    {!isEditing && currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
+                        <Button 
+                            size="small" 
+                            onClick={() => setIsEditing(true)}
+                            sx={{ mt: 1 }}
+                        >
+                            Edit
+                        </Button>
+                    )}
+                </>
+            )}
+            
             {comment.replies?.length > 0 && (
                 <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
                     {comment.replies.length} reply(s)
@@ -47,10 +93,12 @@ function CommentBox({ comment, onCommentClick, isNested = false }) {
     );
 }
 
-function ReviewDetail({ rating, onBack, onCommentAdded }) {
+function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [newComment, setNewComment] = useState('');
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [selectedComment, setSelectedComment] = useState(null);
+
+    console.log('Rating in ReviewDetail:', rating); // Debug log
 
     const handleSubmitComment = async (e) => {
         e.preventDefault();
@@ -97,8 +145,21 @@ function ReviewDetail({ rating, onBack, onCommentAdded }) {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" fontWeight="bold">
                                 {rating.user.username}
+                                {rating.is_edited && (
+                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                        (edited)
+                                    </Typography>
+                                )}
                             </Typography>
-                            <MuiRating value={rating.score} readOnly />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                <Button 
+                                    size="small"
+                                    onClick={() => onEditRating && onEditRating(rating)}
+                                >
+                                    Edit
+                                </Button>
+                                <MuiRating value={rating.score} readOnly />
+                            </Box>
                         </Box>
                         <Typography variant="body1" sx={{ mb: 1 }}>
                             Conditions: {rating.condition_names.join(', ')}
@@ -126,6 +187,30 @@ function ReviewDetail({ rating, onBack, onCommentAdded }) {
                             comment={comment}
                             onCommentClick={handleCommentClick}
                             isNested={isShowingComment}
+                            onEdit={async (commentId, content) => {
+                                try {
+                                    console.log('Editing comment. Current user:', user); // Debug log
+                                    const updatedComment = await updateComment(commentId, content);
+                                    if (isShowingComment) {
+                                        const updatedReplies = currentItem.replies.map(c => 
+                                            c.id === commentId ? {...updatedComment, is_edited: true} : c
+                                        );
+                                        setSelectedComment(prev => ({
+                                            ...prev,
+                                            replies: updatedReplies
+                                        }));
+                                    } else {
+                                        rating.comments = rating.comments.map(c => 
+                                            c.id === commentId ? {...updatedComment, is_edited: true} : c
+                                        );
+                                    }
+                                    await onCommentAdded();
+                                } catch (error) {
+                                    console.error('Error updating comment:', error);
+                                    toast.error('Failed to update comment');
+                                }
+                            }}
+                            currentUser={user}
                         />
                     ))}
                 </List>
