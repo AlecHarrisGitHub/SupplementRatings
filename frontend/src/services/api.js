@@ -238,8 +238,8 @@ export const verifyEmail = async (token) => {
 
 export const updateComment = async (commentId, content) => {
     try {
-        const response = await API.patch(`comments/${commentId}/`, {
-            content: content.trim(),
+        const response = await API.put(`comments/${commentId}/`, {
+            content: content,
             is_edited: true
         });
         return response.data;
