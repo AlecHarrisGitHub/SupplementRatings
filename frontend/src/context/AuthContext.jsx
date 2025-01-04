@@ -13,26 +13,46 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    return !!(token && userData);  // Only authenticated if both token and user data exist
+  });
   const [isAdmin, setIsAdmin] = useState(localStorage.getItem('isAdmin') === 'true');
+  const [user, setUser] = useState(() => {
+    const userData = localStorage.getItem('user');
+    if (!userData) return null;
+    try {
+      return JSON.parse(userData);
+    } catch (error) {
+      console.error('Error parsing user data:', error);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('isAdmin');
+      return null;
+    }
+  });
 
-  const login = (token, isAdmin) => {
-    console.log('AuthContext login called with:', { token, isAdmin });
+  const login = (token, isAdmin, userData) => {
     localStorage.setItem('token', token);
     localStorage.setItem('isAdmin', String(isAdmin));
+    localStorage.setItem('user', JSON.stringify(userData));
     setIsAuthenticated(true);
     setIsAdmin(isAdmin);
+    setUser(userData);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('isAdmin');
+    localStorage.removeItem('user');
     setIsAuthenticated(false);
     setIsAdmin(false);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

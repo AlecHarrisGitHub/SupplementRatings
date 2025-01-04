@@ -33,7 +33,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             user_id = AccessToken(token)['user_id']
             from django.contrib.auth.models import User
             user = User.objects.get(id=user_id)
-            response.data['is_staff'] = user.is_staff
+            response.data.update({
+                'is_staff': user.is_staff,
+                'id': user.id,
+                'username': user.username
+            })
         return response
 
 # Define API URLs
