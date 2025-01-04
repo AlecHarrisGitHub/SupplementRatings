@@ -17,9 +17,6 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);
 
-    console.log('CommentBox currentUser:', currentUser); // Debug log
-    console.log('CommentBox comment.user:', comment.user); // Debug log
-
     const handleEdit = async () => {
         try {
             await onEdit(comment.id, editedContent);
@@ -31,6 +28,7 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
 
     return (
         <ListItem 
+            onClick={() => onCommentClick(comment)}
             sx={{ 
                 mb: 2,
                 flexDirection: 'column',
@@ -39,7 +37,11 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                 borderRadius: 1,
                 boxShadow: 1,
                 p: 2,
-                ml: isNested ? 3 : 0
+                ml: isNested ? 3 : 0,
+                cursor: 'pointer',
+                '&:hover': {
+                    bgcolor: 'action.hover'
+                }
             }}
         >
             <Typography variant="subtitle2" fontWeight="bold">
@@ -52,7 +54,7 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
             </Typography>
             
             {isEditing ? (
-                <Box sx={{ width: '100%', mt: 1 }}>
+                <Box onClick={(e) => e.stopPropagation()} sx={{ width: '100%', mt: 1 }}>
                     <TextField
                         fullWidth
                         multiline
@@ -69,25 +71,22 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                 </Box>
             ) : (
                 <>
-                    <Typography variant="body2" color="text.secondary" onClick={() => onCommentClick(comment)}>
+                    <Typography variant="body2" color="text.secondary">
                         {comment.content}
                     </Typography>
-                    {!isEditing && currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
+                    {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
                         <Button 
                             size="small" 
-                            onClick={() => setIsEditing(true)}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditing(true);
+                            }}
                             sx={{ mt: 1 }}
                         >
                             Edit
                         </Button>
                     )}
                 </>
-            )}
-            
-            {comment.replies?.length > 0 && (
-                <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
-                    {comment.replies.length} reply(s)
-                </Typography>
             )}
         </ListItem>
     );
