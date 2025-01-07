@@ -167,6 +167,7 @@ function SearchableSupplementList() {
     const handleSupplementClick = async (supplementId) => {
         try {
             setLoading(true);
+            setSelectedReview(null); // Reset selected review when clicking a new supplement
             const data = await getSupplement(supplementId);
             let filteredRatings = data.ratings;
             let ratingCount = data.rating_count;
