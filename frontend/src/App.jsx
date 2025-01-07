@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
@@ -29,15 +29,15 @@ function App() {
             />
             <Toaster position="top-center" />
             <Routes>
-                <Route path="/" element={<SearchableSupplementList />} />
+                <Route path="/" element={<Navigate to="/supplements" replace />} />
                 <Route path="/supplements" element={<SearchableSupplementList />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/upload-supplements" element={<UploadCSV type="supplements" />} />
                 <Route path="/upload-conditions" element={<UploadCSV type="conditions" />} />
-                <Route path="*" element={<NotFound />} />
                 <Route path="/verify-email/:token" element={<EmailVerification />} />
+                <Route path="*" element={<NotFound />} />
             </Routes>
         </div>
     );
