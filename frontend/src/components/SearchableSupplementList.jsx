@@ -614,7 +614,7 @@ function SearchableSupplementList() {
                                     'No ratings yet'
                                 )}
                             </Typography>
-                            {user && user.id === selectedSupplement.ratings[0].user.id && (
+                            {user && (selectedSupplement.ratings.length === 0 || user.id !== selectedSupplement.ratings[0]?.user?.id) && (
                                 <Button
                                     startIcon={<AddIcon />}
                                     variant="contained"
