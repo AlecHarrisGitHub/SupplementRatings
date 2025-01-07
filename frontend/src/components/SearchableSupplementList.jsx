@@ -169,7 +169,7 @@ function SearchableSupplementList() {
     const handleSupplementClick = async (supplementId) => {
         try {
             setLoading(true);
-            setSelectedReview(null); // Reset selected review when clicking a new supplement
+            setSelectedReview(null);
             const data = await getSupplement(supplementId);
             let filteredRatings = data.ratings;
             let ratingCount = data.rating_count;
@@ -183,6 +183,13 @@ function SearchableSupplementList() {
                 );
                 ratingCount = filteredRatings.length;
             }
+            
+            // Ensure all rating data is preserved
+            filteredRatings = filteredRatings.map(rating => ({
+                ...rating,
+                dosage: rating.dosage || null,
+                brands: rating.brands || null
+            }));
             
             setSelectedSupplement({
                 ...data,
@@ -373,7 +380,7 @@ function SearchableSupplementList() {
             )}
             {rating.brands && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Brands: {rating.brands}
+                    Brands Used: {rating.brands}
                 </Typography>
             )}
             {rating.comment && (
@@ -643,81 +650,91 @@ function SearchableSupplementList() {
                         </Box>
 
                         <List>
-                            {!selectedReview ? (
-                                selectedSupplement.ratings
-                                    .filter(rating => rating.comment)
-                                    .map((rating) => (
-                                        <ListItem 
-                                            key={rating.id}
-                                            onClick={() => setSelectedReview(rating)}
-                                            sx={{ 
-                                                mb: 2,
-                                                flexDirection: 'column',
-                                                alignItems: 'flex-start',
-                                                bgcolor: 'background.paper',
-                                                borderRadius: 1,
-                                                boxShadow: 1,
-                                                p: 2,
-                                                cursor: 'pointer',
-                                                '&:hover': {
-                                                    bgcolor: 'action.hover'
-                                                }
-                                            }}
-                                        >
-                                            <Box sx={{ 
-                                                width: '100%',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                mb: 1
-                                            }}>
-                                                <Typography variant="subtitle2">
-                                                    {rating.user.username}
-                                                    {rating.is_edited && (
-                                                        <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                            (edited)
-                                                        </Typography>
-                                                    )}
-                                                </Typography>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    {user && user.id === rating.user.id && (
-                                                        <Button 
-                                                            size="small" 
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleEditRating(rating);
-                                                            }}
-                                                        >
-                                                            Edit
-                                                        </Button>
-                                                    )}
-                                                    <Rating value={rating.score} readOnly />
-                                                </Box>
+                        {!selectedReview ? (
+                            selectedSupplement.ratings
+                                .filter(rating => rating.comment)
+                                .map((rating) => (
+                                    <ListItem 
+                                        key={rating.id}
+                                        onClick={() => setSelectedReview(rating)}
+                                        sx={{ 
+                                            mb: 2,
+                                            flexDirection: 'column',
+                                            alignItems: 'flex-start',
+                                            bgcolor: 'background.paper',
+                                            borderRadius: 1,
+                                            boxShadow: 1,
+                                            p: 2,
+                                            cursor: 'pointer',
+                                            '&:hover': {
+                                                bgcolor: 'action.hover'
+                                            }
+                                        }}
+                                    >
+                                        <Box sx={{ 
+                                            width: '100%',
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            mb: 1
+                                        }}>
+                                            <Typography variant="subtitle2">
+                                                {rating.user.username}
+                                                {rating.is_edited && (
+                                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                                        (edited)
+                                                    </Typography>
+                                                )}
+                                            </Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                {user && user.id === rating.user.id && (
+                                                    <Button 
+                                                        size="small" 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditRating(rating);
+                                                        }}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                )}
+                                                <Rating value={rating.score} readOnly />
                                             </Box>
+                                        </Box>
+                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                            Conditions: {rating.condition_names.join(', ')}
+                                        </Typography>
+                                        {rating.dosage && (
                                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                Conditions: {rating.condition_names.join(', ')}
+                                                Dosage: {rating.dosage}
                                             </Typography>
-                                            <Typography variant="body2" color="text.secondary">
-                                                {rating.comment}
+                                        )}
+                                        {rating.brands && (
+                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                                Brands Used: {rating.brands}
                                             </Typography>
-                                            {rating.comments?.length > 0 && (
-                                                <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
-                                                    {rating.comments.length} comment(s)
-                                                </Typography>
-                                            )}
-                                        </ListItem>
-                                    ))
-                            ) : (
-                                <ReviewDetail 
-                                    rating={selectedReview}
-                                    onBack={() => setSelectedReview(null)}
-                                    onEditRating={handleEditRating}
-                                    onCommentAdded={async (newComment) => {
-                                        await refreshSupplementData();
-                                        toast.success('Comment added successfully!');
-                                    }}
-                                />
-                            )}
+                                        )}
+                                        <Typography variant="body2" color="text.secondary">
+                                            {rating.comment}
+                                        </Typography>
+                                        {rating.comments?.length > 0 && (
+                                            <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
+                                                {rating.comments.length} comment(s)
+                                            </Typography>
+                                        )}
+                                    </ListItem>
+                                ))
+                        ) : (
+                            <ReviewDetail 
+                                rating={selectedReview}
+                                onBack={() => setSelectedReview(null)}
+                                onEditRating={handleEditRating}
+                                onCommentAdded={async (newComment) => {
+                                    await refreshSupplementData();
+                                    toast.success('Comment added successfully!');
+                                }}
+                            />
+                        )}
                         </List>
                     </Paper>
                 </Box>

@@ -162,12 +162,24 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                 <MuiRating value={rating.score} readOnly />
                             </Box>
                         </Box>
-                        <Typography variant="body1" sx={{ mb: 1 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             Conditions: {rating.condition_names.join(', ')}
                         </Typography>
-                        <Typography variant="body1">
-                            {rating.comment}
-                        </Typography>
+                        {rating.dosage && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                Dosage: {rating.dosage}
+                            </Typography>
+                        )}
+                        {rating.brands && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                Brands Used: {rating.brands}
+                            </Typography>
+                        )}
+                        {rating.comment && (
+                            <Typography variant="body1" sx={{ mt: 2 }}>
+                                {rating.comment}
+                            </Typography>
+                        )}
                     </Box>
                 ) : (
                     // Show Selected Comment
