@@ -79,6 +79,8 @@ function SearchableSupplementList() {
     const [hasMore, setHasMore] = useState(true);
     const [batchSize, setBatchSize] = useState(20);
     const [editingRating, setEditingRating] = useState(null);
+    const [ratingDosage, setRatingDosage] = useState('');
+    const [ratingBrands, setRatingBrands] = useState('');
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -227,21 +229,23 @@ function SearchableSupplementList() {
             toast.error('Please select at least one condition');
             return;
         }
-
+    
         if (!ratingScore) {
             toast.error('Please select a rating score');
             return;
         }
-
+    
         try {
             const ratingData = {
                 supplement: selectedSupplement.id,
                 conditions: selectedConditions.map(condition => condition.id),
                 score: ratingScore,
                 comment: ratingComment || null,
+                dosage: ratingDosage || null,
+                brands: ratingBrands || null,
                 is_edited: editingRating ? true : false
             };
-
+    
             if (editingRating) {
                 const updatedRating = await updateRating(editingRating.id, ratingData);
                 setSelectedSupplement(prev => ({
@@ -266,6 +270,8 @@ function SearchableSupplementList() {
             
             setRatingScore(1);
             setRatingComment('');
+            setRatingDosage('');
+            setRatingBrands('');
             setSelectedConditions([]);
             setEditingRating(null);
             setRatingDialogOpen(false);
@@ -360,6 +366,16 @@ function SearchableSupplementList() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Conditions: {rating.condition_names.join(', ')}
             </Typography>
+            {rating.dosage && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Dosage: {rating.dosage}
+                </Typography>
+            )}
+            {rating.brands && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Brands: {rating.brands}
+                </Typography>
+            )}
             {rating.comment && (
                 <Typography variant="body1">
                     {rating.comment}
@@ -755,6 +771,24 @@ function SearchableSupplementList() {
                                 </Typography>
                             )}
                         </Box>
+
+                        <TextField
+                            label="Dosage (optional)"
+                            value={ratingDosage}
+                            onChange={(e) => setRatingDosage(e.target.value)}
+                            fullWidth
+                            sx={{ mb: 2 }}
+                            placeholder="e.g., 500mg twice daily"
+                        />
+
+                        <TextField
+                            label="Brands Used (optional)"
+                            value={ratingBrands}
+                            onChange={(e) => setRatingBrands(e.target.value)}
+                            fullWidth
+                            sx={{ mb: 2 }}
+                            placeholder="e.g., NOW Foods, Nature Made"
+                        />
                         
                         <TextField
                             label="Review (optional)"

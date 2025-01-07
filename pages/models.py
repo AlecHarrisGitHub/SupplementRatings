@@ -25,6 +25,8 @@ class Rating(models.Model):
     conditions = models.ManyToManyField(Condition, related_name='ratings')
     score = models.IntegerField(default=0)
     comment = models.TextField(blank=True, null=True)
+    dosage = models.CharField(max_length=100, blank=True, null=True)
+    brands = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
 
