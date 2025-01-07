@@ -12,14 +12,22 @@ class UserSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     replies = serializers.SerializerMethodField()
+    is_edited = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'user', 'rating', 'parent_comment', 'content', 'created_at', 'replies']
+        fields = ['id', 'user', 'rating', 'parent_comment', 'content', 'created_at', 'replies', 'is_edited']
+        read_only_fields = ['user', 'is_edited']
 
     def get_replies(self, obj):
         replies = Comment.objects.filter(parent_comment=obj)
         return CommentSerializer(replies, many=True).data
+
+    def update(self, instance, validated_data):
+        instance.is_edited = True
+        instance.content = validated_data.get('content', instance.content)
+        instance.save()
+        return instance
 
 
 class RatingSerializer(serializers.ModelSerializer):
