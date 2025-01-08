@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 class Supplement(models.Model):
     name = models.CharField(max_length=200)
     category = models.CharField(max_length=200, default='General')
+    dosage_unit = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return self.name
