@@ -23,6 +23,7 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('Attempting login with:', { username });
       const response = await loginUser({ username, password });
       console.log('Login response:', response);
       
@@ -38,7 +39,11 @@ function Login() {
         navigate('/supplements');
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       toast.error('Login failed: ' + (error.response?.data?.detail || 'Unknown error'));
     }
   };

@@ -59,7 +59,7 @@ class SupplementSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Supplement
-        fields = ['id', 'name', 'category', 'ratings', 'avg_rating', 'rating_count']
+        fields = ['id', 'name', 'category', 'dosage_unit', 'ratings', 'avg_rating', 'rating_count']
 
 
 class ConditionSerializer(serializers.ModelSerializer):

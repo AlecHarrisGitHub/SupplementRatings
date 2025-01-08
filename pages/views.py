@@ -156,7 +156,7 @@ def upload_supplements_csv(request):
     
     try:
         df = pd.read_csv(csv_file)
-        required_columns = ['name', 'category']
+        required_columns = ['name', 'category', 'dosage_unit']
         
         if not all(col in df.columns for col in required_columns):
             return Response({
@@ -167,7 +167,8 @@ def upload_supplements_csv(request):
             for _, row in df.iterrows():
                 Supplement.objects.create(
                     name=row['name'],
-                    category=row['category']
+                    category=row['category'],
+                    dosage_unit=row['dosage_unit']
                 )
         
         return Response({'message': 'Supplements uploaded successfully'})
