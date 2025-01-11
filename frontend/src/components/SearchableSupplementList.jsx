@@ -248,7 +248,7 @@ function SearchableSupplementList() {
                 conditions: selectedConditions.map(condition => condition.id),
                 score: ratingScore,
                 comment: ratingComment || null,
-                dosage: ratingDosage ? `${ratingDosage} ${selectedSupplement.dosage_unit || 'mg'}` : null,
+                dosage: ratingDosage ? `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}` : null,
                 brands: ratingBrands || null,
                 is_edited: editingRating ? true : false
             };
@@ -390,7 +390,7 @@ function SearchableSupplementList() {
             </Typography>
             {rating.dosage && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Dosage: {rating.dosage}
+                    Dosage: {rating.dosage.replace(/\s+/g, '')}
                 </Typography>
             )}
             {rating.brands && (
@@ -721,7 +721,7 @@ function SearchableSupplementList() {
                                         </Typography>
                                         {rating.dosage && (
                                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                Dosage: {rating.dosage}
+                                                Dosage: {rating.dosage.replace(/\s+/g, '')}
                                             </Typography>
                                         )}
                                         {rating.brands && (
