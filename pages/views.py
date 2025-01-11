@@ -2,12 +2,13 @@ from rest_framework import viewsets, serializers
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
-from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken
+from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken, Brand
 from .serializers import (
     SupplementSerializer, 
     RatingSerializer, 
     CommentSerializer, 
-    ConditionSerializer
+    ConditionSerializer,
+    BrandSerializer
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -132,6 +133,11 @@ class ConditionViewSet(viewsets.ModelViewSet):
     serializer_class = ConditionSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     queryset = Condition.objects.all()
+
+class BrandViewSet(viewsets.ModelViewSet):
+    queryset = Brand.objects.all()
+    serializer_class = BrandSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
@@ -316,4 +322,29 @@ def verify_email(request, token):
     except EmailVerificationToken.DoesNotExist:
         return Response({'error': 'Invalid verification token'}, 
                        status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+def upload_brands_csv(request):
+    if 'file' not in request.FILES:
+        return Response({'error': 'No file uploaded'}, status=400)
+    
+    csv_file = request.FILES['file']
+    if not csv_file.name.endswith('.csv'):
+        return Response({'error': 'File must be a CSV'}, status=400)
+    
+    try:
+        df = pd.read_csv(csv_file)
+        if 'name' not in df.columns:
+            return Response({'error': 'CSV must contain a name column'}, status=400)
+        
+        with transaction.atomic():
+            for _, row in df.iterrows():
+                Brand.objects.create(name=row['name'])
+        
+        return Response({'message': 'Brands uploaded successfully'})
+    
+    except Exception as e:
+        print(f"Error in upload: {str(e)}")
+        return Response({'error': str(e)}, status=400)
 

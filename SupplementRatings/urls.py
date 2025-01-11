@@ -6,8 +6,10 @@ from pages.views import (
     RatingViewSet, 
     CommentViewSet, 
     ConditionViewSet,
+    BrandViewSet,
     upload_supplements_csv,
     upload_conditions_csv,
+    upload_brands_csv,
     get_user_details,
     register_user,
     verify_email
@@ -22,6 +24,7 @@ router.register(r'supplements', SupplementViewSet, basename='supplement')
 router.register(r'ratings', RatingViewSet, basename='rating')
 router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'conditions', ConditionViewSet, basename='condition')
+router.register(r'brands', BrandViewSet, basename='brand')
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
@@ -44,6 +47,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 api_urlpatterns = [
     path('upload-supplements-csv/', upload_supplements_csv, name='upload-supplements-csv'),
     path('upload-conditions-csv/', upload_conditions_csv, name='upload-conditions-csv'),
+    path('upload-brands-csv/', upload_brands_csv, name='upload-brands-csv'),
     path('token/obtain/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/me/', get_user_details, name='user-details'),

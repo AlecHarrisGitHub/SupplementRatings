@@ -261,4 +261,31 @@ export const updateRating = async (ratingId, ratingData) => {
     }
 };
 
+export const uploadBrandsCSV = async (file) => {
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await API.post('/upload-brands-csv/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error uploading brands CSV:', error);
+        throw error;
+    }
+};
+
+export const getBrands = async () => {
+    try {
+        const response = await API.get('/brands/');
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching brands:', error);
+        throw error;
+    }
+};
+
 export default API;

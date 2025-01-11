@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Supplement, Rating, Comment, Condition
+from .models import Supplement, Rating, Comment, Condition, Brand
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -65,4 +65,10 @@ class SupplementSerializer(serializers.ModelSerializer):
 class ConditionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Condition
+        fields = ['id', 'name']
+
+
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
         fields = ['id', 'name']

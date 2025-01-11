@@ -67,3 +67,10 @@ class EmailVerificationToken(models.Model):
     def is_valid(self):
         from django.utils import timezone
         return timezone.now() <= self.expires_at
+
+
+class Brand(models.Model):
+    name = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.name

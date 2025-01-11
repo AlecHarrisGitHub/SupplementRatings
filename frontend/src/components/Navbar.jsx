@@ -36,6 +36,13 @@ function Navbar() {
                                     >
                                         Upload Conditions
                                     </Button>
+                                    <Button 
+                                        color="inherit" 
+                                        component={Link} 
+                                        to="/upload-brands"
+                                    >
+                                        Upload Brands
+                                    </Button>
                                 </>
                             )}
                             <Button 
