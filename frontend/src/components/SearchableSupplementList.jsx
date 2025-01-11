@@ -19,7 +19,7 @@ import {
     IconButton,
     Skeleton
 } from '@mui/material';
-import { getSupplements, getSupplement, getConditions, addRating, updateRating } from '../services/api';
+import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
@@ -81,6 +81,8 @@ function SearchableSupplementList() {
     const [editingRating, setEditingRating] = useState(null);
     const [ratingDosage, setRatingDosage] = useState('');
     const [ratingBrands, setRatingBrands] = useState('');
+    const [brands, setBrands] = useState([]);
+    const [selectedBrand, setSelectedBrand] = useState(null);
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -159,6 +161,19 @@ function SearchableSupplementList() {
         }
     }, [appliedFilterConditions]);
 
+    useEffect(() => {
+        const fetchBrands = async () => {
+            try {
+                const data = await getBrands();
+                setBrands(data);
+            } catch (error) {
+                console.error('Error fetching brands:', error);
+                toast.error('Failed to fetch brands');
+            }
+        };
+        fetchBrands();
+    }, []);
+
     const handleKeyDown = (event) => {
         if (event.key === 'Enter') {
             setCurrentSearch(searchTerm);
@@ -224,86 +239,48 @@ function SearchableSupplementList() {
     };
 
     const handleEditRating = (rating) => {
+        setEditingRating(rating);
+        setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
         setRatingScore(rating.score);
         setRatingComment(rating.comment || '');
-        setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
-        setEditingRating(rating);
+        setRatingDosage(rating.dosage || '');
+        setSelectedBrand(rating.brands ? brands.find(b => b.name === rating.brands) : null);
         setRatingDialogOpen(true);
     };
 
-    const handleRatingSubmit = async () => {
-        if (selectedConditions.length === 0) {
-            toast.error('Please select at least one condition');
-            return;
-        }
-
-        if (!ratingScore) {
-            toast.error('Please select a rating score');
-            return;
-        }
-
+    const handleRatingSubmit = async (e) => {
+        e.preventDefault();
         try {
             const ratingData = {
                 supplement: selectedSupplement.id,
-                conditions: selectedConditions.map(condition => condition.id),
+                conditions: selectedConditions.map(c => c.id),
                 score: ratingScore,
-                comment: ratingComment || null,
-                dosage: ratingDosage ? `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}` : null,
-                brands: ratingBrands || null,
-                is_edited: editingRating ? true : false
+                comment: ratingComment,
+                dosage: ratingDosage ? `${ratingDosage}` : null,
+                brands: selectedBrand ? selectedBrand.name : null,
             };
 
             if (editingRating) {
-                const updatedRating = await updateRating(editingRating.id, ratingData);
-                // Update both the ratings and originalRatings arrays
-                const updatedRatingWithUser = {
-                    ...updatedRating,
-                    is_edited: true,
-                    user: editingRating.user, // Preserve the user information
-                    condition_names: selectedConditions.map(c => c.name) // Update condition names
-                };
-                
-                setSelectedSupplement(prev => ({
-                    ...prev,
-                    ratings: prev.ratings.map(r => 
-                        r.id === editingRating.id ? updatedRatingWithUser : r
-                    ),
-                    originalRatings: prev.originalRatings.map(r => 
-                        r.id === editingRating.id ? updatedRatingWithUser : r
-                    )
-                }));
-
-                // If this rating is currently selected in ReviewDetail, update it
-                if (selectedReview?.id === editingRating.id) {
-                    setSelectedReview(updatedRatingWithUser);
-                }
-
-                toast.success('Rating updated successfully!');
+                await updateRating(editingRating.id, ratingData);
+                toast.success('Rating updated successfully');
             } else {
-                // Handle new rating creation (existing code)
-                const response = await addRating(ratingData);
-                setSelectedSupplement(prev => ({
-                    ...prev,
-                    ratings: [response, ...(prev.ratings || [])],
-                    originalRatings: [response, ...(prev.originalRatings || [])]
-                }));
-                toast.success('Rating added successfully!');
+                await addRating(ratingData);
+                toast.success('Rating added successfully');
             }
 
-            setRatingScore(1);
+            // Reset form
+            setSelectedConditions([]);
+            setRatingScore(0);
             setRatingComment('');
             setRatingDosage('');
-            setRatingBrands('');
-            setSelectedConditions([]);
-            setEditingRating(null);
+            setSelectedBrand(null);
             setRatingDialogOpen(false);
-        } catch (error) {
-            const errorMessage = error.userMessage || 
-                               error.response?.data?.detail || 
-                               'Failed to save rating.';
             
-            toast.error(errorMessage);
-            console.error('Error details:', error);
+            // Refresh supplement details
+            await handleSupplementClick(selectedSupplement.id);
+        } catch (error) {
+            console.error('Error submitting rating:', error);
+            toast.error('Failed to submit rating');
         }
     };
 
@@ -818,13 +795,19 @@ function SearchableSupplementList() {
                             </Typography>
                         </Box>
 
-                        <TextField
-                            label="Brands Used (optional)"
-                            value={ratingBrands}
-                            onChange={(e) => setRatingBrands(e.target.value)}
-                            fullWidth
-                            sx={{ mb: 2 }}
-                            placeholder="e.g., NOW Foods, Nature Made"
+                        <Autocomplete
+                            options={brands}
+                            getOptionLabel={(option) => option.name}
+                            value={selectedBrand}
+                            onChange={(_, newValue) => setSelectedBrand(newValue)}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Brand Used (optional)"
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                />
+                            )}
                         />
                         
                         <TextField

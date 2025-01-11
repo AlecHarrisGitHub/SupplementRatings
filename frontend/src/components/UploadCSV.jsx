@@ -1,7 +1,7 @@
 // frontend/src/components/UploadCSV.jsx
 
 import React, { useState, useContext } from 'react';
-import { uploadSupplementsCSV, uploadConditionsCSV } from '../services/api';
+import { uploadSupplementsCSV, uploadConditionsCSV, uploadBrandsCSV } from '../services/api';
 import { toast } from 'react-toastify';
 import { 
   Button, 
@@ -53,7 +53,10 @@ function UploadCSV({ type }) {
     setProgress(0);
 
     try {
-      const uploadFunction = type === 'conditions' ? uploadConditionsCSV : uploadSupplementsCSV;
+      const uploadFunction = 
+      type === 'conditions' ? uploadConditionsCSV : 
+      type == 'brands' ? uploadBrandsCSV :
+      uploadSupplementsCSV;
       
       console.log('Starting upload for type:', type);
       console.log('File being uploaded:', file);
@@ -71,7 +74,7 @@ function UploadCSV({ type }) {
       clearInterval(progressInterval);
       setProgress(100);
       
-      toast.success(`${type === 'conditions' ? 'Conditions' : 'Supplements'} uploaded successfully!`);
+      toast.success(`${type === 'conditions' ? 'Conditions' : type === 'brands' ? 'Brands' : 'Supplements'} uploaded successfully!`);
       setFile(null);
       setProgress(0);
     } catch (error) {
@@ -92,7 +95,7 @@ function UploadCSV({ type }) {
     <Box sx={{ maxWidth: 600, mx: 'auto', p: 3 }}>
       <Paper elevation={3} sx={{ p: 3 }}>
         <Typography variant="h5" gutterBottom>
-          Upload {type === 'conditions' ? 'Conditions' : 'Supplements'} CSV
+          Upload {type === 'conditions' ? 'Conditions' : type === 'brands' ? 'Brands' : 'Supplements'} CSV
         </Typography>
         
         <Box sx={{ my: 3 }}>

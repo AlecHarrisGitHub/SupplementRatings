@@ -11,6 +11,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import NotFound from './pages/NotFound';
 import EmailVerification from './pages/EmailVerification';
 import { Toaster } from 'react-hot-toast';
+import UploadBrands from './pages/UploadBrands';
 
 function App() {
     return (
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/upload-supplements" element={<UploadCSV type="supplements" />} />
                 <Route path="/upload-conditions" element={<UploadCSV type="conditions" />} />
                 <Route path="/verify-email/:token" element={<EmailVerification />} />
+                <Route path="/upload-brands" element={<UploadBrands />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </div>
