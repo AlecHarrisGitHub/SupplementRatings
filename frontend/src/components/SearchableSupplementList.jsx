@@ -236,12 +236,12 @@ function SearchableSupplementList() {
             toast.error('Please select at least one condition');
             return;
         }
-    
+
         if (!ratingScore) {
             toast.error('Please select a rating score');
             return;
         }
-    
+
         try {
             const ratingData = {
                 supplement: selectedSupplement.id,
@@ -252,20 +252,35 @@ function SearchableSupplementList() {
                 brands: ratingBrands || null,
                 is_edited: editingRating ? true : false
             };
-    
+
             if (editingRating) {
                 const updatedRating = await updateRating(editingRating.id, ratingData);
+                // Update both the ratings and originalRatings arrays
+                const updatedRatingWithUser = {
+                    ...updatedRating,
+                    is_edited: true,
+                    user: editingRating.user, // Preserve the user information
+                    condition_names: selectedConditions.map(c => c.name) // Update condition names
+                };
+                
                 setSelectedSupplement(prev => ({
                     ...prev,
                     ratings: prev.ratings.map(r => 
-                        r.id === editingRating.id ? {...updatedRating, is_edited: true} : r
+                        r.id === editingRating.id ? updatedRatingWithUser : r
                     ),
                     originalRatings: prev.originalRatings.map(r => 
-                        r.id === editingRating.id ? {...updatedRating, is_edited: true} : r
+                        r.id === editingRating.id ? updatedRatingWithUser : r
                     )
                 }));
+
+                // If this rating is currently selected in ReviewDetail, update it
+                if (selectedReview?.id === editingRating.id) {
+                    setSelectedReview(updatedRatingWithUser);
+                }
+
                 toast.success('Rating updated successfully!');
             } else {
+                // Handle new rating creation (existing code)
                 const response = await addRating(ratingData);
                 setSelectedSupplement(prev => ({
                     ...prev,
@@ -274,7 +289,7 @@ function SearchableSupplementList() {
                 }));
                 toast.success('Rating added successfully!');
             }
-            
+
             setRatingScore(1);
             setRatingComment('');
             setRatingDosage('');
