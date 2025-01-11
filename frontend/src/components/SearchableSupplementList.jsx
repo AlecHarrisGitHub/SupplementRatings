@@ -248,7 +248,7 @@ function SearchableSupplementList() {
                 conditions: selectedConditions.map(condition => condition.id),
                 score: ratingScore,
                 comment: ratingComment || null,
-                dosage: ratingDosage || null,
+                dosage: ratingDosage ? `${ratingDosage} ${selectedSupplement.dosage_unit || 'mg'}` : null,
                 brands: ratingBrands || null,
                 is_edited: editingRating ? true : false
             };
@@ -789,14 +789,19 @@ function SearchableSupplementList() {
                             )}
                         </Box>
 
-                        <TextField
-                            label="Dosage (optional)"
-                            value={ratingDosage}
-                            onChange={(e) => setRatingDosage(e.target.value)}
-                            fullWidth
-                            sx={{ mb: 2 }}
-                            placeholder="e.g., 500mg twice daily"
-                        />
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <TextField
+                                label="Dosage"
+                                type="number"
+                                value={ratingDosage}
+                                onChange={(e) => setRatingDosage(e.target.value)}
+                                sx={{ width: '150px' }}
+                                placeholder="e.g., 500"
+                            />
+                            <Typography sx={{ ml: 1 }}>
+                                {selectedSupplement?.dosage_unit || 'mg'}
+                            </Typography>
+                        </Box>
 
                         <TextField
                             label="Brands Used (optional)"
