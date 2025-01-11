@@ -192,7 +192,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                         </Typography>
                         {rating.dosage && (
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Dosage: {rating.dosage}
+                                Dosage: {rating.dosage.replace(/\s+/g, '')}
                             </Typography>
                         )}
                         {rating.brands && (
