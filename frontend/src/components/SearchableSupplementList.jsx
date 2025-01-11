@@ -244,7 +244,8 @@ function SearchableSupplementList() {
         setRatingScore(rating.score);
         setRatingComment(rating.comment || '');
         setRatingDosage(rating.dosage || '');
-        setSelectedBrand(rating.brands ? brands.find(b => b.name === rating.brands) : null);
+        setRatingBrands(rating.brands || '');
+        setSelectedBrand(rating.brands ? { name: rating.brands } : null);
         setRatingDialogOpen(true);
     };
 
@@ -258,6 +259,7 @@ function SearchableSupplementList() {
                 comment: ratingComment,
                 dosage: ratingDosage ? `${ratingDosage}` : null,
                 brands: selectedBrand ? selectedBrand.name : null,
+                is_edited: editingRating ? true : false
             };
 
             if (editingRating) {
@@ -275,12 +277,13 @@ function SearchableSupplementList() {
             setRatingDosage('');
             setSelectedBrand(null);
             setRatingDialogOpen(false);
+            setEditingRating(null);
             
             // Refresh supplement details
             await handleSupplementClick(selectedSupplement.id);
         } catch (error) {
             console.error('Error submitting rating:', error);
-            toast.error('Failed to submit rating');
+            toast.error(error.userMessage || 'Failed to submit rating');
         }
     };
 
