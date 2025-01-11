@@ -19,7 +19,10 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
 
     const handleEdit = async () => {
         try {
-            await onEdit(comment.id, editedContent);
+            const updatedComment = await onEdit(comment.id, editedContent);
+            // Immediately update the comment content
+            comment.content = editedContent;
+            comment.is_edited = true;
             setIsEditing(false);
         } catch (error) {
             toast.error('Failed to update comment');
@@ -107,15 +110,30 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
 
         try {
-            await addComment({
+            const response = await addComment({
                 rating: selectedComment ? null : rating.id,
                 parent_comment: selectedComment ? selectedComment.id : null,
                 content: newComment.trim()
             });
             
             setNewComment('');
-            // Call the parent's refresh function without showing toast
-            await onCommentAdded();
+            
+            if (selectedComment) {
+                // If replying to a comment, update both the selected comment and the rating's comments
+                const updatedReplies = [...(selectedComment.replies || []), response];
+                const updatedComment = { ...selectedComment, replies: updatedReplies };
+                setSelectedComment(updatedComment);
+                
+                // Update the comment in rating.comments array
+                rating.comments = rating.comments.map(c => 
+                    c.id === selectedComment.id ? updatedComment : c
+                );
+            } else {
+                // If commenting on the rating, update the comments
+                rating.comments = [...(rating.comments || []), response];
+            }
+            
+            onCommentAdded();
         } catch (error) {
             console.error('Error adding comment:', error);
             toast.error('Failed to add comment');
@@ -123,7 +141,14 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     };
 
     const handleCommentClick = (comment) => {
-        setSelectedComment(comment);
+        // Always get the latest version of the comment from the rating's comments
+        const updatedComment = rating.comments.find(c => c.id === comment.id);
+        if (updatedComment) {
+            setSelectedComment(updatedComment);
+        } else {
+            // If we can't find the comment in rating.comments (shouldn't happen), use the original
+            setSelectedComment(comment);
+        }
     };
 
     const currentItem = selectedComment || rating;
@@ -205,6 +230,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                     console.log('Editing comment. Current user:', user); // Debug log
                                     const updatedComment = await updateComment(commentId, content);
                                     if (isShowingComment) {
+                                        // If editing a reply
                                         const updatedReplies = currentItem.replies.map(c => 
                                             c.id === commentId ? {...updatedComment, is_edited: true} : c
                                         );
@@ -213,11 +239,16 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                             replies: updatedReplies
                                         }));
                                     } else {
-                                        rating.comments = rating.comments.map(c => 
+                                        // If editing a main comment
+                                        const updatedComments = rating.comments.map(c => 
                                             c.id === commentId ? {...updatedComment, is_edited: true} : c
                                         );
+                                        rating.comments = updatedComments;
+                                        // Force a re-render by creating a new array
+                                        setSelectedComment(null); // Reset selected comment to trigger re-render
                                     }
-                                    await onCommentAdded();
+                                    // Still call the parent's refresh function but don't wait for it
+                                    onCommentAdded();
                                 } catch (error) {
                                     console.error('Error updating comment:', error);
                                     toast.error('Failed to update comment');
