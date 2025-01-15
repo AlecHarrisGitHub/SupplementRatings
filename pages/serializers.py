@@ -38,8 +38,8 @@ class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
         fields = ['id', 'user', 'supplement', 'conditions', 'condition_names', 
-                 'score', 'comment', 'dosage', 'brands', 'created_at', 
-                 'comments', 'is_edited']
+                 'score', 'comment', 'dosage', 'dosage_frequency', 'frequency_unit',
+                 'brands', 'created_at', 'comments', 'is_edited']
         read_only_fields = ['user']
 
     def get_condition_names(self, obj):

@@ -17,7 +17,9 @@ import {
     Autocomplete,
     Drawer,
     IconButton,
-    Skeleton
+    Skeleton,
+    Select,
+    MenuItem
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -83,6 +85,8 @@ function SearchableSupplementList() {
     const [ratingBrands, setRatingBrands] = useState('');
     const [brands, setBrands] = useState([]);
     const [selectedBrand, setSelectedBrand] = useState(null);
+    const [ratingDosageFrequency, setRatingDosageFrequency] = useState('');
+    const [ratingFrequencyUnit, setRatingFrequencyUnit] = useState('');
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -271,6 +275,8 @@ function SearchableSupplementList() {
                 score: ratingScore,
                 comment: ratingComment,
                 dosage: ratingDosage ? `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}` : null,
+                dosage_frequency: ratingDosageFrequency || null,
+                frequency_unit: ratingFrequencyUnit || null,
                 brands: selectedBrand ? selectedBrand.name : null,
                 is_edited: editingRating ? true : false
             };
@@ -381,9 +387,11 @@ function SearchableSupplementList() {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Conditions: {rating.condition_names.join(', ')}
             </Typography>
-            {rating.dosage && (
+            {(rating.dosage || rating.dosage_frequency) && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Dosage: {rating.dosage.replace(/\s+/g, '')}
+                    Dosage: {rating.dosage?.replace(/\s+/g, '')}
+                    {rating.dosage_frequency && rating.frequency_unit && 
+                        ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
                 </Typography>
             )}
             {rating.brands && (
@@ -715,9 +723,11 @@ function SearchableSupplementList() {
                                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                                             Conditions: {rating.condition_names.join(', ')}
                                         </Typography>
-                                        {rating.dosage && (
+                                        {(rating.dosage || rating.dosage_frequency) && (
                                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                Dosage: {rating.dosage.replace(/\s+/g, '')}
+                                                Dosage: {rating.dosage?.replace(/\s+/g, '')}
+                                                {rating.dosage_frequency && rating.frequency_unit && 
+                                                    ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
                                             </Typography>
                                         )}
                                         {rating.brands && (
@@ -800,7 +810,7 @@ function SearchableSupplementList() {
                             )}
                         </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                             <TextField
                                 label="Dosage"
                                 type="number"
@@ -812,6 +822,28 @@ function SearchableSupplementList() {
                             <Typography sx={{ ml: 1 }}>
                                 {selectedSupplement?.dosage_unit || 'mg'}
                             </Typography>
+                            <TextField
+                                label="Frequency"
+                                type="number"
+                                value={ratingDosageFrequency}
+                                onChange={(e) => setRatingDosageFrequency(e.target.value)}
+                                sx={{ width: '100px' }}
+                                placeholder="e.g., 2"
+                            />
+                            <Select
+                                value={ratingFrequencyUnit}
+                                onChange={(e) => setRatingFrequencyUnit(e.target.value)}
+                                sx={{ width: '150px' }}
+                                displayEmpty
+                            >
+                                <MenuItem value="">
+                                    <em>Select unit</em>
+                                </MenuItem>
+                                <MenuItem value="day">Per Day</MenuItem>
+                                <MenuItem value="week">Per Week</MenuItem>
+                                <MenuItem value="month">Per Month</MenuItem>
+                                <MenuItem value="year">Per Year</MenuItem>
+                            </Select>
                         </Box>
 
                         <Autocomplete

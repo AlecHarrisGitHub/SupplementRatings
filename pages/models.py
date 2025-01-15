@@ -21,12 +21,26 @@ class Condition(models.Model):
 
 
 class Rating(models.Model):
+    FREQUENCY_CHOICES = [
+        ('day', 'Per Day'),
+        ('week', 'Per Week'),
+        ('month', 'Per Month'),
+        ('year', 'Per Year')
+    ]
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     supplement = models.ForeignKey(Supplement, related_name='ratings', on_delete=models.CASCADE)
     conditions = models.ManyToManyField(Condition, related_name='ratings')
     score = models.IntegerField(default=0)
     comment = models.TextField(blank=True, null=True)
     dosage = models.CharField(max_length=100, blank=True, null=True)
+    dosage_frequency = models.IntegerField(blank=True, null=True)
+    frequency_unit = models.CharField(
+        max_length=10,
+        choices=FREQUENCY_CHOICES,
+        blank=True,
+        null=True
+    )
     brands = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
