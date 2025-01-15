@@ -213,6 +213,11 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                     <Box sx={{ mb: 3 }}>
                         <Typography variant="subtitle1" fontWeight="bold">
                             {selectedComment.user.username}
+                            {selectedComment.is_edited && (
+                                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                    (edited)
+                                </Typography>
+                            )}
                         </Typography>
                         <Typography variant="body1">
                             {selectedComment.content}
