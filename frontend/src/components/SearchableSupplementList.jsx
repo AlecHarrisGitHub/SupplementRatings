@@ -243,9 +243,22 @@ function SearchableSupplementList() {
         setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
         setRatingScore(rating.score);
         setRatingComment(rating.comment || '');
-        setRatingDosage(rating.dosage || '');
-        setRatingBrands(rating.brands || '');
-        setSelectedBrand(rating.brands ? { name: rating.brands } : null);
+        
+        // Handle dosage - strip the unit if present
+        if (rating.dosage) {
+            const dosageValue = rating.dosage.replace(new RegExp(`${selectedSupplement.dosage_unit}$`), '').trim();
+            setRatingDosage(dosageValue);
+        } else {
+            setRatingDosage('');
+        }
+        
+        // Handle brand
+        if (rating.brands) {
+            setSelectedBrand({ id: null, name: rating.brands });
+        } else {
+            setSelectedBrand(null);
+        }
+        
         setRatingDialogOpen(true);
     };
 
@@ -441,6 +454,9 @@ function SearchableSupplementList() {
         setRatingScore(1);
         setRatingComment('');
         setSelectedConditions([]);
+        // Reset dosage and brand fields
+        setRatingDosage('');
+        setSelectedBrand(null);
     };
 
     return (
