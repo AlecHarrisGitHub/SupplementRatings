@@ -34,12 +34,13 @@ class Rating(models.Model):
     score = models.IntegerField(default=0)
     comment = models.TextField(blank=True, null=True)
     dosage = models.CharField(max_length=100, blank=True, null=True)
-    dosage_frequency = models.IntegerField(blank=True, null=True)
+    dosage_frequency = models.IntegerField(blank=True, null=True, default=1)
     frequency_unit = models.CharField(
         max_length=10,
         choices=FREQUENCY_CHOICES,
         blank=True,
-        null=True
+        null=True,
+        default='day'
     )
     brands = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
