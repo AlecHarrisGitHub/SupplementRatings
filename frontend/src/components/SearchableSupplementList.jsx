@@ -257,7 +257,7 @@ function SearchableSupplementList() {
                 conditions: selectedConditions.map(c => c.id),
                 score: ratingScore,
                 comment: ratingComment,
-                dosage: ratingDosage ? `${ratingDosage}` : null,
+                dosage: ratingDosage ? `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}` : null,
                 brands: selectedBrand ? selectedBrand.name : null,
                 is_edited: editingRating ? true : false
             };
