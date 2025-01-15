@@ -85,8 +85,8 @@ function SearchableSupplementList() {
     const [ratingBrands, setRatingBrands] = useState('');
     const [brands, setBrands] = useState([]);
     const [selectedBrand, setSelectedBrand] = useState(null);
-    const [ratingDosageFrequency, setRatingDosageFrequency] = useState('');
-    const [ratingFrequencyUnit, setRatingFrequencyUnit] = useState('');
+    const [ratingDosageFrequency, setRatingDosageFrequency] = useState('1');
+    const [ratingFrequencyUnit, setRatingFrequencyUnit] = useState('day');
 
     // Debounced search function
     const debouncedSearch = useCallback(
