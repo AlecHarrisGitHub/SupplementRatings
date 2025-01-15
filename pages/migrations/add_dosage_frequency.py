@@ -2,7 +2,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('pages', '0001_supplement_dosage_unit'),
+        ('pages', '0002_brand'),
     ]
 
     operations = [
@@ -13,7 +13,17 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='rating',
-            name='dosage_period',
-            field=models.CharField(blank=True, max_length=20, null=True),
+            name='frequency_unit',
+            field=models.CharField(
+                max_length=10,
+                choices=[
+                    ('day', 'Per Day'),
+                    ('week', 'Per Week'),
+                    ('month', 'Per Month'),
+                    ('year', 'Per Year')
+                ],
+                blank=True,
+                null=True
+            ),
         ),
     ] 

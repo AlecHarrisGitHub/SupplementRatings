@@ -190,9 +190,11 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                             Conditions: {rating.condition_names.join(', ')}
                         </Typography>
-                        {rating.dosage && (
+                        {(rating.dosage || rating.dosage_frequency) && (
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Dosage: {rating.dosage.replace(/\s+/g, '')}
+                                Dosage: {rating.dosage?.replace(/\s+/g, '')}
+                                {rating.dosage_frequency && rating.frequency_unit && 
+                                    ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
                             </Typography>
                         )}
                         {rating.brands && (
