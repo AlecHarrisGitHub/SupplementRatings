@@ -21,13 +21,14 @@ import {
     Select,
     MenuItem
 } from '@mui/material';
-import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating } from '../services/api';
+import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ReviewDetail from './ReviewDetail';
 import debounce from 'lodash/debounce';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 
 const ConditionTag = ({ condition, onRemove }) => (
     <Box
@@ -601,6 +602,17 @@ function SearchableSupplementList() {
                     )}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton 
+                        onClick={(e) => handleUpvoteRating(e, rating)}
+                        color={rating.has_upvoted ? "primary" : "default"}
+                        disabled={!user || rating.user.id === user?.id}
+                        size="small"
+                    >
+                        <ThumbUpIcon fontSize="small" />
+                        <Typography variant="caption" sx={{ ml: 0.5 }}>
+                            {rating.upvotes}
+                        </Typography>
+                    </IconButton>
                     {user && user.id === rating.user.id && (
                         <Button 
                             size="small" 
@@ -696,6 +708,39 @@ function SearchableSupplementList() {
         // Reset dosage and brand fields
         setRatingDosage('');
         setSelectedBrand(null);
+    };
+
+    const handleUpvoteRating = async (e, rating) => {
+        e.stopPropagation(); // Prevent clicking into the review
+        if (!user) {
+            toast.error('Please log in to upvote');
+            return;
+        }
+        if (rating.user.id === user.id) {
+            toast.error('You cannot upvote your own rating');
+            return;
+        }
+
+        try {
+            const response = await upvoteRating(rating.id);
+            // Update the rating in the list
+            const updatedRatings = selectedSupplement.ratings.map(r => {
+                if (r.id === rating.id) {
+                    return {
+                        ...r,
+                        upvotes: response.upvotes,
+                        has_upvoted: !r.has_upvoted
+                    };
+                }
+                return r;
+            });
+            setSelectedSupplement(prev => ({
+                ...prev,
+                ratings: updatedRatings
+            }));
+        } catch (error) {
+            toast.error('Failed to upvote rating');
+        }
     };
 
     return (
@@ -903,6 +948,17 @@ function SearchableSupplementList() {
                                                 )}
                                             </Typography>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <IconButton 
+                                                    onClick={(e) => handleUpvoteRating(e, rating)}
+                                                    color={rating.has_upvoted ? "primary" : "default"}
+                                                    disabled={!user || rating.user.id === user?.id}
+                                                    size="small"
+                                                >
+                                                    <ThumbUpIcon fontSize="small" />
+                                                    <Typography variant="caption" sx={{ ml: 0.5 }}>
+                                                        {rating.upvotes}
+                                                    </Typography>
+                                                </IconButton>
                                                 {user && user.id === rating.user.id && (
                                                     <Button 
                                                         size="small" 
@@ -950,6 +1006,25 @@ function SearchableSupplementList() {
                                 onCommentAdded={async (newComment) => {
                                     await refreshSupplementData();
                                     toast.success('Comment added successfully!');
+                                }}
+                                onUpvoteRating={async (rating) => {
+                                    const response = await upvoteRating(rating.id);
+                                    // Update the rating in both the detail view and the list
+                                    const updatedRating = {
+                                        ...rating,
+                                        upvotes: response.upvotes,
+                                        has_upvoted: !rating.has_upvoted
+                                    };
+                                    setSelectedReview(updatedRating);
+                                    
+                                    // Also update in the main list
+                                    const updatedRatings = selectedSupplement.ratings.map(r => 
+                                        r.id === rating.id ? updatedRating : r
+                                    );
+                                    setSelectedSupplement(prev => ({
+                                        ...prev,
+                                        ratings: updatedRatings
+                                    }));
                                 }}
                             />
                         )}

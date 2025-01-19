@@ -8,8 +8,10 @@ import {
     Paper,
     List,
     ListItem,
+    IconButton,
 } from '@mui/material';
-import { addComment, updateComment } from '../services/api';
+import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import { addComment, updateComment, upvoteRating, upvoteComment } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
@@ -99,6 +101,60 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [newComment, setNewComment] = useState('');
     const { isAuthenticated, user } = useAuth();
     const [selectedComment, setSelectedComment] = useState(null);
+    const [localRating, setLocalRating] = useState(rating);
+
+    const handleUpvoteRating = async () => {
+        if (!isAuthenticated) {
+            toast.error('Please log in to upvote');
+            return;
+        }
+        if (localRating.user.id === user.id) {
+            toast.error('You cannot upvote your own rating');
+            return;
+        }
+
+        try {
+            const response = await upvoteRating(localRating.id);
+            setLocalRating(prev => ({
+                ...prev,
+                upvotes: response.upvotes,
+                has_upvoted: !prev.has_upvoted
+            }));
+        } catch (error) {
+            toast.error('Failed to upvote rating');
+        }
+    };
+
+    const handleUpvoteComment = async (comment) => {
+        if (!isAuthenticated) {
+            toast.error('Please log in to upvote');
+            return;
+        }
+        if (comment.user.id === user.id) {
+            toast.error('You cannot upvote your own comment');
+            return;
+        }
+
+        try {
+            const response = await upvoteComment(comment.id);
+            const updatedComments = localRating.comments.map(c => {
+                if (c.id === comment.id) {
+                    return {
+                        ...c,
+                        upvotes: response.upvotes,
+                        has_upvoted: !c.has_upvoted
+                    };
+                }
+                return c;
+            });
+            setLocalRating(prev => ({
+                ...prev,
+                comments: updatedComments
+            }));
+        } catch (error) {
+            toast.error('Failed to upvote comment');
+        }
+    };
 
     console.log('Rating in ReviewDetail:', rating); // Debug log
 
@@ -168,43 +224,53 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                     <Box sx={{ mb: 3 }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Typography variant="subtitle1" fontWeight="bold">
-                                {rating.user.username}
-                                {rating.is_edited && (
+                                {localRating.user.username}
+                                {localRating.is_edited && (
                                     <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                                         (edited)
                                     </Typography>
                                 )}
                             </Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                {user && user.id === rating.user.id && (
+                                <IconButton 
+                                    onClick={handleUpvoteRating}
+                                    color={localRating.has_upvoted ? "primary" : "default"}
+                                    disabled={!isAuthenticated || localRating.user.id === user?.id}
+                                >
+                                    <ThumbUpIcon />
+                                    <Typography variant="caption" sx={{ ml: 0.5 }}>
+                                        {localRating.upvotes}
+                                    </Typography>
+                                </IconButton>
+                                {user && user.id === localRating.user.id && (
                                     <Button 
                                         size="small"
-                                        onClick={() => onEditRating && onEditRating(rating)}
+                                        onClick={() => onEditRating && onEditRating(localRating)}
                                     >
                                         Edit
                                     </Button>
                                 )}
-                                <MuiRating value={rating.score} readOnly />
+                                <MuiRating value={localRating.score} readOnly />
                             </Box>
                         </Box>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Conditions: {rating.condition_names.join(', ')}
+                            Conditions: {localRating.condition_names.join(', ')}
                         </Typography>
-                        {(rating.dosage || rating.dosage_frequency) && (
+                        {(localRating.dosage || localRating.dosage_frequency) && (
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Dosage: {rating.dosage?.replace(/\s+/g, '')}
-                                {rating.dosage_frequency && rating.frequency_unit && 
-                                    ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
+                                Dosage: {localRating.dosage?.replace(/\s+/g, '')}
+                                {localRating.dosage_frequency && localRating.frequency_unit && 
+                                    ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}`}
                             </Typography>
                         )}
-                        {rating.brands && (
+                        {localRating.brands && (
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Brands Used: {rating.brands}
+                                Brands Used: {localRating.brands}
                             </Typography>
                         )}
-                        {rating.comment && (
+                        {localRating.comment && (
                             <Typography variant="body1" sx={{ mt: 2 }}>
-                                {rating.comment}
+                                {localRating.comment}
                             </Typography>
                         )}
                     </Box>
