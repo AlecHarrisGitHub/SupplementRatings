@@ -15,20 +15,24 @@ import { addComment, updateComment, upvoteRating, upvoteComment } from '../servi
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 
-function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser }) {
+function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser, onUpvote }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);
 
     const handleEdit = async () => {
         try {
             const updatedComment = await onEdit(comment.id, editedContent);
-            // Immediately update the comment content
             comment.content = editedContent;
             comment.is_edited = true;
             setIsEditing(false);
         } catch (error) {
             toast.error('Failed to update comment');
         }
+    };
+
+    const handleUpvoteClick = (e) => {
+        e.stopPropagation(); // Prevent comment click event
+        onUpvote(comment);
     };
 
     return (
@@ -49,14 +53,32 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                 }
             }}
         >
-            <Typography variant="subtitle2" fontWeight="bold">
-                {comment.user.username}
-                {comment.is_edited && (
-                    <Typography component="span" variant="caption" color="text.secondary">
-                        {" (edited)"}
+            <Box sx={{ 
+                width: '100%',
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'flex-start'
+            }}>
+                <Typography variant="subtitle2" fontWeight="bold">
+                    {comment.user.username}
+                    {comment.is_edited && (
+                        <Typography component="span" variant="caption" color="text.secondary">
+                            {" (edited)"}
+                        </Typography>
+                    )}
+                </Typography>
+                <IconButton 
+                    onClick={handleUpvoteClick}
+                    color={comment.has_upvoted ? "primary" : "default"}
+                    size="small"
+                    disabled={!currentUser || comment.user.id === currentUser.id}
+                >
+                    <ThumbUpIcon fontSize="small" />
+                    <Typography variant="caption" sx={{ ml: 0.5 }}>
+                        {comment.upvotes}
                     </Typography>
-                )}
-            </Typography>
+                </IconButton>
+            </Box>
             
             {isEditing ? (
                 <Box onClick={(e) => e.stopPropagation()} sx={{ width: '100%', mt: 1 }}>
@@ -137,20 +159,39 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
         try {
             const response = await upvoteComment(comment.id);
-            const updatedComments = localRating.comments.map(c => {
-                if (c.id === comment.id) {
-                    return {
-                        ...c,
-                        upvotes: response.upvotes,
-                        has_upvoted: !c.has_upvoted
-                    };
-                }
-                return c;
-            });
-            setLocalRating(prev => ({
-                ...prev,
-                comments: updatedComments
-            }));
+            // Update the comment's upvote count in the local state
+            const updateComments = (comments) => {
+                return comments.map(c => {
+                    if (c.id === comment.id) {
+                        return {
+                            ...c,
+                            upvotes: response.upvotes,
+                            has_upvoted: !c.has_upvoted
+                        };
+                    }
+                    if (c.replies) {
+                        return {
+                            ...c,
+                            replies: updateComments(c.replies)
+                        };
+                    }
+                    return c;
+                });
+            };
+
+            if (selectedComment) {
+                // Update replies if we're viewing a comment
+                setSelectedComment(prev => ({
+                    ...prev,
+                    replies: updateComments(prev.replies || [])
+                }));
+            } else {
+                // Update main comments if we're viewing the rating
+                setLocalRating(prev => ({
+                    ...prev,
+                    comments: updateComments(prev.comments)
+                }));
+            }
         } catch (error) {
             toast.error('Failed to upvote comment');
         }
@@ -328,6 +369,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                 }
                             }}
                             currentUser={user}
+                            onUpvote={handleUpvoteComment}
                         />
                     ))}
                 </List>
