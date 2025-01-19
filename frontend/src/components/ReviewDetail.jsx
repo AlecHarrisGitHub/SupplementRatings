@@ -179,19 +179,36 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                 });
             };
 
+            // Update both the local rating and the parent rating
+            const updatedComments = updateComments(localRating.comments);
+            
+            // Update local rating state
+            setLocalRating(prev => ({
+                ...prev,
+                comments: updatedComments
+            }));
+
+            // Update selected comment if we're viewing replies
             if (selectedComment) {
-                // Update replies if we're viewing a comment
-                setSelectedComment(prev => ({
-                    ...prev,
-                    replies: updateComments(prev.replies || [])
-                }));
-            } else {
-                // Update main comments if we're viewing the rating
-                setLocalRating(prev => ({
-                    ...prev,
-                    comments: updateComments(prev.comments)
-                }));
+                if (selectedComment.id === comment.id) {
+                    // If the upvoted comment is the selected comment
+                    setSelectedComment(prev => ({
+                        ...prev,
+                        upvotes: response.upvotes,
+                        has_upvoted: !prev.has_upvoted
+                    }));
+                } else {
+                    // If the upvoted comment is in the replies
+                    setSelectedComment(prev => ({
+                        ...prev,
+                        replies: updateComments(prev.replies || [])
+                    }));
+                }
             }
+
+            // Update the parent rating's comments
+            rating.comments = updatedComments;
+
         } catch (error) {
             toast.error('Failed to upvote comment');
         }
