@@ -258,10 +258,28 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         // Always get the latest version of the comment from the rating's comments
         const updatedComment = rating.comments.find(c => c.id === comment.id);
         if (updatedComment) {
-            setSelectedComment(updatedComment);
+            setSelectedComment({
+                ...updatedComment,
+                upvotes: comment.upvotes,
+                has_upvoted: comment.has_upvoted,
+                replies: (updatedComment.replies || []).map(reply => ({
+                    ...reply,
+                    upvotes: reply.upvotes || 0,
+                    has_upvoted: reply.has_upvoted || false
+                }))
+            });
         } else {
             // If we can't find the comment in rating.comments (shouldn't happen), use the original
-            setSelectedComment(comment);
+            setSelectedComment({
+                ...comment,
+                upvotes: comment.upvotes || 0,
+                has_upvoted: comment.has_upvoted || false,
+                replies: (comment.replies || []).map(reply => ({
+                    ...reply,
+                    upvotes: reply.upvotes || 0,
+                    has_upvoted: reply.has_upvoted || false
+                }))
+            });
         }
     };
 
@@ -335,14 +353,26 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                 ) : (
                     // Show Selected Comment
                     <Box sx={{ mb: 3 }}>
-                        <Typography variant="subtitle1" fontWeight="bold">
-                            {selectedComment.user.username}
-                            {selectedComment.is_edited && (
-                                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                    (edited)
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="subtitle1" fontWeight="bold">
+                                {selectedComment.user.username}
+                                {selectedComment.is_edited && (
+                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                        (edited)
+                                    </Typography>
+                                )}
+                            </Typography>
+                            <IconButton 
+                                onClick={() => handleUpvoteComment(selectedComment)}
+                                color={selectedComment.has_upvoted ? "primary" : "default"}
+                                disabled={!isAuthenticated || selectedComment.user.id === user?.id}
+                            >
+                                <ThumbUpIcon />
+                                <Typography variant="caption" sx={{ ml: 0.5 }}>
+                                    {selectedComment.upvotes}
                                 </Typography>
-                            )}
-                        </Typography>
+                            </IconButton>
+                        </Box>
                         <Typography variant="body1">
                             {selectedComment.content}
                         </Typography>
