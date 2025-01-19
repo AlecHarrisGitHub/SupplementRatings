@@ -1,6 +1,7 @@
 // frontend/src/services/api.js
 
 import axios from 'axios';
+import { getAuthToken } from '../utils/auth';
 
 // Create an axios instance with a base URL
 const API = axios.create({
@@ -49,6 +50,33 @@ API.interceptors.response.use(
 // Add caching to the API service
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+// If you're using Create React App, use REACT_APP_ prefix
+const API_BASE_URL = '/api';  // Since we're proxying requests through the development server
+
+const authenticatedFetch = async (endpoint, options = {}) => {
+    const token = getAuthToken();
+    if (!token) {
+        throw new Error('No authentication token found');
+    }
+
+    const headers = {
+        'Authorization': `Token ${token}`,
+        'Content-Type': 'application/json',
+        ...options.headers
+    };
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response;
+};
 
 export const getSupplements = async (params = {}, skipCache = false) => {
     const cacheKey = JSON.stringify(params);
@@ -284,6 +312,26 @@ export const getBrands = async () => {
         return response.data;
     } catch (error) {
         console.error('Error fetching brands:', error);
+        throw error;
+    }
+};
+
+export const upvoteRating = async (ratingId) => {
+    try {
+        const response = await API.post(`ratings/${ratingId}/upvote/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error upvoting rating:', error);
+        throw error;
+    }
+};
+
+export const upvoteComment = async (commentId) => {
+    try {
+        const response = await API.post(`comments/${commentId}/upvote/`);
+        return response.data;
+    } catch (error) {
+        console.error('Error upvoting comment:', error);
         throw error;
     }
 };

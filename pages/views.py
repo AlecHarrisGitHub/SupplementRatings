@@ -2,7 +2,7 @@ from rest_framework import viewsets, serializers
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
-from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken, Brand
+from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken, Brand, UserUpvote
 from .serializers import (
     SupplementSerializer, 
     RatingSerializer, 
@@ -13,7 +13,7 @@ from .serializers import (
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
 from rest_framework.permissions import IsAdminUser, AllowAny
 import pandas as pd
 from django.db import transaction
@@ -21,6 +21,7 @@ from rest_framework import status
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
+from django.db import IntegrityError
 
 class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
@@ -111,6 +112,27 @@ class RatingViewSet(viewsets.ModelViewSet):
 
         serializer.save(user=self.request.user)
 
+    @action(detail=True, methods=['POST'])
+    def upvote(self, request, pk=None):
+        rating = self.get_object()
+        
+        # Don't allow self-upvoting
+        if rating.user == request.user:
+            return Response({'error': 'You cannot upvote your own rating'}, status=400)
+
+        try:
+            # Try to create upvote
+            UserUpvote.objects.create(user=request.user, rating=rating)
+            rating.upvotes += 1
+            rating.save()
+            return Response({'upvotes': rating.upvotes})
+        except IntegrityError:
+            # User has already upvoted, so remove the upvote
+            UserUpvote.objects.filter(user=request.user, rating=rating).delete()
+            rating.upvotes = max(0, rating.upvotes - 1)  # Ensure we don't go below 0
+            rating.save()
+            return Response({'upvotes': rating.upvotes})
+
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
@@ -128,6 +150,27 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+    @action(detail=True, methods=['POST'])
+    def upvote(self, request, pk=None):
+        comment = self.get_object()
+        
+        # Don't allow self-upvoting
+        if comment.user == request.user:
+            return Response({'error': 'You cannot upvote your own comment'}, status=400)
+
+        try:
+            # Try to create upvote
+            UserUpvote.objects.create(user=request.user, comment=comment)
+            comment.upvotes += 1
+            comment.save()
+            return Response({'upvotes': comment.upvotes})
+        except IntegrityError:
+            # User has already upvoted, so remove the upvote
+            UserUpvote.objects.filter(user=request.user, comment=comment).delete()
+            comment.upvotes = max(0, comment.upvotes - 1)  # Ensure we don't go below 0
+            comment.save()
+            return Response({'upvotes': comment.upvotes})
 
 class ConditionViewSet(viewsets.ModelViewSet):
     serializer_class = ConditionSerializer

@@ -45,6 +45,7 @@ class Rating(models.Model):
     brands = models.CharField(max_length=200, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
+    upvotes = models.IntegerField(default=0)
 
     class Meta:
         unique_together = ('user', 'supplement')
@@ -60,6 +61,7 @@ class Comment(models.Model):
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
+    upvotes = models.IntegerField(default=0)
 
     def __str__(self):
         if self.rating:
@@ -89,3 +91,21 @@ class Brand(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class UserUpvote(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.ForeignKey(Rating, on_delete=models.CASCADE, null=True, blank=True)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [
+            ('user', 'rating'),
+            ('user', 'comment')
+        ]
+
+    def __str__(self):
+        if self.rating:
+            return f"{self.user.username} upvoted rating {self.rating.id}"
+        return f"{self.user.username} upvoted comment {self.comment.id}"
