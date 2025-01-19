@@ -656,15 +656,31 @@ function SearchableSupplementList() {
                                     'No ratings yet'
                                 )}
                             </Typography>
-                            {user && (selectedSupplement.ratings.length === 0 || user.id !== selectedSupplement.ratings[0]?.user?.id) && (
-                                <Button
-                                    startIcon={<AddIcon />}
-                                    variant="contained"
-                                    onClick={() => setRatingDialogOpen(true)}
-                                    sx={{ mt: 1 }}
-                                >
-                                    Add Rating
-                                </Button>
+                            {user && (
+                                <>
+                                    {selectedSupplement.ratings.length === 0 && (
+                                        <Button
+                                            startIcon={<AddIcon />}
+                                            variant="contained"
+                                            onClick={() => setRatingDialogOpen(true)}
+                                            sx={{ mt: 1 }}
+                                        >
+                                            Add Rating
+                                        </Button>
+                                    )}
+                                    {selectedSupplement.ratings.length > 0 && 
+                                     user.id === selectedSupplement.ratings[0]?.user?.id &&
+                                     !selectedSupplement.ratings[0]?.comment && (
+                                        <Button
+                                            startIcon={<AddIcon />}
+                                            variant="contained"
+                                            onClick={() => handleEditRating(selectedSupplement.ratings[0])}
+                                            sx={{ mt: 1 }}
+                                        >
+                                            Edit Rating
+                                        </Button>
+                                    )}
+                                </>
                             )}
                         </Box>
 
