@@ -27,53 +27,53 @@ class SupplementViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
-        # If this is a detail view (retrieving single supplement), return full queryset
         if self.action == 'retrieve':
             return Supplement.objects.all()
 
-        # For list view, apply pagination and filters
         queryset = Supplement.objects.all()
         name_search = self.request.query_params.get('name', None)
         conditions_search = self.request.query_params.get('conditions', None)
+        brands_search = self.request.query_params.get('brands', None)
+        dosage_search = self.request.query_params.get('dosage', None)
+        frequency_search = self.request.query_params.get('frequency', None)
         offset = int(self.request.query_params.get('offset', 0))
         limit = int(self.request.query_params.get('limit', 10))
 
         if name_search:
             queryset = queryset.filter(name__icontains=name_search)
 
+        filter_conditions = {}
         if conditions_search:
             condition_names = conditions_search.split(',')
+            filter_conditions['ratings__conditions__name__in'] = condition_names
+        
+        if brands_search:
+            brands = brands_search.split(',')
+            filter_conditions['ratings__brands__in'] = brands
+        
+        if dosage_search:
+            filter_conditions['ratings__dosage'] = dosage_search
+        
+        if frequency_search:
+            frequency_parts = frequency_search.split('_')
+            if len(frequency_parts) == 2:
+                filter_conditions['ratings__dosage_frequency'] = frequency_parts[0]
+                filter_conditions['ratings__frequency_unit'] = frequency_parts[1]
+
+        if filter_conditions:
+            queryset = queryset.filter(**filter_conditions)
             queryset = queryset.annotate(
-                has_condition_rating=Exists(
-                    Rating.objects.filter(
-                        supplement_id=OuterRef('id'),
-                        conditions__name__in=condition_names
-                    )
-                ),
-                avg_rating=Avg(
-                    Case(
-                        When(
-                            ratings__conditions__name__in=condition_names,
-                            then='ratings__score'
-                        ),
-                        default=None,
-                        output_field=FloatField(),
-                    )
-                ),
-                rating_count=Count(
-                    'ratings',
-                    filter=Q(ratings__conditions__name__in=condition_names),
-                    distinct=True
-                )
-            ).order_by('-has_condition_rating', F('avg_rating').desc(nulls_last=True))
+                avg_rating=Avg('ratings__score'),
+                rating_count=Count('ratings', distinct=True),
+                has_filtered_rating=Value(True, output_field=BooleanField())
+            ).order_by('-has_filtered_rating', F('avg_rating').desc(nulls_last=True))
         else:
             queryset = queryset.annotate(
                 avg_rating=Avg('ratings__score'),
                 rating_count=Count('ratings', distinct=True),
-                has_condition_rating=Value(True, output_field=BooleanField())
+                has_filtered_rating=Value(True, output_field=BooleanField())
             ).order_by(F('avg_rating').desc(nulls_last=True))
 
-        # Only apply pagination for list view
         if self.action == 'list':
             return queryset[offset:offset + limit]
         return queryset
