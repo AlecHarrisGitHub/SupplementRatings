@@ -944,18 +944,19 @@ function SearchableSupplementList() {
                                     <MenuItem value="recent">Most Recent</MenuItem>
                                 </Select>
                             </Box>
-                            {user && selectedSupplement.ratings.length > 0 && 
-                             user.id === selectedSupplement.ratings[0]?.user?.id &&
-                             !selectedSupplement.ratings[0]?.comment && (
-                                <Button
-                                    startIcon={<AddIcon />}
-                                    variant="contained"
-                                    onClick={() => handleEditRating(selectedSupplement.ratings[0])}
-                                    sx={{ mt: 1 }}
-                                >
-                                    Edit Rating
-                                </Button>
-                            )}
+                            {user && selectedSupplement.ratings.map(rating => (
+                                rating.user.id === user.id && !rating.comment && (
+                                    <Button
+                                        key={rating.id}
+                                        startIcon={<AddIcon />}
+                                        variant="contained"
+                                        onClick={() => handleEditRating(rating)}
+                                        sx={{ mt: 1 }}
+                                    >
+                                        Edit Rating
+                                    </Button>
+                                )
+                            ))}
                         </Box>
 
                         <List>
