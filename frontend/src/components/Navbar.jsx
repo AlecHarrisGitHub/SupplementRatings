@@ -34,7 +34,7 @@ function Navbar() {
                                         component={Link} 
                                         to="/upload-conditions"
                                     >
-                                        Upload Conditions
+                                        Upload Purposes
                                     </Button>
                                     <Button 
                                         color="inherit" 

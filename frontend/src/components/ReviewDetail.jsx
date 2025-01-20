@@ -330,7 +330,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             </Box>
                         </Box>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Conditions: {localRating.condition_names.join(', ')}
+                            Purpose: {localRating.condition_names.join(', ')}
                         </Typography>
                         {(localRating.dosage || localRating.dosage_frequency) && (
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>

@@ -98,7 +98,7 @@ const FilterDrawer = ({
                 renderInput={(params) => (
                     <TextField
                         {...params}
-                        label="Filter by Conditions"
+                        label="Filter by Purpose"
                         margin="normal"
                     />
                 )}
@@ -1102,7 +1102,7 @@ function SearchableSupplementList() {
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Conditions *"
+                                    label="Purpose *"
                                     required
                                     margin="normal"
                                     error={selectedConditions.length === 0}
