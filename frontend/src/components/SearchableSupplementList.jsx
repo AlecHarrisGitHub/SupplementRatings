@@ -223,6 +223,9 @@ function SearchableSupplementList() {
     const [ratingDosageFrequency, setRatingDosageFrequency] = useState('1');
     const [ratingFrequencyUnit, setRatingFrequencyUnit] = useState('day');
 
+    // Add new state for sort order near the other state declarations
+    const [sortOrder, setSortOrder] = useState('likes'); // 'likes' or 'recent'
+
     // Debounced search function
     const debouncedSearch = useCallback(
         debounce((term) => {
@@ -743,6 +746,18 @@ function SearchableSupplementList() {
         }
     };
 
+    // Add this helper function before the return statement
+    const getSortedRatings = (ratings) => {
+        return [...ratings].sort((a, b) => {
+            if (sortOrder === 'likes') {
+                return b.upvotes - a.upvotes;
+            } else {
+                // Assuming ratings have a created_at or timestamp field
+                return new Date(b.created_at) - new Date(a.created_at);
+            }
+        });
+    };
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -875,44 +890,51 @@ function SearchableSupplementList() {
                         </Box>
 
                         <Box sx={{ mb: 3 }}>
-                            <Typography variant="subtitle1" gutterBottom>
-                                {selectedSupplement.ratings.length > 0 ? (
-                                    `Average Rating: ${(selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)} (${selectedSupplement.ratings.length} ${selectedSupplement.ratings.length === 1 ? 'rating' : 'ratings'})`
-                                ) : (
-                                    'No ratings yet'
-                                )}
-                            </Typography>
-                            {user && (
-                                <>
-                                    {selectedSupplement.ratings.length === 0 && (
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Typography variant="subtitle1">
+                                        {selectedSupplement.ratings.length > 0 ? (
+                                            `Average Rating: ${(selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)} (${selectedSupplement.ratings.length} ${selectedSupplement.ratings.length === 1 ? 'rating' : 'ratings'})`
+                                        ) : (
+                                            'No ratings yet'
+                                        )}
+                                    </Typography>
+                                    {user && !selectedSupplement.ratings.some(r => r.user.id === user.id) && (
                                         <Button
                                             startIcon={<AddIcon />}
                                             variant="contained"
                                             onClick={() => setRatingDialogOpen(true)}
-                                            sx={{ mt: 1 }}
                                         >
                                             Add Rating
                                         </Button>
                                     )}
-                                    {selectedSupplement.ratings.length > 0 && 
-                                     user.id === selectedSupplement.ratings[0]?.user?.id &&
-                                     !selectedSupplement.ratings[0]?.comment && (
-                                        <Button
-                                            startIcon={<AddIcon />}
-                                            variant="contained"
-                                            onClick={() => handleEditRating(selectedSupplement.ratings[0])}
-                                            sx={{ mt: 1 }}
-                                        >
-                                            Edit Rating
-                                        </Button>
-                                    )}
-                                </>
+                                </Box>
+                                <Select
+                                    size="small"
+                                    value={sortOrder}
+                                    onChange={(e) => setSortOrder(e.target.value)}
+                                >
+                                    <MenuItem value="likes">Most Liked</MenuItem>
+                                    <MenuItem value="recent">Most Recent</MenuItem>
+                                </Select>
+                            </Box>
+                            {user && selectedSupplement.ratings.length > 0 && 
+                             user.id === selectedSupplement.ratings[0]?.user?.id &&
+                             !selectedSupplement.ratings[0]?.comment && (
+                                <Button
+                                    startIcon={<AddIcon />}
+                                    variant="contained"
+                                    onClick={() => handleEditRating(selectedSupplement.ratings[0])}
+                                    sx={{ mt: 1 }}
+                                >
+                                    Edit Rating
+                                </Button>
                             )}
                         </Box>
 
                         <List>
                         {!selectedReview ? (
-                            selectedSupplement.ratings
+                            getSortedRatings(selectedSupplement.ratings)
                                 .filter(rating => rating.comment)
                                 .map((rating) => (
                                     <ListItem 
