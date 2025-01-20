@@ -37,6 +37,7 @@ class SupplementViewSet(viewsets.ModelViewSet):
         brands_search = self.request.query_params.get('brands', None)
         dosage_search = self.request.query_params.get('dosage', None)
         frequency_search = self.request.query_params.get('frequency', None)
+        sort_by = self.request.query_params.get('sort_by', 'highest_rating')
         offset = int(self.request.query_params.get('offset', 0))
         limit = int(self.request.query_params.get('limit', 10))
 
@@ -63,17 +64,19 @@ class SupplementViewSet(viewsets.ModelViewSet):
 
         if filter_conditions:
             queryset = queryset.filter(**filter_conditions)
-            queryset = queryset.annotate(
-                avg_rating=Avg('ratings__score'),
-                rating_count=Count('ratings', distinct=True),
-                has_filtered_rating=Value(True, output_field=BooleanField())
-            ).order_by('-has_filtered_rating', F('avg_rating').desc(nulls_last=True))
-        else:
-            queryset = queryset.annotate(
-                avg_rating=Avg('ratings__score'),
-                rating_count=Count('ratings', distinct=True),
-                has_filtered_rating=Value(True, output_field=BooleanField())
-            ).order_by(F('avg_rating').desc(nulls_last=True))
+
+        # Add annotations for sorting
+        queryset = queryset.annotate(
+            avg_rating=Avg('ratings__score'),
+            rating_count=Count('ratings', distinct=True),
+            has_filtered_rating=Value(True, output_field=BooleanField())
+        )
+
+        # Apply sorting
+        if sort_by == 'most_ratings':
+            queryset = queryset.order_by('-rating_count', '-avg_rating')
+        else:  # highest_rating
+            queryset = queryset.order_by(F('avg_rating').desc(nulls_last=True), '-rating_count')
 
         if self.action == 'list':
             return queryset[offset:offset + limit]
