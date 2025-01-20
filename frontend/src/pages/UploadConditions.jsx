@@ -5,7 +5,7 @@ import { Container, Typography } from '@mui/material';
 function UploadConditions() {
   return (
     <Container>
-      <Typography variant="h4" sx={{ my: 4 }}>Upload Conditions</Typography>
+      <Typography variant="h4" sx={{ my: 4 }}>Upload Purposes</Typography>
       <UploadCSV type="conditions" />
     </Container>
   );
