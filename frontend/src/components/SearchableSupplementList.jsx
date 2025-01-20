@@ -565,6 +565,7 @@ function SearchableSupplementList() {
         setSelectedFilterDosageUnit('mg');
         setSelectedFilterFrequency('');
         setSelectedFilterFrequencyUnit('day');
+        setSelectedSortBy('highest_rating');
         setAppliedFilterConditions([]);
         setAppliedFilterBrands([]);
         setAppliedFilterDosage('');
