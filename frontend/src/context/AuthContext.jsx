@@ -1,44 +1,33 @@
 // frontend/src/context/AuthContext.jsx
 
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
-export const AuthContext = createContext(null);
-
-export const useAuth = () => {
-  const context = React.useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    return !!(token && userData);  // Only authenticated if both token and user data exist
-  });
-  const [isAdmin, setIsAdmin] = useState(localStorage.getItem('isAdmin') === 'true');
-  const [user, setUser] = useState(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) return null;
-    try {
-      return JSON.parse(userData);
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      localStorage.removeItem('isAdmin');
-      return null;
-    }
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [user, setUser] = useState(null);
 
-  const login = (token, isAdmin, userData) => {
+  // Add this useEffect to initialize auth state from localStorage
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    const storedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+
+    if (token && storedUser) {
+      setIsAuthenticated(true);
+      setIsAdmin(storedIsAdmin);
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
+
+  const login = (token, isAdminUser, userData) => {
     localStorage.setItem('token', token);
-    localStorage.setItem('isAdmin', String(isAdmin));
+    localStorage.setItem('isAdmin', isAdminUser);
     localStorage.setItem('user', JSON.stringify(userData));
     setIsAuthenticated(true);
-    setIsAdmin(isAdmin);
+    setIsAdmin(isAdminUser);
     setUser(userData);
   };
 
@@ -57,3 +46,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export const useAuth = () => useContext(AuthContext);
