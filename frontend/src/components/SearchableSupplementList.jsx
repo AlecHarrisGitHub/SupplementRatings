@@ -74,6 +74,8 @@ const FilterDrawer = ({
     setSelectedFilterFrequency,
     selectedFilterFrequencyUnit,
     setSelectedFilterFrequencyUnit,
+    selectedSortBy,
+    setSelectedSortBy,
     onApplyFilter,
     onClearFilter
 }) => (
@@ -87,6 +89,19 @@ const FilterDrawer = ({
                 Filter Supplements
             </Typography>
             
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
+                Sort By
+            </Typography>
+            <Select
+                fullWidth
+                value={selectedSortBy}
+                onChange={(e) => setSelectedSortBy(e.target.value)}
+                sx={{ mb: 2 }}
+            >
+                <MenuItem value="highest_rating">Highest Rating</MenuItem>
+                <MenuItem value="most_ratings">Most Ratings</MenuItem>
+            </Select>
+
             <Autocomplete
                 multiple
                 options={conditions}
@@ -226,6 +241,10 @@ function SearchableSupplementList() {
     // Add new state for sort order near the other state declarations
     const [sortOrder, setSortOrder] = useState('likes'); // 'likes' or 'recent'
 
+    // Add new state for sort selection
+    const [selectedSortBy, setSelectedSortBy] = useState('highest_rating');
+    const [appliedSortBy, setAppliedSortBy] = useState('highest_rating');
+
     // Debounced search function
     const debouncedSearch = useCallback(
         debounce((term) => {
@@ -262,6 +281,7 @@ function SearchableSupplementList() {
                     ...(appliedFilterFrequency ? { 
                         frequency: `${appliedFilterFrequency}_${appliedFilterFrequencyUnit}` 
                     } : {}),
+                    sort_by: appliedSortBy,
                     offset: 0,
                     limit: 10
                 };
@@ -277,7 +297,7 @@ function SearchableSupplementList() {
             }
         };
         fetchSupplements();
-    }, [currentSearch, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit]);
+    }, [currentSearch, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit, appliedSortBy]);
 
     useEffect(() => {
         const fetchConditions = async () => {
@@ -533,6 +553,7 @@ function SearchableSupplementList() {
         setAppliedFilterDosageUnit(selectedFilterDosageUnit);
         setAppliedFilterFrequency(selectedFilterFrequency);
         setAppliedFilterFrequencyUnit(selectedFilterFrequencyUnit);
+        setAppliedSortBy(selectedSortBy);
         setFilterDrawerOpen(false);
     };
 
@@ -549,6 +570,7 @@ function SearchableSupplementList() {
         setAppliedFilterDosageUnit('mg');
         setAppliedFilterFrequency('');
         setAppliedFilterFrequencyUnit('day');
+        setAppliedSortBy('highest_rating');
         setFilterDrawerOpen(false);
     };
 
@@ -796,6 +818,8 @@ function SearchableSupplementList() {
                 setSelectedFilterFrequency={setSelectedFilterFrequency}
                 selectedFilterFrequencyUnit={selectedFilterFrequencyUnit}
                 setSelectedFilterFrequencyUnit={setSelectedFilterFrequencyUnit}
+                selectedSortBy={selectedSortBy}
+                setSelectedSortBy={setSelectedSortBy}
                 onApplyFilter={handleApplyFilter}
                 onClearFilter={handleClearFilter}
             />
