@@ -89,19 +89,6 @@ const FilterDrawer = ({
                 Filter Supplements
             </Typography>
             
-            <Typography variant="subtitle1" gutterBottom sx={{ mt: 2 }}>
-                Sort By
-            </Typography>
-            <Select
-                fullWidth
-                value={selectedSortBy}
-                onChange={(e) => setSelectedSortBy(e.target.value)}
-                sx={{ mb: 2 }}
-            >
-                <MenuItem value="highest_rating">Highest Rating</MenuItem>
-                <MenuItem value="most_ratings">Most Ratings</MenuItem>
-            </Select>
-
             <Autocomplete
                 multiple
                 options={conditions}
@@ -174,6 +161,20 @@ const FilterDrawer = ({
                     <MenuItem value="year">Per Year</MenuItem>
                 </Select>
             </Box>
+
+            {/* Sort options moved to bottom */}
+            <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
+                Sort By
+            </Typography>
+            <Select
+                fullWidth
+                value={selectedSortBy}
+                onChange={(e) => setSelectedSortBy(e.target.value)}
+                sx={{ mb: 3 }}
+            >
+                <MenuItem value="highest_rating">Highest Rating</MenuItem>
+                <MenuItem value="most_ratings">Most Ratings</MenuItem>
+            </Select>
 
             <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
                 <Button
