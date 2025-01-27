@@ -33,6 +33,7 @@ class SupplementViewSet(viewsets.ModelViewSet):
 
         queryset = Supplement.objects.all()
         name_search = self.request.query_params.get('name', None)
+        category_search = self.request.query_params.get('category', None)
         conditions_search = self.request.query_params.get('conditions', None)
         brands_search = self.request.query_params.get('brands', None)
         dosage_search = self.request.query_params.get('dosage', None)
@@ -41,9 +42,14 @@ class SupplementViewSet(viewsets.ModelViewSet):
         offset = int(self.request.query_params.get('offset', 0))
         limit = int(self.request.query_params.get('limit', 10))
 
+        # Apply basic filters first
         if name_search:
             queryset = queryset.filter(name__icontains=name_search)
 
+        if category_search:
+            queryset = queryset.filter(category__iexact=category_search)
+
+        # Then apply rating-related filters
         filter_conditions = {}
         if conditions_search:
             condition_names = conditions_search.split(',')
@@ -81,6 +87,11 @@ class SupplementViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return queryset[offset:offset + limit]
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def categories(self, request):
+        categories = Supplement.objects.values_list('category', flat=True).distinct()
+        return Response(list(categories))
 
 class RatingViewSet(viewsets.ModelViewSet):
     serializer_class = RatingSerializer
