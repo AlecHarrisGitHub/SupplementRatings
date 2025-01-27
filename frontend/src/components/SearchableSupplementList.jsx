@@ -92,22 +92,6 @@ const FilterDrawer = ({
                 Filter Supplements
             </Typography>
             
-            <TextField
-                select
-                label="Category"
-                value={selectedFilterCategory}
-                onChange={(e) => setSelectedFilterCategory(e.target.value)}
-                fullWidth
-                margin="normal"
-            >
-                <MenuItem value="">All Categories</MenuItem>
-                {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                        {category}
-                    </MenuItem>
-                ))}
-            </TextField>
-            
             <Autocomplete
                 multiple
                 options={conditions}
@@ -123,6 +107,22 @@ const FilterDrawer = ({
                 )}
                 sx={{ mb: 2 }}
             />
+            
+            <TextField
+                select
+                label="Category"
+                value={selectedFilterCategory}
+                onChange={(e) => setSelectedFilterCategory(e.target.value)}
+                fullWidth
+                margin="normal"
+            >
+                <MenuItem value="">All Categories</MenuItem>
+                {categories.map((category) => (
+                    <MenuItem key={category} value={category}>
+                        {category}
+                    </MenuItem>
+                ))}
+            </TextField>
 
             <Autocomplete
                 multiple
