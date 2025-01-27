@@ -188,17 +188,6 @@ class BrandViewSet(viewsets.ModelViewSet):
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def upload_supplements_csv(request):
-    print("Auth header:", request.headers.get('Authorization'))
-    print("User:", request.user)
-    print("Is authenticated:", request.user.is_authenticated)
-    print("Is admin:", request.user.is_staff)
-    
-    if not request.user.is_authenticated:
-        return Response({'error': 'Authentication required'}, status=401)
-    
-    if not request.user.is_staff:
-        return Response({'error': 'Admin privileges required'}, status=403)
-        
     if 'file' not in request.FILES:
         return Response({'error': 'No file uploaded'}, status=400)
     
@@ -216,6 +205,10 @@ def upload_supplements_csv(request):
             }, status=400)
         
         with transaction.atomic():
+            # Delete all existing supplements
+            Supplement.objects.all().delete()
+            
+            # Create new supplements
             for _, row in df.iterrows():
                 Supplement.objects.create(
                     name=row['name'],
@@ -231,7 +224,6 @@ def upload_supplements_csv(request):
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def upload_conditions_csv(request):
-    print("Received request for conditions upload")
     if 'file' not in request.FILES:
         return Response({'error': 'No file uploaded'}, status=400)
     
@@ -245,6 +237,10 @@ def upload_conditions_csv(request):
             return Response({'error': 'CSV must contain a name column'}, status=400)
         
         with transaction.atomic():
+            # Delete all existing conditions
+            Condition.objects.all().delete()
+            
+            # Create new conditions
             for _, row in df.iterrows():
                 Condition.objects.create(name=row['name'])
         
@@ -385,6 +381,10 @@ def upload_brands_csv(request):
             return Response({'error': 'CSV must contain a name column'}, status=400)
         
         with transaction.atomic():
+            # Delete all existing brands
+            Brand.objects.all().delete()
+            
+            # Create new brands
             for _, row in df.iterrows():
                 Brand.objects.create(name=row['name'])
         
