@@ -21,7 +21,7 @@ import {
     Select,
     MenuItem
 } from '@mui/material';
-import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating } from '../services/api';
+import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating, getCategories } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import AddIcon from '@mui/icons-material/Add';
@@ -77,7 +77,10 @@ const FilterDrawer = ({
     selectedSortBy,
     setSelectedSortBy,
     onApplyFilter,
-    onClearFilter
+    onClearFilter,
+    selectedFilterCategory,
+    setSelectedFilterCategory,
+    categories
 }) => (
     <Drawer
         anchor="left"
@@ -88,6 +91,22 @@ const FilterDrawer = ({
             <Typography variant="h6" gutterBottom>
                 Filter Supplements
             </Typography>
+            
+            <TextField
+                select
+                label="Category"
+                value={selectedFilterCategory}
+                onChange={(e) => setSelectedFilterCategory(e.target.value)}
+                fullWidth
+                margin="normal"
+            >
+                <MenuItem value="">All Categories</MenuItem>
+                {categories.map((category) => (
+                    <MenuItem key={category} value={category}>
+                        {category}
+                    </MenuItem>
+                ))}
+            </TextField>
             
             <Autocomplete
                 multiple
@@ -218,6 +237,7 @@ function SearchableSupplementList() {
     const [selectedFilterDosageUnit, setSelectedFilterDosageUnit] = useState('mg');
     const [selectedFilterFrequency, setSelectedFilterFrequency] = useState('');
     const [selectedFilterFrequencyUnit, setSelectedFilterFrequencyUnit] = useState('day');
+    const [selectedFilterCategory, setSelectedFilterCategory] = useState('');
 
     const [appliedFilterConditions, setAppliedFilterConditions] = useState([]);
     const [appliedFilterBrands, setAppliedFilterBrands] = useState([]);
@@ -225,6 +245,7 @@ function SearchableSupplementList() {
     const [appliedFilterDosageUnit, setAppliedFilterDosageUnit] = useState('mg');
     const [appliedFilterFrequency, setAppliedFilterFrequency] = useState('');
     const [appliedFilterFrequencyUnit, setAppliedFilterFrequencyUnit] = useState('day');
+    const [appliedFilterCategory, setAppliedFilterCategory] = useState('');
 
     const [selectedReview, setSelectedReview] = useState(null);
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -245,6 +266,22 @@ function SearchableSupplementList() {
     // Add new state for sort selection
     const [selectedSortBy, setSelectedSortBy] = useState('highest_rating');
     const [appliedSortBy, setAppliedSortBy] = useState('highest_rating');
+
+    const [categories, setCategories] = useState([]);
+
+    // Add this useEffect after the other useEffect hooks
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const data = await getCategories();
+                setCategories(data);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                toast.error('Failed to fetch categories');
+            }
+        };
+        fetchCategories();
+    }, []);
 
     // Debounced search function
     const debouncedSearch = useCallback(
@@ -270,6 +307,7 @@ function SearchableSupplementList() {
                 setLoading(true);
                 const params = {
                     ...(currentSearch ? { name: currentSearch } : {}),
+                    ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
                     ...(appliedFilterConditions.length > 0 ? { 
                         conditions: appliedFilterConditions.map(c => c.name).join(',') 
                     } : {}),
@@ -298,7 +336,7 @@ function SearchableSupplementList() {
             }
         };
         fetchSupplements();
-    }, [currentSearch, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit, appliedSortBy]);
+    }, [currentSearch, appliedFilterCategory, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit, appliedSortBy]);
 
     useEffect(() => {
         const fetchConditions = async () => {
@@ -548,6 +586,7 @@ function SearchableSupplementList() {
     };
 
     const handleApplyFilter = () => {
+        setAppliedFilterCategory(selectedFilterCategory);
         setAppliedFilterConditions(selectedFilterConditions);
         setAppliedFilterBrands(selectedFilterBrands);
         setAppliedFilterDosage(selectedFilterDosage);
@@ -559,6 +598,8 @@ function SearchableSupplementList() {
     };
 
     const handleClearFilter = () => {
+        setSelectedFilterCategory('');
+        setAppliedFilterCategory('');
         setSelectedFilterConditions([]);
         setSelectedFilterBrands([]);
         setSelectedFilterDosage('');
@@ -690,21 +731,31 @@ function SearchableSupplementList() {
         setSelectedFilterConditions(updatedConditions);
     };
 
-    const loadMore = async () => {
+    const handleLoadMore = async () => {
         try {
             setLoading(true);
             const params = {
                 ...(currentSearch ? { name: currentSearch } : {}),
+                ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
                 ...(appliedFilterConditions.length > 0 ? { 
                     conditions: appliedFilterConditions.map(c => c.name).join(',') 
                 } : {}),
+                ...(appliedFilterBrands.length > 0 ? {
+                    brands: appliedFilterBrands.map(b => b.name).join(',')
+                } : {}),
+                ...(appliedFilterDosage ? { 
+                    dosage: `${appliedFilterDosage}${appliedFilterDosageUnit}` 
+                } : {}),
+                ...(appliedFilterFrequency ? { 
+                    frequency: `${appliedFilterFrequency}_${appliedFilterFrequencyUnit}` 
+                } : {}),
+                sort_by: appliedSortBy,
                 offset: offset,
                 limit: batchSize
             };
             const newData = await getSupplements(params);
-            setSupplements(prev => [...prev, ...newData]);
-            setOffset(prev => prev + batchSize);
-            setBatchSize(prev => prev * 2); // Double the batch size for next load
+            setSupplements(prevSupplements => [...prevSupplements, ...newData]);
+            setOffset(offset + batchSize);
             setHasMore(newData.length === batchSize);
         } catch (error) {
             console.error('Error loading more supplements:', error);
@@ -715,15 +766,17 @@ function SearchableSupplementList() {
     };
 
     const LoadMoreButton = () => (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 3 }}>
-            <Button
-                variant="contained"
-                onClick={loadMore}
-                disabled={loading || !hasMore}
-            >
-                {loading ? 'Loading...' : hasMore ? 'Load More' : 'No More Results'}
-            </Button>
-        </Box>
+        hasMore && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 4 }}>
+                <Button
+                    variant="outlined"
+                    onClick={handleLoadMore}
+                    disabled={loading}
+                >
+                    {loading ? 'Loading...' : 'Load More'}
+                </Button>
+            </Box>
+        )
     );
 
     const handleCloseRatingDialog = () => {
@@ -824,6 +877,9 @@ function SearchableSupplementList() {
                 setSelectedSortBy={setSelectedSortBy}
                 onApplyFilter={handleApplyFilter}
                 onClearFilter={handleClearFilter}
+                selectedFilterCategory={selectedFilterCategory}
+                setSelectedFilterCategory={setSelectedFilterCategory}
+                categories={categories}
             />
 
             {/* Main Content */}
