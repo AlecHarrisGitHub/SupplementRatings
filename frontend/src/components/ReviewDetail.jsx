@@ -15,6 +15,7 @@ import { addComment, updateComment, upvoteRating, upvoteComment } from '../servi
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import ImageUpload from './ImageUpload';
+import ImageModal from './ImageModal';
 
 function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser, onUpvote }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -34,6 +35,11 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
     const handleUpvoteClick = (e) => {
         e.stopPropagation(); // Prevent comment click event
         onUpvote(comment);
+    };
+
+    const handleImageClick = (e, imageUrl) => {
+        e.stopPropagation();
+        // Implement the logic to open the image modal with the image URL
     };
 
     return (
@@ -111,7 +117,12 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                                 style={{ 
                                     maxWidth: '200px',
                                     maxHeight: '200px',
-                                    borderRadius: '4px'
+                                    borderRadius: '4px',
+                                    cursor: 'pointer'
+                                }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleImageClick(e, comment.image);
                                 }}
                             />
                         </Box>
@@ -141,6 +152,8 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [selectedComment, setSelectedComment] = useState(null);
     const [localRating, setLocalRating] = useState(rating);
     const [newImage, setNewImage] = useState(null);
+    const [modalOpen, setModalOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null);
 
     const handleUpvoteRating = async () => {
         if (!isAuthenticated) {
@@ -308,6 +321,12 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
     };
 
+    const handleImageClick = (e, imageUrl) => {
+        e.stopPropagation();
+        setSelectedImage(imageUrl);
+        setModalOpen(true);
+    };
+
     const currentItem = selectedComment || rating;
     const isShowingComment = !!selectedComment;
 
@@ -382,8 +401,10 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                             style={{ 
                                                 maxWidth: '300px',
                                                 maxHeight: '300px',
-                                                borderRadius: '4px'
+                                                borderRadius: '4px',
+                                                cursor: 'pointer'
                                             }}
+                                            onClick={(e) => handleImageClick(e, localRating.image)}
                                         />
                                     </Box>
                                 )}
@@ -424,8 +445,10 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                     style={{ 
                                         maxWidth: '300px',
                                         maxHeight: '300px',
-                                        borderRadius: '4px'
+                                        borderRadius: '4px',
+                                        cursor: 'pointer'
                                     }}
+                                    onClick={(e) => handleImageClick(e, selectedComment.image)}
                                 />
                             </Box>
                         )}
@@ -501,6 +524,12 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                     </Box>
                 )}
             </Paper>
+
+            <ImageModal 
+                open={modalOpen}
+                onClose={() => setModalOpen(false)}
+                imageUrl={selectedImage}
+            />
         </Box>
     );
 }
