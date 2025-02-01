@@ -18,6 +18,8 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from django.conf import settings
+from django.conf.urls.static import static
 
 router = DefaultRouter()
 router.register(r'supplements', SupplementViewSet, basename='supplement')
@@ -59,5 +61,5 @@ api_urlpatterns = [
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(api_urlpatterns)),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

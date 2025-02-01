@@ -14,6 +14,7 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import { addComment, updateComment, upvoteRating, upvoteComment } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import ImageUpload from './ImageUpload';
 
 function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser, onUpvote }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -98,9 +99,24 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                 </Box>
             ) : (
                 <>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body1" sx={{ mt: 1, mb: comment.image ? 2 : 0 }}>
                         {comment.content}
                     </Typography>
+                    
+                    {comment.image && (
+                        <Box sx={{ mt: 1, mb: 2 }}>
+                            <img 
+                                src={comment.image}
+                                alt="Comment attachment"
+                                style={{ 
+                                    maxWidth: '200px',
+                                    maxHeight: '200px',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                        </Box>
+                    )}
+                    
                     {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
                         <Button 
                             size="small" 
@@ -124,6 +140,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const { isAuthenticated, user } = useAuth();
     const [selectedComment, setSelectedComment] = useState(null);
     const [localRating, setLocalRating] = useState(rating);
+    const [newImage, setNewImage] = useState(null);
 
     const handleUpvoteRating = async () => {
         if (!isAuthenticated) {
@@ -218,33 +235,41 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
     const handleSubmitComment = async (e) => {
         e.preventDefault();
-        if (!newComment.trim()) {
-            toast.error('Please enter a comment');
-            return;
-        }
-
         try {
-            const response = await addComment({
-                rating: selectedComment ? null : rating.id,
-                parent_comment: selectedComment ? selectedComment.id : null,
-                content: newComment.trim()
-            });
+            const formData = new FormData();
             
-            setNewComment('');
+            // Only append rating ID if we're commenting on a rating
+            if (!selectedComment) {
+                formData.append('rating', rating.id);
+            }
             
+            // Only append parent_comment if we're replying to a comment
             if (selectedComment) {
-                // If replying to a comment, update both the selected comment and the rating's comments
-                const updatedReplies = [...(selectedComment.replies || []), response];
-                const updatedComment = { ...selectedComment, replies: updatedReplies };
-                setSelectedComment(updatedComment);
-                
-                // Update the comment in rating.comments array
-                rating.comments = rating.comments.map(c => 
-                    c.id === selectedComment.id ? updatedComment : c
-                );
+                formData.append('parent_comment', selectedComment.id);
+            }
+            
+            formData.append('content', newComment.trim());
+            
+            // Only append image if one is selected
+            if (newImage) {
+                formData.append('image', newImage);
+            }
+
+            const response = await addComment(formData);
+            
+            // Reset form
+            setNewComment('');
+            setNewImage(null);
+            
+            // Update the UI
+            if (selectedComment) {
+                const updatedReplies = [...selectedComment.replies, response];
+                setSelectedComment(prev => ({
+                    ...prev,
+                    replies: updatedReplies
+                }));
             } else {
-                // If commenting on the rating, update the comments
-                rating.comments = [...(rating.comments || []), response];
+                rating.comments = [...rating.comments, response];
             }
             
             onCommentAdded();
@@ -345,9 +370,24 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             </Typography>
                         )}
                         {localRating.comment && (
-                            <Typography variant="body1" sx={{ mt: 2 }}>
-                                {localRating.comment}
-                            </Typography>
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="body1">
+                                    {localRating.comment}
+                                </Typography>
+                                {localRating.image && (
+                                    <Box sx={{ mt: 2 }}>
+                                        <img 
+                                            src={localRating.image}
+                                            alt="Rating attachment"
+                                            style={{ 
+                                                maxWidth: '300px',
+                                                maxHeight: '300px',
+                                                borderRadius: '4px'
+                                            }}
+                                        />
+                                    </Box>
+                                )}
+                            </Box>
                         )}
                     </Box>
                 ) : (
@@ -433,10 +473,15 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             onChange={(e) => setNewComment(e.target.value)}
                             sx={{ mb: 2 }}
                         />
+                        <ImageUpload 
+                            onImageSelect={(file) => setNewImage(file)}
+                            currentImage={null}
+                        />
                         <Button 
                             type="submit" 
                             variant="contained"
                             disabled={!newComment.trim()}
+                            sx={{ mt: 2 }}
                         >
                             Add Reply
                         </Button>

@@ -18,7 +18,7 @@ class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         fields = ['id', 'user', 'rating', 'parent_comment', 'content', 
-                 'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted']
+                 'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image']
         read_only_fields = ['user', 'is_edited', 'upvotes', 'has_upvoted']
 
     def get_replies(self, obj):
@@ -48,7 +48,7 @@ class RatingSerializer(serializers.ModelSerializer):
         model = Rating
         fields = ['id', 'user', 'supplement', 'conditions', 'condition_names', 
                  'score', 'comment', 'dosage', 'dosage_frequency', 'frequency_unit',
-                 'brands', 'created_at', 'comments', 'is_edited', 'upvotes', 'has_upvoted']
+                 'brands', 'created_at', 'comments', 'is_edited', 'upvotes', 'has_upvoted', 'image']
         read_only_fields = ['user', 'upvotes', 'has_upvoted']
 
     def get_condition_names(self, obj):

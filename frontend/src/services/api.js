@@ -133,11 +133,14 @@ export const getRatings = async (supplementId) => {
     }
 };
 
-export const addRating = async (ratingData) => {
+export const addRating = async (formData) => {
     try {
-        const response = await API.post('ratings/', ratingData);
-        // Clear the cache for this supplement's data
-        cache.clear(); // Clear all cache when a rating is added
+        const response = await API.post('ratings/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+        cache.clear();
         return response.data;
     } catch (error) {
         const errorMessage = error.response?.data?.detail || 
@@ -148,16 +151,22 @@ export const addRating = async (ratingData) => {
     }
 };
 
-export const addComment = async (commentData) => {
+export const addComment = async (formData) => {
     try {
-        const response = await API.post('comments/', {
-            rating: commentData.rating,
-            parent_comment: commentData.parent_comment,
-            content: commentData.content.trim()
+        // Log the FormData contents for debugging
+        for (let pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
+        }
+
+        const response = await API.post('comments/', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
         });
         return response.data;
     } catch (error) {
         console.error('Error adding comment:', error);
+        console.error('Error response:', error.response?.data);
         throw error;
     }
 };
@@ -264,11 +273,18 @@ export const verifyEmail = async (token) => {
     }
 };
 
-export const updateComment = async (commentId, content) => {
+export const updateComment = async (commentId, content, image = null) => {
     try {
-        const response = await API.put(`comments/${commentId}/`, {
-            content: content,
-            is_edited: true
+        const formData = new FormData();
+        formData.append('content', content);
+        if (image) {
+            formData.append('image', image);
+        }
+        
+        const response = await API.put(`comments/${commentId}/`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
         });
         return response.data;
     } catch (error) {
@@ -277,14 +293,23 @@ export const updateComment = async (commentId, content) => {
     }
 };
 
-export const updateRating = async (ratingId, ratingData) => {
+export const updateRating = async (ratingId, formData) => {
     try {
-        const response = await API.patch(`ratings/${ratingId}/`, ratingData);
-        // Clear the cache for this supplement's data
+        // Log FormData contents for debugging
+        for (let pair of formData.entries()) {
+            console.log('FormData:', pair[0], pair[1]);
+        }
+
+        const response = await API.put(`ratings/${ratingId}/`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
         cache.clear();
         return response.data;
     } catch (error) {
         console.error('Error updating rating:', error);
+        console.error('Error response:', error.response?.data);
         throw error;
     }
 };
