@@ -416,6 +416,19 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                         <Typography variant="body1">
                             {selectedComment.content}
                         </Typography>
+                        {selectedComment.image && (
+                            <Box sx={{ mt: 2 }}>
+                                <img 
+                                    src={selectedComment.image}
+                                    alt="Comment attachment"
+                                    style={{ 
+                                        maxWidth: '300px',
+                                        maxHeight: '300px',
+                                        borderRadius: '4px'
+                                    }}
+                                />
+                            </Box>
+                        )}
                     </Box>
                 )}
 
