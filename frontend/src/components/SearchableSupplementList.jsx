@@ -549,8 +549,37 @@ function SearchableSupplementList() {
 
     const [ratingImage, setRatingImage] = useState(null);
 
+    // Modify the resetFormState function to be more thorough
+    const resetFormState = () => {
+        setRatingScore(1);
+        setRatingComment('');
+        setSelectedConditions([]);
+        setRatingDosage('');
+        setRatingBrands('');
+        setSelectedBrand(null);
+        setRatingDosageFrequency('1');
+        setRatingFrequencyUnit('day');
+        setRatingImage(null);
+        setEditingRating(null);
+    };
+
+    // Add this function to handle opening the rating dialog for a new rating
+    const handleAddRating = () => {
+        resetFormState();
+        setRatingDialogOpen(true);
+    };
+
+    // Modify the handleCloseRatingDialog function
+    const handleCloseRatingDialog = () => {
+        resetFormState();
+        setRatingDialogOpen(false);
+    };
+
+    // Also modify the handleRatingSubmit function to reset form after successful submission
     const handleRatingSubmit = async (e) => {
-        e.preventDefault();
+        if (e) {
+            e.preventDefault();
+        }
         try {
             const formData = new FormData();
             formData.append('supplement', selectedSupplement.id);
@@ -583,14 +612,8 @@ function SearchableSupplementList() {
             }
 
             // Reset form and refresh data
-            setSelectedConditions([]);
-            setRatingScore(0);
-            setRatingComment('');
-            setRatingDosage('');
-            setSelectedBrand(null);
-            setRatingImage(null);
+            resetFormState();
             setRatingDialogOpen(false);
-            setEditingRating(null);
             
             await handleSupplementClick(selectedSupplement.id);
         } catch (error) {
@@ -804,17 +827,6 @@ function SearchableSupplementList() {
         )
     );
 
-    const handleCloseRatingDialog = () => {
-        setRatingDialogOpen(false);
-        setEditingRating(null);
-        setRatingScore(1);
-        setRatingComment('');
-        setSelectedConditions([]);
-        // Reset dosage and brand fields
-        setRatingDosage('');
-        setSelectedBrand(null);
-    };
-
     const handleUpvoteRating = async (e, rating) => {
         e.stopPropagation(); // Prevent clicking into the review
         if (!user) {
@@ -1010,7 +1022,7 @@ function SearchableSupplementList() {
                                         <Button
                                             startIcon={<AddIcon />}
                                             variant="contained"
-                                            onClick={() => setRatingDialogOpen(true)}
+                                            onClick={handleAddRating}
                                         >
                                             Add Rating
                                         </Button>
