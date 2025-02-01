@@ -46,6 +46,7 @@ class Rating(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
     upvotes = models.IntegerField(default=0)
+    image = models.ImageField(upload_to='ratings/', null=True, blank=True)
 
     class Meta:
         unique_together = ('user', 'supplement')
@@ -62,6 +63,7 @@ class Comment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_edited = models.BooleanField(default=False)
     upvotes = models.IntegerField(default=0)
+    image = models.ImageField(upload_to='comments/', null=True, blank=True)
 
     def __str__(self):
         if self.rating:

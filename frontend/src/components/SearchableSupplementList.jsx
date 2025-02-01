@@ -29,6 +29,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import ReviewDetail from './ReviewDetail';
 import debounce from 'lodash/debounce';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ImageUpload from './ImageUpload';
 
 const ConditionTag = ({ condition, onRemove }) => (
     <Box
@@ -526,6 +527,7 @@ function SearchableSupplementList() {
         setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
         setRatingScore(rating.score);
         setRatingComment(rating.comment || '');
+        setRatingImage(null);
         
         // Handle dosage - strip the unit if present
         if (rating.dosage) {
@@ -545,43 +547,55 @@ function SearchableSupplementList() {
         setRatingDialogOpen(true);
     };
 
+    const [ratingImage, setRatingImage] = useState(null);
+
     const handleRatingSubmit = async (e) => {
         e.preventDefault();
         try {
-            const ratingData = {
-                supplement: selectedSupplement.id,
-                conditions: selectedConditions.map(c => c.id),
-                score: ratingScore,
-                comment: ratingComment,
-                dosage: ratingDosage ? `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}` : null,
-                dosage_frequency: ratingDosageFrequency || null,
-                frequency_unit: ratingFrequencyUnit || null,
-                brands: selectedBrand ? selectedBrand.name : null,
-                is_edited: editingRating ? true : false
-            };
+            const formData = new FormData();
+            formData.append('supplement', selectedSupplement.id);
+            formData.append('conditions', selectedConditions.map(c => c.id));
+            formData.append('score', ratingScore);
+            formData.append('comment', ratingComment || '');
+            
+            if (ratingDosage) {
+                formData.append('dosage', `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}`);
+            }
+            if (ratingDosageFrequency) {
+                formData.append('dosage_frequency', ratingDosageFrequency);
+            }
+            if (ratingFrequencyUnit) {
+                formData.append('frequency_unit', ratingFrequencyUnit);
+            }
+            if (selectedBrand) {
+                formData.append('brands', selectedBrand.name);
+            }
+            if (ratingImage) {
+                formData.append('image', ratingImage);
+            }
 
             if (editingRating) {
-                await updateRating(editingRating.id, ratingData);
+                await updateRating(editingRating.id, formData);
                 toast.success('Rating updated successfully');
             } else {
-                await addRating(ratingData);
+                await addRating(formData);
                 toast.success('Rating added successfully');
             }
 
-            // Reset form
+            // Reset form and refresh data
             setSelectedConditions([]);
             setRatingScore(0);
             setRatingComment('');
             setRatingDosage('');
             setSelectedBrand(null);
+            setRatingImage(null);
             setRatingDialogOpen(false);
             setEditingRating(null);
             
-            // Refresh supplement details
             await handleSupplementClick(selectedSupplement.id);
         } catch (error) {
             console.error('Error submitting rating:', error);
-            toast.error(error.userMessage || 'Failed to submit rating');
+            toast.error(error.response?.data?.detail || 'Failed to submit rating');
         }
     };
 
@@ -710,10 +724,21 @@ function SearchableSupplementList() {
                     Brands Used: {rating.brands}
                 </Typography>
             )}
-            {rating.comment && (
-                <Typography variant="body1">
-                    {rating.comment}
-                </Typography>
+            <Typography variant="body2" color="text.secondary">
+                {rating.comment}
+            </Typography>
+            {rating.image && (
+                <Box sx={{ mt: 2 }}>
+                    <img 
+                        src={rating.image}
+                        alt="Rating attachment"
+                        style={{ 
+                            maxWidth: '300px',
+                            maxHeight: '300px',
+                            borderRadius: '4px'
+                        }}
+                    />
+                </Box>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
                 <Button size="small" onClick={() => handleReviewClick(rating)}>
@@ -1096,6 +1121,19 @@ function SearchableSupplementList() {
                                         <Typography variant="body2" color="text.secondary">
                                             {rating.comment}
                                         </Typography>
+                                        {rating.image && (
+                                            <Box sx={{ mt: 2 }}>
+                                                <img 
+                                                    src={rating.image}
+                                                    alt="Rating attachment"
+                                                    style={{ 
+                                                        maxWidth: '300px',
+                                                        maxHeight: '300px',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                />
+                                            </Box>
+                                        )}
                                         {rating.comments?.length > 0 && (
                                             <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
                                                 {rating.comments.length} comment(s)
@@ -1239,13 +1277,17 @@ function SearchableSupplementList() {
                         />
                         
                         <TextField
-                            label="Review (optional)"
-                            value={ratingComment}
-                            onChange={(e) => setRatingComment(e.target.value)}
+                            fullWidth
                             multiline
                             rows={4}
-                            fullWidth
+                            label="Comment"
+                            value={ratingComment}
+                            onChange={(e) => setRatingComment(e.target.value)}
                             sx={{ mb: 2 }}
+                        />
+                        <ImageUpload 
+                            onImageSelect={(file) => setRatingImage(file)}
+                            currentImage={editingRating?.image || null}
                         />
                     </Box>
                 </DialogContent>
