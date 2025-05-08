@@ -1,0 +1,8 @@
+Django>=5.1.4
+djangorestframework>=3.14.0
+djangorestframework-simplejwt>=5.3.1
+django-cors-headers>=4.3.1
+django-storages>=1.14.2
+python-decouple>=3.8
+Pillow>=10.2.0  # for image handling
+argon2-cffi>=23.1.0  # for password hashing 
