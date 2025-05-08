@@ -23,28 +23,19 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log('Attempting login with:', { username });
       const response = await loginUser({ username, password });
-      console.log('Login response:', response);
-      
       if (response.access) {
         const userData = {
           username: username,
           id: response.id,
           is_staff: response.is_staff
         };
-        console.log('Setting user data:', userData);
         login(response.access, response.is_staff, userData);
         toast.success('Logged in successfully!');
         navigate('/supplements');
       }
     } catch (error) {
-      console.error('Login error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-      toast.error('Login failed: ' + (error.response?.data?.detail || 'Unknown error'));
+      toast.error(error.message || 'Invalid username or password');
     }
   };
 

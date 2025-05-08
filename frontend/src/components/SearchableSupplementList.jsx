@@ -617,8 +617,7 @@ function SearchableSupplementList() {
             
             await handleSupplementClick(selectedSupplement.id);
         } catch (error) {
-            console.error('Error submitting rating:', error);
-            toast.error(error.response?.data?.detail || 'Failed to submit rating');
+            toast.error('Failed to submit rating. Please try again.');
         }
     };
 

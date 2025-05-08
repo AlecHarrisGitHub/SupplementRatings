@@ -13,7 +13,7 @@ from .serializers import (
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.contrib.auth.models import User
-from rest_framework.decorators import api_view, permission_classes, authentication_classes, action
+from rest_framework.decorators import api_view, permission_classes, authentication_classes, action, throttle_classes
 from rest_framework.permissions import IsAdminUser, AllowAny
 import pandas as pd
 from django.db import transaction
@@ -22,6 +22,8 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.db import IntegrityError
+from pages.throttles import RegisterRateThrottle
+from .permissions import IsOwnerOrReadOnly, IsOwnerOrAdmin
 
 class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
@@ -95,7 +97,7 @@ class SupplementViewSet(viewsets.ModelViewSet):
 
 class RatingViewSet(viewsets.ModelViewSet):
     serializer_class = RatingSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
         queryset = Rating.objects.all()
@@ -121,8 +123,8 @@ class RatingViewSet(viewsets.ModelViewSet):
 
         if existing_rating:
             raise serializers.ValidationError({
-                'detail': 'You have already rated this supplement. You can only rate each supplement once.'
-            }, code=400)
+                'detail': 'You have already rated this supplement.'
+            })
 
         serializer.save(user=self.request.user)
 
@@ -149,7 +151,7 @@ class RatingViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
 
     def get_queryset(self):
         return Comment.objects.all()
@@ -199,6 +201,9 @@ class BrandViewSet(viewsets.ModelViewSet):
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def upload_supplements_csv(request):
+    if not request.user.is_staff:
+        return Response({'error': 'Permission denied'}, status=status.HTTP_403_FORBIDDEN)
+        
     if 'file' not in request.FILES:
         return Response({'error': 'No file uploaded'}, status=400)
     
@@ -282,6 +287,7 @@ def get_user_details(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @authentication_classes([])
+@throttle_classes([RegisterRateThrottle])
 def register_user(request):
     try:
         username = request.data.get('username')

@@ -14,6 +14,8 @@ from pathlib import Path
 import os
 from decouple import config
 from datetime import timedelta
+import logging
+from rest_framework.throttling import AnonRateThrottle
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,15 +26,38 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'your-secret-key'
+SECRET_KEY = config('SECOND_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('PRODUCTION', cast=bool, default=None)
+DEBUG = not DEBUG
 
-ALLOWED_HOSTS = []
 
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+# Development and Production URLs
+FRONTEND_DEV_URLS = [
+    'http://127.0.0.1:5173',
+    'http://localhost:5173',
+]
+
+FRONTEND_PROD_URL = 'https://supplementratings.com'
+
+# Development and Production CORS/Host settings
+if DEBUG:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+    CORS_ALLOWED_ORIGINS = FRONTEND_DEV_URLS
+    CORS_ALLOW_CREDENTIALS = True
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    CSRF_TRUSTED_ORIGINS = FRONTEND_DEV_URLS
+else:
+    ALLOWED_HOSTS = ['.supplementratings.com']
+    CORS_ALLOWED_ORIGINS = [FRONTEND_PROD_URL]
+    CORS_ALLOW_CREDENTIALS = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CSRF_TRUSTED_ORIGINS = [FRONTEND_PROD_URL]
 CORS_ALLOWED_METHODS = [
     'GET',
     'POST',
@@ -67,11 +92,12 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'pages.apps.PagesConfig',
     'storages',  # for handling file uploads
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -120,14 +146,24 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/day',
+        'user': '1000/day',
+        'auth': '5/minute',    # Login attempts
+        'register': '5/hour'   # Registration attempts
+    }
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': False,
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
-    'UPDATE_LAST_LOGIN': False,
+    'UPDATE_LAST_LOGIN': True,
 
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
@@ -139,6 +175,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
     'USER_ID_FIELD': 'id',
     'USER_ID_CLAIM': 'user_id',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
 }
 
 
@@ -196,3 +235,25 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 # Add to your existing settings
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Password validation
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
+CSRF_COOKIE_NAME = 'csrftoken'
+CSRF_HEADER_NAME = 'X-CSRFToken'
+
+
+import sys
+def _capture_all_exceptions(exc_type, exc_value, tb):
+    logging.error("UNCAUGHT EXCEPTION", exc_info=(exc_type, exc_value, tb))
+sys.excepthook = _capture_all_exceptions

@@ -20,6 +20,7 @@ from rest_framework_simplejwt.views import (
 )
 from django.conf import settings
 from django.conf.urls.static import static
+from pages.throttles import AuthRateThrottle, RegisterRateThrottle
 
 router = DefaultRouter()
 router.register(r'supplements', SupplementViewSet, basename='supplement')
@@ -28,11 +29,15 @@ router.register(r'comments', CommentViewSet, basename='comment')
 router.register(r'conditions', ConditionViewSet, basename='condition')
 router.register(r'brands', BrandViewSet, basename='brand')
 
+import traceback
+from rest_framework.response import Response
+
 class CustomTokenObtainPairView(TokenObtainPairView):
+    #throttle_classes = [AuthRateThrottle]
+    
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
-            # Get the user from the token
             from rest_framework_simplejwt.tokens import AccessToken
             token = response.data['access']
             user_id = AccessToken(token)['user_id']
@@ -44,13 +49,24 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 'username': user.username
             })
         return response
+    
+class DebugTokenObtainPairView(CustomTokenObtainPairView):
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except Exception as exc:
+            tb_lines = traceback.format_exc().splitlines()
+            return Response(
+                {"error": str(exc), "traceback": tb_lines},
+                status=500,
+            )
 
 # Define API URLs
 api_urlpatterns = [
     path('upload-supplements-csv/', upload_supplements_csv, name='upload-supplements-csv'),
     path('upload-conditions-csv/', upload_conditions_csv, name='upload-conditions-csv'),
     path('upload-brands-csv/', upload_brands_csv, name='upload-brands-csv'),
-    path('token/obtain/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/obtain/', DebugTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/me/', get_user_details, name='user-details'),
     path('register/', register_user, name='register-user'),
