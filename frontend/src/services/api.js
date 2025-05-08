@@ -2,19 +2,24 @@
 
 import axios from 'axios';
 import { getAuthToken } from '../utils/auth';
+import { API_BASE_URL } from '../config';
 
 // Create an axios instance with a base URL
 const API = axios.create({
-    baseURL: '/api/'
+    baseURL: API_BASE_URL,
+    withCredentials: true,
+    xsrfCookieName: 'csrftoken',
+    xsrfHeaderName: 'X-CSRFToken',
 });
 
-// Add a request interceptor to include the auth token
+// Add a request interceptor to include the auth token and CSRF token
 API.interceptors.request.use((config) => {
+    // Add auth token if it exists
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('Request config:', config); // Debug log
+    
     return config;
 }, (error) => {
     return Promise.reject(error);
@@ -24,35 +29,29 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
     (response) => response,
     (error) => {
-        console.error('API Error:', error.response); // Debug log
-
-        // Extract the request URL
         const requestUrl = error.config.url;
-
-        // Define endpoints that should not trigger a redirect
         const authEndpoints = ['token/obtain/', 'register/'];
 
-        // Check if the error is 401 and the request is not to an auth endpoint
         if (
             error.response?.status === 401 &&
             !authEndpoints.some((endpoint) => requestUrl.includes(endpoint))
         ) {
-            // Clear token and redirect to login if unauthorized
             localStorage.removeItem('token');
             localStorage.removeItem('isAdmin');
             window.location.href = '/login';
         }
 
-        return Promise.reject(error);
+        // Return the actual error message from the backend if available
+        return Promise.reject({
+            status: error.response?.status,
+            message: error.response?.data?.detail || error.response?.data?.error || 'An unexpected error occurred'
+        });
     }
 );
 
 // Add caching to the API service
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-
-// If you're using Create React App, use REACT_APP_ prefix
-const API_BASE_URL = '/api';  // Since we're proxying requests through the development server
 
 const authenticatedFetch = async (endpoint, options = {}) => {
     const token = getAuthToken();
@@ -96,7 +95,6 @@ export const getSupplements = async (params = {}, skipCache = false) => {
         }
         return response.data;
     } catch (error) {
-        console.error('Error fetching supplements:', error);
         throw error;
     }
 };
@@ -106,7 +104,6 @@ export const getSupplement = async (id) => {
         const response = await API.get(`supplements/${id}/`);
         return response.data;
     } catch (error) {
-        console.error('Error fetching supplement:', error);
         throw error;
     }
 };
@@ -116,7 +113,6 @@ export const getSupplementDetails = async (id) => {
         const response = await API.get(`supplements/${id}/`);
         return response.data;
     } catch (error) {
-        console.error('Error fetching supplement details:', error);
         throw error;
     }
 };
@@ -128,7 +124,6 @@ export const getRatings = async (supplementId) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error fetching ratings:', error);
         throw error;
     }
 };
@@ -143,21 +138,15 @@ export const addRating = async (formData) => {
         cache.clear();
         return response.data;
     } catch (error) {
-        const errorMessage = error.response?.data?.detail || 
-                           error.response?.data?.message || 
-                           'Failed to add rating.';
-        error.userMessage = errorMessage;
-        throw error;
+        throw {
+            userMessage: error.response?.data?.detail || 
+                        'Unable to add rating. Please check your input and try again.'
+        };
     }
 };
 
 export const addComment = async (formData) => {
     try {
-        // Log the FormData contents for debugging
-        for (let pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
-        }
-
         const response = await API.post('comments/', formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
@@ -165,9 +154,10 @@ export const addComment = async (formData) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error adding comment:', error);
-        console.error('Error response:', error.response?.data);
-        throw error;
+        throw {
+            userMessage: error.response?.data?.detail || 
+                        'Unable to add comment. Please try again.'
+        };
     }
 };
 
