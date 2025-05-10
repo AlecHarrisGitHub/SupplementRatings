@@ -29,7 +29,6 @@ jobs:
         run: |
           ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             set -e
-            mkdir SupplementRatings
             cd ~/SupplementRatings
             git pull origin main
             cp ~/env_backups/.env   ~/SupplementRatings/.env
