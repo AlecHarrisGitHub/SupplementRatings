@@ -39,6 +39,8 @@ jobs:
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
             cd frontend
+            rm -rf node_modules
+            npm install react-hot-toast --save
             npm ci
             npm run build
             cd ..
