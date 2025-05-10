@@ -42,6 +42,9 @@ jobs:
             npm ci
             npm run build
             cd ..
+            rm -rf frontend_dist
+            mkdir frontend_dist
+            mv frontend/dist/* frontend_dist/
             python manage.py collectstatic --noinput
             python manage.py migrate
             sudo systemctl restart gunicorn
