@@ -32,8 +32,7 @@ jobs:
             cd ~/SupplementRatings
             git fetch origin
             git reset --hard origin/main
-            cp ~/env_backups/.env   ~/SupplementRatings/.env
-            source ~/env_backups/venv/bin/activate
+            source ~/venv/bin/activate
             pip install -r requirements.txt
             python manage.py migrate
             sudo systemctl restart gunicorn
