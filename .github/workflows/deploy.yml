@@ -31,8 +31,8 @@ jobs:
             set -e
             cd ~/SupplementRatings
             git pull origin main
-            cp /home/ec2-user/env_backups/.env   ~/SupplementRatings/.env
-            source /home/ec2-user/env_backups/venv/bin/activate
+            cp ~/env_backups/.env   ~/SupplementRatings/.env
+            source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
             python manage.py migrate
             sudo systemctl restart gunicorn
