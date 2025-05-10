@@ -30,7 +30,8 @@ jobs:
           ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             set -e
             cd ~/SupplementRatings
-            git pull origin main
+            git fetch origin
+            git reset --hard origin/main
             cp ~/env_backups/.env   ~/SupplementRatings/.env
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
