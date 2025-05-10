@@ -32,7 +32,11 @@ jobs:
             cd ~/SupplementRatings
             git fetch origin
             git reset --hard origin/main
-            source ~/venv/bin/activate
+            if [ ! -f .env ]; then
+              sudo cp /home/ec2-user/env_backups/.env .env
+              sudo chown ec2-user:ec2-user .env
+            fi
+            source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
             python manage.py migrate
             sudo systemctl restart gunicorn
