@@ -1,0 +1,40 @@
+name: Deploy to EC2
+
+# Trigger on pushes to main
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Check out your code
+      - uses: actions/checkout@v3
+
+      # 2. Start an SSH agent and load your private key
+      - name: Setup SSH agent
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      # 3. Add your server to known_hosts (so SSH won’t prompt)
+      - name: Add remote host to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      # 4. SSH in and pull + rebuild + restart
+      - name: Deploy to EC2
+        run: |
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+            set -e
+            cd ~/SupplementRatings
+            git pull origin main
+            cp /home/ec2-user/env_backups/ .env
+            source /home/ec2-user/env_backups/venv/bin/activate
+            pip install -r requirements.txt
+            python manage.py migrate
+            sudo systemctl restart gunicorn
+            sudo systemctl reload nginx
+          EOF
