@@ -7,17 +7,16 @@ import { API_BASE_URL } from '../config';
 // Create an axios instance with a base URL
 const API = axios.create({
     baseURL: API_BASE_URL,
-    withCredentials: true,
-    xsrfCookieName: 'csrftoken',
-    xsrfHeaderName: 'X-CSRFToken',
 });
 
 // Add a request interceptor to include the auth token and CSRF token
 API.interceptors.request.use((config) => {
     // Add auth token if it exists
     const token = localStorage.getItem('token');
+    console.log("TOKEN BEING SENT:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+        console.log("AUTHORIZATION HEADER:", config.headers.Authorization);
     }
     
     return config;

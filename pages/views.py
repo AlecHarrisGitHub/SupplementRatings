@@ -24,6 +24,7 @@ from django.conf import settings
 from django.db import IntegrityError
 from pages.throttles import RegisterRateThrottle
 from .permissions import IsOwnerOrReadOnly, IsOwnerOrAdmin
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
@@ -97,7 +98,8 @@ class SupplementViewSet(viewsets.ModelViewSet):
 
 class RatingViewSet(viewsets.ModelViewSet):
     serializer_class = RatingSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         queryset = Rating.objects.all()
@@ -128,30 +130,55 @@ class RatingViewSet(viewsets.ModelViewSet):
 
         serializer.save(user=self.request.user)
 
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], 
+            authentication_classes=[JWTAuthentication],
+            permission_classes=[IsAuthenticated])
     def upvote(self, request, pk=None):
-        rating = self.get_object()
+        print("REQUEST HEADERS:", request.headers)
+        print("AUTH:", request.auth)
+        print("AUTHENTICATORS:", request._authenticator)
+        print("USER IS AUTHENTICATED:", request.user.is_authenticated)
+        print("USER:", request.user.username if request.user.is_authenticated else "ANONYMOUS")
         
-        # Don't allow self-upvoting
-        if rating.user == request.user:
-            return Response({'error': 'You cannot upvote your own rating'}, status=400)
-
         try:
-            # Try to create upvote
-            UserUpvote.objects.create(user=request.user, rating=rating)
-            rating.upvotes += 1
-            rating.save()
-            return Response({'upvotes': rating.upvotes})
-        except IntegrityError:
-            # User has already upvoted, so remove the upvote
-            UserUpvote.objects.filter(user=request.user, rating=rating).delete()
-            rating.upvotes = max(0, rating.upvotes - 1)  # Ensure we don't go below 0
-            rating.save()
-            return Response({'upvotes': rating.upvotes})
+            rating = self.get_object()
+            print("RATING FETCHED SUCCESSFULLY")
+            
+            # Don't allow self-upvoting
+            if rating.user == request.user:
+                print("SELF-UPVOTE ATTEMPT")
+                return Response({'error': 'You cannot upvote your own rating'}, status=400)
+
+            try:
+                # Try to create upvote
+                print("CREATING UPVOTE")
+                UserUpvote.objects.create(user=request.user, rating=rating)
+                rating.upvotes += 1
+                rating.save()
+                print("UPVOTE SUCCESSFUL")
+                return Response({'upvotes': rating.upvotes})
+            except IntegrityError:
+                # User has already upvoted, so remove the upvote
+                print("REMOVING EXISTING UPVOTE")
+                UserUpvote.objects.filter(user=request.user, rating=rating).delete()
+                rating.upvotes = max(0, rating.upvotes - 1)  # Ensure we don't go below 0
+                rating.save()
+                print("UPVOTE REMOVED SUCCESSFULLY")
+                return Response({'upvotes': rating.upvotes})
+        except Exception as e:
+            print("ERROR IN UPVOTE:", str(e))
+            return Response({'error': str(e)}, status=500)
+
+    def check_object_permissions(self, request, obj):
+        print("CHECKING OBJECT PERMISSIONS")
+        print("REQUEST METHOD:", request.method)
+        print("PERMISSIONS:", self.permission_classes)
+        return super().check_object_permissions(request, obj)
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         return Comment.objects.all()
@@ -167,7 +194,9 @@ class CommentViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    @action(detail=True, methods=['POST'])
+    @action(detail=True, methods=['POST'], 
+            authentication_classes=[JWTAuthentication],
+            permission_classes=[IsAuthenticated])
     def upvote(self, request, pk=None):
         comment = self.get_object()
         
