@@ -24,31 +24,55 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
 
-      # 4. SSH in and pull + rebuild + restart
+      # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
         run: |
           ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             set -e
             cd ~/SupplementRatings
+
+            # ---------- 1) back-up existing DB ----------
+            backup_dir="/home/ec2-user/db_backups"
+            mkdir -p "$backup_dir"
+            if [ -f db.sqlite3 ]; then
+              echo "⏳  Backing up db.sqlite3…"
+              cp db.sqlite3 "$backup_dir/db.sqlite3.$(date +%Y%m%d%H%M%S)"
+            fi
+
+            # ---------- 2) pull latest code ----------
             git fetch origin
             git reset --hard origin/main
+
+            # ---------- 3) restore DB (if missing) ----------
+            if [ ! -f db.sqlite3 ] && ls "$backup_dir"/db.sqlite3.* >/dev/null 2>&1; then
+              echo "🔄  Restoring db.sqlite3…"
+              latest_backup=$(ls -t "$backup_dir"/db.sqlite3.* | head -n 1)
+              cp "$latest_backup" db.sqlite3
+            fi
+
+            # ---------- 4) rebuild & restart ----------
             if [ ! -f .env ]; then
               sudo cp /home/ec2-user/env_backups/.env .env
               sudo chown ec2-user:ec2-user .env
             fi
+
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
+
             cd frontend
             rm -rf node_modules
             npm install react-hot-toast --save
             npm ci
             npm run build
             cd ..
+
             rm -rf frontend_dist
-            mkdir frontend_dist
+            mkdir  frontend_dist
             mv frontend/dist/* frontend_dist/
+
             python manage.py collectstatic --noinput
             python manage.py migrate
+
             sudo systemctl restart gunicorn
-            sudo systemctl reload nginx
+            sudo systemctl reload  nginx
           EOF
