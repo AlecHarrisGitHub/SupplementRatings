@@ -26,6 +26,7 @@ from pages.throttles import RegisterRateThrottle
 from .permissions import IsOwnerOrReadOnly, IsOwnerOrAdmin
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import logging
+import os
 
 logging.warning("DEBUG: REST_FRAMEWORK_THROTTLE_RATES = %s", getattr(settings, 'REST_FRAMEWORK_THROTTLE_RATES', None))
 
@@ -357,7 +358,9 @@ def register_user(request):
         verification_token = EmailVerificationToken.objects.create(user=user)
 
         # Send verification email
-        verification_url = f"http://localhost:5173/verify-email/{verification_token.token}"
+        is_production = os.environ.get('PRODUCTION', 'False').lower() == 'true'
+        domain = 'https://supplementratings.com' if is_production else 'http://localhost:5173'
+        verification_url = f"{domain}/verify-email/{verification_token.token}"
         
         try:
             print("Email settings:")
