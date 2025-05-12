@@ -15,7 +15,6 @@ import os
 from decouple import config
 from datetime import timedelta
 import logging
-from rest_framework.throttling import AnonRateThrottle
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -152,9 +151,16 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/day',
         'user': '1000/day',
-        'auth': '5/minute',    # Login attempts
-        'register': '5/hour'   # Registration attempts
+        'auth': '5/minute',
+        'register': '5/hour'
     }
+}
+
+REST_FRAMEWORK_THROTTLE_RATES = {
+    'anon': '100/day',
+    'user': '1000/day',
+    'auth': '5/minute',
+    'register': '5/hour'
 }
 
 SIMPLE_JWT = {

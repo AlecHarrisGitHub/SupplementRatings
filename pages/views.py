@@ -25,6 +25,9 @@ from django.db import IntegrityError
 from pages.throttles import RegisterRateThrottle
 from .permissions import IsOwnerOrReadOnly, IsOwnerOrAdmin
 from rest_framework_simplejwt.authentication import JWTAuthentication
+import logging
+
+logging.warning("DEBUG: REST_FRAMEWORK_THROTTLE_RATES = %s", getattr(settings, 'REST_FRAMEWORK_THROTTLE_RATES', None))
 
 class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
@@ -318,6 +321,7 @@ def get_user_details(request):
 @authentication_classes([])
 @throttle_classes([RegisterRateThrottle])
 def register_user(request):
+    print("DEBUG: register_user CALLED")
     try:
         username = request.data.get('username')
         email = request.data.get('email')
