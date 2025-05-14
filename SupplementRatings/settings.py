@@ -240,7 +240,7 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 # Add to your existing settings
 MEDIA_URL = '/media/'
 if config('PRODUCTION', cast=bool, default=None):
-    MEDIA_ROOT = 'media'
+    MEDIA_ROOT = os.path.join(BASE_DIR.parent, 'data', 'media')
 else:
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
