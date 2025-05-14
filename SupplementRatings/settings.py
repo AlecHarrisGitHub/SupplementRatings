@@ -239,7 +239,11 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
 # Add to your existing settings
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+if config('PRODUCTION', cast=bool, default=None):
+    MEDIA_ROOT = 'media'
+else:
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True

@@ -27,6 +27,7 @@ from .permissions import IsOwnerOrReadOnly, IsOwnerOrAdmin
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import logging
 import os
+from decouple import config
 
 logging.warning("DEBUG: REST_FRAMEWORK_THROTTLE_RATES = %s", getattr(settings, 'REST_FRAMEWORK_THROTTLE_RATES', None))
 
@@ -358,7 +359,7 @@ def register_user(request):
         verification_token = EmailVerificationToken.objects.create(user=user)
 
         # Send verification email
-        is_production = os.environ.get('PRODUCTION', 'False').lower() == 'true'
+        is_production = config('PRODUCTION', cast=bool, default=None)
         domain = 'https://supplementratings.com' if is_production else 'http://localhost:5173'
         verification_url = f"{domain}/verify-email/{verification_token.token}"
         
