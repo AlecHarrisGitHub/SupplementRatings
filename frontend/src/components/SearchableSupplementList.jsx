@@ -19,7 +19,8 @@ import {
     IconButton,
     Skeleton,
     Select,
-    MenuItem
+    MenuItem,
+    Divider
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating, getCategories } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -269,6 +270,7 @@ function SearchableSupplementList() {
     const [appliedSortBy, setAppliedSortBy] = useState('highest_rating');
 
     const [categories, setCategories] = useState([]);
+    const [ratingDialogAttemptedSubmit, setRatingDialogAttemptedSubmit] = useState(false);
 
     // Add this useEffect after the other useEffect hooks
     useEffect(() => {
@@ -565,6 +567,7 @@ function SearchableSupplementList() {
         setRatingFrequencyUnit('day');
         setRatingImage(null);
         setEditingRating(null);
+        setRatingDialogAttemptedSubmit(false);
     };
 
     // Add this function to handle opening the rating dialog for a new rating
@@ -584,6 +587,13 @@ function SearchableSupplementList() {
         if (e) {
             e.preventDefault();
         }
+        setRatingDialogAttemptedSubmit(true);
+
+        if (selectedConditions.length === 0 || !ratingScore) {
+            toast.error("Purpose and Rating are required.");
+            return;
+        }
+
         try {
             const formData = new FormData();
             formData.append('supplement', selectedSupplement.id);
@@ -1215,32 +1225,36 @@ function SearchableSupplementList() {
                                     label="Purpose *"
                                     required
                                     margin="normal"
-                                    error={selectedConditions.length === 0}
-                                    helperText={selectedConditions.length === 0 ? "At least one condition is required" : ""}
+                                    error={selectedConditions.length === 0 && ratingDialogAttemptedSubmit}
+                                    helperText={selectedConditions.length === 0 && ratingDialogAttemptedSubmit ? "At least one purpose is required" : ""}
                                 />
                             )}
                         />
                         
-                        <Box sx={{ my: 2 }}>
+                        <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                             <Typography component="legend">Rating *</Typography>
                             <Rating
+                                name="simple-controlled"
                                 value={ratingScore}
-                                onChange={(_, newValue) => {
-                                    if (newValue !== null) {
-                                        setRatingScore(newValue);
-                                    }
+                                onChange={(event, newValue) => {
+                                    setRatingScore(newValue);
                                 }}
-                                size="large"
-                                required
+                                sx={{mt:1}}
                             />
-                            {!ratingScore && (
-                                <Typography color="error" variant="caption" sx={{ display: 'block' }}>
-                                    Please select a rating
+                            {ratingDialogAttemptedSubmit && !ratingScore && (
+                                <Typography color="error" variant="caption" sx={{ mt: 1 }}>
+                                    Rating is required.
                                 </Typography>
                             )}
                         </Box>
 
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                        <Divider sx={{ mt: 2, mb: 3 }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                                OPTIONAL FIELDS
+                            </Typography>
+                        </Divider>
+
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
                             <TextField
                                 label="Dosage"
                                 type="number"
@@ -1284,7 +1298,7 @@ function SearchableSupplementList() {
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Brand Used (optional)"
+                                    label="Brand Used"
                                     fullWidth
                                     sx={{ mb: 2 }}
                                 />
