@@ -83,139 +83,156 @@ const FilterDrawer = ({
     selectedFilterCategory,
     setSelectedFilterCategory,
     categories
-}) => (
-    <Drawer
-        anchor="left"
-        open={open}
-        onClose={onClose}
-    >
-        <Box sx={{ width: 300, p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-                Filter Supplements
-            </Typography>
-            
-            <Autocomplete
-                multiple
-                options={conditions}
-                getOptionLabel={(option) => option.name}
-                value={selectedFilterConditions}
-                onChange={(_, newValue) => setSelectedFilterConditions(newValue)}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Filter by Purpose"
-                        margin="normal"
-                    />
-                )}
-                sx={{ mb: 2 }}
-            />
-            
-            <TextField
-                select
-                label="Category"
-                value={selectedFilterCategory}
-                onChange={(e) => setSelectedFilterCategory(e.target.value)}
-                fullWidth
-                margin="normal"
-            >
-                <MenuItem value="">All Categories</MenuItem>
-                {categories.map((category) => (
-                    <MenuItem key={category} value={category}>
-                        {category}
-                    </MenuItem>
-                ))}
-            </TextField>
+}) => {
+    // Sort categories alphabetically
+    const sortedCategories = React.useMemo(() => {
+        if (Array.isArray(categories)) {
+            return [...categories].sort((a, b) => a.localeCompare(b));
+        }
+        return [];
+    }, [categories]);
 
-            <Autocomplete
-                multiple
-                options={brands}
-                getOptionLabel={(option) => option.name}
-                value={selectedFilterBrands}
-                onChange={(_, newValue) => setSelectedFilterBrands(newValue)}
-                renderInput={(params) => (
-                    <TextField
-                        {...params}
-                        label="Filter by Brands"
-                        margin="normal"
-                    />
-                )}
-                sx={{ mb: 2 }}
-            />
+    // Sort brands alphabetically by name
+    const sortedBrands = React.useMemo(() => {
+        if (Array.isArray(brands)) {
+            return [...brands].sort((a, b) => a.name.localeCompare(b.name));
+        }
+        return [];
+    }, [brands]);
 
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                    label="Dosage"
-                    type="number"
-                    value={selectedFilterDosage}
-                    onChange={(e) => setSelectedFilterDosage(e.target.value)}
-                    sx={{ width: '50%' }}
+    return (
+        <Drawer
+            anchor="left"
+            open={open}
+            onClose={onClose}
+        >
+            <Box sx={{ width: 300, p: 3 }}>
+                <Typography variant="h6" gutterBottom>
+                    Filter Supplements
+                </Typography>
+                
+                <Autocomplete
+                    multiple
+                    options={conditions}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedFilterConditions}
+                    onChange={(_, newValue) => setSelectedFilterConditions(newValue)}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Filter by Purpose"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
                 />
-                <Select
-                    value={selectedFilterDosageUnit}
-                    onChange={(e) => setSelectedFilterDosageUnit(e.target.value)}
-                    sx={{ width: '50%' }}
-                >
-                    <MenuItem value="mg">mg</MenuItem>
-                    <MenuItem value="g">g</MenuItem>
-                    <MenuItem value="mcg">mcg</MenuItem>
-                    <MenuItem value="ml">ml</MenuItem>
-                    <MenuItem value="IU">IU</MenuItem>
-                </Select>
-            </Box>
-
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                <TextField
-                    label="Frequency"
-                    type="number"
-                    value={selectedFilterFrequency}
-                    onChange={(e) => setSelectedFilterFrequency(e.target.value)}
-                    sx={{ width: '50%' }}
+                
+                <Autocomplete
+                    options={sortedCategories}
+                    getOptionLabel={(option) => option}
+                    value={selectedFilterCategory}
+                    onChange={(_, newValue) => setSelectedFilterCategory(newValue || '')}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Category"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
                 />
+
+                <Autocomplete
+                    multiple
+                    options={sortedBrands}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedFilterBrands}
+                    onChange={(_, newValue) => setSelectedFilterBrands(newValue)}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Filter by Brands"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
+                />
+
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <TextField
+                        label="Dosage"
+                        type="number"
+                        value={selectedFilterDosage}
+                        onChange={(e) => setSelectedFilterDosage(e.target.value)}
+                        sx={{ width: '50%' }}
+                    />
+                    <Select
+                        value={selectedFilterDosageUnit}
+                        onChange={(e) => setSelectedFilterDosageUnit(e.target.value)}
+                        sx={{ width: '50%' }}
+                    >
+                        <MenuItem value="mg">mg</MenuItem>
+                        <MenuItem value="g">g</MenuItem>
+                        <MenuItem value="mcg">mcg</MenuItem>
+                        <MenuItem value="ml">ml</MenuItem>
+                        <MenuItem value="IU">IU</MenuItem>
+                    </Select>
+                </Box>
+
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <TextField
+                        label="Frequency"
+                        type="number"
+                        value={selectedFilterFrequency}
+                        onChange={(e) => setSelectedFilterFrequency(e.target.value)}
+                        sx={{ width: '50%' }}
+                    />
+                    <Select
+                        value={selectedFilterFrequencyUnit}
+                        onChange={(e) => setSelectedFilterFrequencyUnit(e.target.value)}
+                        sx={{ width: '50%' }}
+                    >
+                        <MenuItem value="day">Per Day</MenuItem>
+                        <MenuItem value="week">Per Week</MenuItem>
+                        <MenuItem value="month">Per Month</MenuItem>
+                        <MenuItem value="year">Per Year</MenuItem>
+                    </Select>
+                </Box>
+
+                {/* Sort options moved to bottom */}
+                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
+                    Sort By
+                </Typography>
                 <Select
-                    value={selectedFilterFrequencyUnit}
-                    onChange={(e) => setSelectedFilterFrequencyUnit(e.target.value)}
-                    sx={{ width: '50%' }}
+                    fullWidth
+                    value={selectedSortBy}
+                    onChange={(e) => setSelectedSortBy(e.target.value)}
+                    sx={{ mb: 3 }}
                 >
-                    <MenuItem value="day">Per Day</MenuItem>
-                    <MenuItem value="week">Per Week</MenuItem>
-                    <MenuItem value="month">Per Month</MenuItem>
-                    <MenuItem value="year">Per Year</MenuItem>
+                    <MenuItem value="highest_rating">Highest Rating</MenuItem>
+                    <MenuItem value="most_ratings">Most Ratings</MenuItem>
                 </Select>
-            </Box>
 
-            {/* Sort options moved to bottom */}
-            <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
-                Sort By
-            </Typography>
-            <Select
-                fullWidth
-                value={selectedSortBy}
-                onChange={(e) => setSelectedSortBy(e.target.value)}
-                sx={{ mb: 3 }}
-            >
-                <MenuItem value="highest_rating">Highest Rating</MenuItem>
-                <MenuItem value="most_ratings">Most Ratings</MenuItem>
-            </Select>
-
-            <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
-                <Button
-                    variant="outlined"
-                    onClick={onClearFilter}
-                    fullWidth
-                >
-                    Clear
-                </Button>
-                <Button
-                    variant="contained"
-                    onClick={onApplyFilter}
-                    fullWidth
-                >
-                    Apply
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
+                    <Button
+                        variant="outlined"
+                        onClick={onClearFilter}
+                        fullWidth
+                    >
+                        Clear
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={onApplyFilter}
+                        fullWidth
+                    >
+                        Apply
+                    </Button>
+                </Box>
             </Box>
-        </Box>
-    </Drawer>
-);
+        </Drawer>
+    );
+};
 
 function SearchableSupplementList() {
     const [searchTerm, setSearchTerm] = useState('');
@@ -377,6 +394,8 @@ function SearchableSupplementList() {
         const fetchBrands = async () => {
             try {
                 const data = await getBrands();
+                // Ensure brands are sorted before setting state if needed elsewhere,
+                // but for the filter, we use sortedBrands directly in FilterDrawer.
                 setBrands(data);
             } catch (error) {
                 console.error('Error fetching brands:', error);
