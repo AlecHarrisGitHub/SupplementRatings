@@ -12,6 +12,8 @@ import NotFound from './pages/NotFound';
 import EmailVerification from './pages/EmailVerification';
 import { Toaster } from 'react-hot-toast';
 import UploadBrands from './pages/UploadBrands';
+import AdminDashboard from './pages/AdminDashboard';
+import PrivateRoute from './components/PrivateRoute';
 
 function App() {
     return (
@@ -35,10 +37,11 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/upload-supplements" element={<UploadCSV type="supplements" />} />
-                <Route path="/upload-conditions" element={<UploadCSV type="conditions" />} />
+                <Route path="/upload-supplements" element={<PrivateRoute><UploadCSV type="supplements" /></PrivateRoute>} />
+                <Route path="/upload-conditions" element={<PrivateRoute><UploadCSV type="conditions" /></PrivateRoute>} />
+                <Route path="/upload-brands" element={<PrivateRoute><UploadBrands /></PrivateRoute>} />
+                <Route path="/admin-dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
                 <Route path="/verify-email/:token" element={<EmailVerification />} />
-                <Route path="/upload-brands" element={<UploadBrands />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </div>

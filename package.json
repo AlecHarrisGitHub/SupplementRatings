@@ -2,5 +2,8 @@
   "dependencies": {
     "@mui/icons-material": "^6.4.1",
     "react-hot-toast": "^2.4.1"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

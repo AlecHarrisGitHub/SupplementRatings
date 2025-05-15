@@ -307,7 +307,7 @@ function SearchableSupplementList() {
             try {
                 setLoading(true);
                 const params = {
-                    ...(currentSearch ? { name: currentSearch } : {}),
+                    ...(currentSearch ? { search: currentSearch } : {}),
                     ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
                     ...(appliedFilterConditions.length > 0 ? { 
                         conditions: appliedFilterConditions.map(c => c.name).join(',') 
@@ -326,9 +326,9 @@ function SearchableSupplementList() {
                     limit: 10
                 };
                 const data = await getSupplements(params);
-                setSupplements(data);
+                setSupplements(data.results || []);
                 setOffset(10);
-                setHasMore(data.length === 10);
+                setHasMore(data.next !== null);
             } catch (error) {
                 console.error('Error fetching supplements:', error);
                 toast.error('Failed to fetch supplements');
@@ -493,7 +493,8 @@ function SearchableSupplementList() {
         try {
             setLoading(true);
             const params = {
-                ...(currentSearch ? { name: currentSearch } : {}),
+                ...(currentSearch ? { search: currentSearch } : {}),
+                ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
                 ...(appliedFilterConditions.length > 0 ? { 
                     conditions: appliedFilterConditions.map(c => c.name).join(',') 
                 } : {}),
@@ -506,14 +507,15 @@ function SearchableSupplementList() {
                 ...(appliedFilterFrequency ? { 
                     frequency: `${appliedFilterFrequency}_${appliedFilterFrequencyUnit}` 
                 } : {}),
+                sort_by: appliedSortBy,
                 offset: 0,
                 limit: 10
             };
             const data = await getSupplements(params);
-            setSupplements(data);
+            setSupplements(data.results || []);
             setSelectedSupplement(null);
             setOffset(10);
-            setHasMore(data.length === 10);
+            setHasMore(data.next !== null);
         } catch (error) {
             console.error('Error refreshing supplements:', error);
             toast.error('Failed to refresh supplements list');
@@ -782,7 +784,7 @@ function SearchableSupplementList() {
         try {
             setLoading(true);
             const params = {
-                ...(currentSearch ? { name: currentSearch } : {}),
+                ...(currentSearch ? { search: currentSearch } : {}),
                 ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
                 ...(appliedFilterConditions.length > 0 ? { 
                     conditions: appliedFilterConditions.map(c => c.name).join(',') 
@@ -800,10 +802,10 @@ function SearchableSupplementList() {
                 offset: offset,
                 limit: batchSize
             };
-            const newData = await getSupplements(params);
-            setSupplements(prevSupplements => [...prevSupplements, ...newData]);
-            setOffset(offset + batchSize);
-            setHasMore(newData.length === batchSize);
+            const data = await getSupplements(params);
+            setSupplements(prevSupplements => [...prevSupplements, ...(data.results || [])]);
+            setOffset(offset + (data.results ? data.results.length : 0));
+            setHasMore(data.next !== null);
         } catch (error) {
             console.error('Error loading more supplements:', error);
             toast.error('Failed to load more supplements');

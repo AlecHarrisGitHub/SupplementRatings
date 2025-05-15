@@ -84,9 +84,23 @@ export const getSupplements = async (params = {}, skipCache = false) => {
         return cached.data;
     }
 
+    // Map sort_by to ordering for DRF compatibility
+    const apiParams = { ...params };
+    if (apiParams.sort_by) {
+        if (apiParams.sort_by === 'name') {
+            apiParams.ordering = 'name';
+        } else if (apiParams.sort_by === 'highest_rating') {
+            apiParams.ordering = '-avg_rating'; // Assuming avg_rating is annotated and available
+        } else if (apiParams.sort_by === 'most_ratings') {
+            apiParams.ordering = '-rating_count'; // Assuming rating_count is annotated
+        }
+        // Add more mappings if needed
+        delete apiParams.sort_by;
+    }
+
     try {
-        const response = await API.get('supplements/', { params });
-        if (params.offset === 0) {  // Only cache first page
+        const response = await API.get('supplements/', { params: apiParams });
+        if (params.offset === 0) {  // Only cache first page, use original params for cache key
             cache.set(cacheKey, {
                 data: response.data,
                 timestamp: Date.now()
@@ -94,6 +108,20 @@ export const getSupplements = async (params = {}, skipCache = false) => {
         }
         return response.data;
     } catch (error) {
+        throw error;
+    }
+};
+
+export const getAllSupplements = async (params = {}) => {
+    try {
+        // Fetch with a large limit to effectively get all supplements for dropdowns.
+        // The modal expects data.results or an array. DRF paginated response is { count, next, previous, results }.
+        const effectiveParams = { ...params, limit: 1000, offset: 0 }; // Fetch up to 1000 supplements
+        const response = await API.get('supplements/', { params: effectiveParams });
+        // Return the results array directly
+        return response.data.results || []; 
+    } catch (error) {
+        console.error('Error fetching all supplements:', error);
         throw error;
     }
 };
@@ -116,7 +144,7 @@ export const getSupplementDetails = async (id) => {
     }
 };
 
-export const getRatings = async (supplementId) => {
+export const getRatingsForSupplement = async (supplementId) => {
     try {
         const response = await API.get(`ratings/`, {
             params: { supplement: supplementId }
@@ -160,14 +188,14 @@ export const addComment = async (formData) => {
     }
 };
 
-export const getComments = async (ratingId) => {
+export const getCommentsForRating = async (ratingId) => {
     try {
         const response = await API.get(`comments/`, {
             params: { rating: ratingId }
         });
         return response.data;
     } catch (error) {
-        console.error('Error fetching comments:', error);
+        console.error('Error fetching comments for rating:', error);
         throw error;
     }
 };
@@ -218,6 +246,20 @@ export const uploadSupplementsCSV = async (file) => {
     } catch (error) {
         console.error('Error uploading supplements CSV:', error);
         throw error;
+    }
+};
+
+export const deleteSupplement = async (supplementId, transferToSupplementId = null) => {
+    try {
+        let url = `/supplements/${supplementId}/`;
+        if (transferToSupplementId) {
+            url += `?transfer_ratings_to_id=${transferToSupplementId}`;
+        }
+        const response = await API.delete(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting supplement:', error.response?.data || error.message);
+        throw error.response?.data || error;
     }
 };
 
@@ -330,6 +372,31 @@ export const getBrands = async () => {
     }
 };
 
+export const deleteBrand = async (brandId, options = {}) => {
+    try {
+        let url = `/brands/${brandId}/`;
+        const params = new URLSearchParams();
+        if (options.replace_ratings_brand_with_id) {
+            params.append('replace_ratings_brand_with_id', options.replace_ratings_brand_with_id);
+        } else if (options.remove_from_ratings === true) { // Default backend behavior, but can be explicit
+            // The backend defaults to removing the brand string from ratings if no replace option is given.
+            // We don't strictly need to send a param for this default unless the backend API changes its default.
+            // For clarity or future API changes, one might send: params.append('action', 'remove_from_ratings');
+        }
+
+        const queryString = params.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+
+        const response = await API.delete(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting brand:', error.response?.data || error.message);
+        throw error.response?.data || error;
+    }
+};
+
 export const upvoteRating = async (ratingId) => {
     try {
         const response = await API.post(`ratings/${ratingId}/upvote/`);
@@ -356,6 +423,87 @@ export const getCategories = async () => {
         return response.data;
     } catch (error) {
         console.error('Error fetching categories:', error);
+        throw error;
+    }
+};
+
+// Function to get ALL conditions for dropdowns
+export const getAllConditions = async () => {
+    try {
+        // Assuming the /conditions/ endpoint without search params returns all, or supports a specific param.
+        const response = await API.get('conditions/'); 
+        return response.data; // Expects an array or {results: [...]} that DeleteConditionModal can use
+    } catch (error) {
+        console.error('Error fetching all conditions:', error);
+        throw error;
+    }
+};
+
+export const deleteCondition = async (conditionId, options = {}) => {
+    try {
+        let url = `/conditions/${conditionId}/`;
+        const params = new URLSearchParams();
+        if (options.transfer_ratings_to_condition_id) {
+            params.append('transfer_ratings_to_condition_id', options.transfer_ratings_to_condition_id);
+        } else {
+            // Default action is to delete associated ratings, as per user request
+            // This is handled by the backend if no transfer ID is provided.
+            // To be explicit or if backend required a flag: params.append('delete_associated_ratings', 'true');
+        }
+
+        const queryString = params.toString();
+        if (queryString) {
+            url += `?${queryString}`;
+        }
+
+        const response = await API.delete(url);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting condition:', error.response?.data || error.message);
+        throw error.response?.data || error;
+    }
+};
+
+export const deleteRatingByAdmin = async (ratingId) => {
+    try {
+        const response = await API.delete(`/ratings/${ratingId}/`);
+        return response.data; // Or simply return true/status if no specific data is returned
+    } catch (error) {
+        console.error('Error deleting rating by admin:', error.response?.data || error.message);
+        throw error.response?.data || error;
+    }
+};
+
+export const deleteCommentByAdmin = async (commentId) => {
+    try {
+        const response = await API.delete(`/comments/${commentId}/`);
+        return response.data; // Or true/status
+    } catch (error) {
+        console.error('Error deleting comment by admin:', error.response?.data || error.message);
+        throw error.response?.data || error;
+    }
+};
+
+// New function for ManageRatings.jsx to get all ratings with pagination/search
+export const searchAllRatings = async (params = {}) => {
+    try {
+        // Assumes backend /ratings/ endpoint supports general listing with these params
+        const response = await API.get('ratings/', { params });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching all ratings for admin:', error);
+        throw error;
+    }
+};
+
+// New function for ManageComments.jsx to get all comments with pagination/search
+export const searchAllComments = async (params = {}) => {
+    try {
+        // Assumes backend /comments/ endpoint supports general listing with these params
+        const response = await API.get('comments/', { params });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching all comments for admin:', error);
         throw error;
     }
 };
