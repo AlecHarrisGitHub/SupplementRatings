@@ -13,7 +13,10 @@ function SupplementList() {
       try {
         setLoading(true)
         const response = await getSupplements()
-        console.log('API Response:', response)
+        // console.log('API Response:', response)
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const supplementsData = Array.isArray(response) ? response : response.data
         setSupplements(supplementsData || [])
       } catch (err) {

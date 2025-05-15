@@ -293,8 +293,8 @@ function SearchableSupplementList() {
     );
 
     // Add console log for debugging
-    console.log('User in SearchableSupplementList:', user);
-    console.log('Rating user:', selectedSupplement?.ratings?.[0]?.user);
+    // console.log('User in SearchableSupplementList:', user);
+    // console.log('Rating user:', selectedSupplement?.ratings?.[0]?.user);
 
     // Add this near the top of the component, after the state declarations
     const memoizedHandleSearchChange = useCallback((e) => {
@@ -400,15 +400,15 @@ function SearchableSupplementList() {
             let ratingCount = data.rating_count;
             
             // Add console logs for debugging
-            console.log('Applied filters:', {
-                conditions: appliedFilterConditions,
-                brands: appliedFilterBrands,
-                dosage: appliedFilterDosage,
-                dosageUnit: appliedFilterDosageUnit,
-                frequency: appliedFilterFrequency,
-                frequencyUnit: appliedFilterFrequencyUnit
-            });
-            console.log('Original ratings:', data.ratings);
+            // console.log('Applied filters:', {
+            //     conditions: appliedFilterConditions,
+            //     brands: appliedFilterBrands,
+            //     dosage: appliedFilterDosage,
+            //     dosageUnit: appliedFilterDosageUnit,
+            //     frequency: appliedFilterFrequency,
+            //     frequencyUnit: appliedFilterFrequencyUnit
+            // });
+            // console.log('Original ratings:', data.ratings);
             
             if (appliedFilterConditions.length > 0 || 
                 appliedFilterBrands.length > 0 || 
@@ -444,19 +444,19 @@ function SearchableSupplementList() {
 
                     // Check frequency filter
                     if (appliedFilterFrequency) {
-                        console.log('Checking frequency for rating:', {
-                            ratingFreq: rating.dosage_frequency,
-                            ratingUnit: rating.frequency_unit,
-                            appliedFreq: appliedFilterFrequency,
-                            appliedUnit: appliedFilterFrequencyUnit
-                        });
+                        // console.log('Checking frequency for rating:', {
+                        //     ratingDosageFrequency: rating.dosage_frequency,
+                        //     ratingFrequencyUnit: rating.frequency_unit,
+                        //     filterFrequency: appliedFilterFrequency,
+                        //     filterUnit: appliedFilterFrequencyUnit
+                        // });
                         
                         // Convert all values to strings for comparison
-                        const ratingFreq = String(rating.dosage_frequency);
-                        const appliedFreq = String(appliedFilterFrequency);
+                        const ratingDosageFrequency = String(rating.dosage_frequency);
+                        const filterFrequency = String(appliedFilterFrequency);
                         
                         if (!rating.dosage_frequency || !rating.frequency_unit ||
-                            ratingFreq !== appliedFreq ||
+                            ratingDosageFrequency !== filterFrequency ||
                             rating.frequency_unit !== appliedFilterFrequencyUnit) {
                             return false;
                         }
@@ -467,7 +467,7 @@ function SearchableSupplementList() {
                 ratingCount = filteredRatings.length;
             }
             
-            console.log('Filtered ratings:', filteredRatings);
+            // console.log('Filtered ratings:', filteredRatings);
             
             // Ensure all rating data is preserved
             filteredRatings = filteredRatings.map(rating => ({
@@ -546,6 +546,8 @@ function SearchableSupplementList() {
             setSelectedBrand(null);
         }
         
+        setRatingDosageFrequency('1');
+        setRatingFrequencyUnit('day');
         setRatingDialogOpen(true);
     };
 
@@ -667,7 +669,7 @@ function SearchableSupplementList() {
                 originalRatings: refreshedData.ratings
             });
             
-            console.log('Updated supplement data:', refreshedData); // Debug log
+            // console.log('Updated supplement data:', refreshedData); // Debug log
         } catch (error) {
             console.error('Error refreshing supplement data:', error);
         }

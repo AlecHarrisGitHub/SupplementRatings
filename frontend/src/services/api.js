@@ -13,10 +13,10 @@ const API = axios.create({
 API.interceptors.request.use((config) => {
     // Add auth token if it exists
     const token = localStorage.getItem('token');
-    console.log("TOKEN BEING SENT:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
+    // console.log("TOKEN BEING SENT:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        console.log("AUTHORIZATION HEADER:", config.headers.Authorization);
+        // console.log("AUTHORIZATION HEADER:", config.headers.Authorization);
     }
     
     return config;
@@ -218,7 +218,7 @@ export const uploadConditionsCSV = async (file) => {
         formData.append('file', file);
         
         // Log the auth header for debugging
-        console.log('Auth header:', API.defaults.headers.common['Authorization']);
+        // console.log('Auth header:', API.defaults.headers.common['Authorization']);
         
         const response = await API.post('upload-conditions-csv/', formData, {
             headers: {
@@ -327,9 +327,9 @@ export const updateComment = async (commentId, content, image = null) => {
 export const updateRating = async (ratingId, formData) => {
     try {
         // Log FormData contents for debugging
-        for (let pair of formData.entries()) {
-            console.log('FormData:', pair[0], pair[1]);
-        }
+        // for (let pair of formData.entries()) {
+        //     console.log('FormData:', pair[0], pair[1]);
+        // }
 
         const response = await API.put(`ratings/${ratingId}/`, formData, {
             headers: {
@@ -507,5 +507,13 @@ export const searchAllComments = async (params = {}) => {
         throw error;
     }
 };
+
+// export const setAuthToken = (token) => {
+//     if (token) {
+//         API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+//     } else {
+//         delete API.defaults.headers.common['Authorization'];
+//     }
+// };
 
 export default API;

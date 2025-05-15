@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
@@ -7,9 +7,9 @@ import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 function Navbar() {
     const { isAuthenticated, isAdmin, user, logout } = useAuth();
+    // console.log('Navbar Auth State:', { isAuthenticated, isAdmin });
     const navigate = useNavigate();
-    
-    console.log('Navbar Auth State:', { isAuthenticated, isAdmin });
+    const [anchorEl, setAnchorEl] = useState(null);
     
     const handleLogout = () => {
         logout();

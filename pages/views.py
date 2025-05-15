@@ -31,7 +31,7 @@ from decouple import config
 from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
 
-logging.warning("DEBUG: REST_FRAMEWORK_THROTTLE_RATES = %s", getattr(settings, 'REST_FRAMEWORK_THROTTLE_RATES', None))
+# logging.warning("DEBUG: REST_FRAMEWORK_THROTTLE_RATES = %s", getattr(settings, 'REST_FRAMEWORK_THROTTLE_RATES', None))
 
 class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
@@ -242,50 +242,48 @@ class RatingViewSet(viewsets.ModelViewSet):
 
         serializer.save(user=self.request.user)
 
-    @action(detail=True, methods=['POST'], 
-            authentication_classes=[JWTAuthentication],
-            permission_classes=[IsAuthenticated])
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def upvote(self, request, pk=None):
-        print("REQUEST HEADERS:", request.headers)
-        print("AUTH:", request.auth)
-        print("AUTHENTICATORS:", request._authenticator)
-        print("USER IS AUTHENTICATED:", request.user.is_authenticated)
-        print("USER:", request.user.username if request.user.is_authenticated else "ANONYMOUS")
-        
+        # print("REQUEST HEADERS:", request.headers)
+        # print("AUTH:", request.auth)
+        # print("AUTHENTICATORS:", request._authenticator)
+        # print("USER IS AUTHENTICATED:", request.user.is_authenticated)
+        # print("USER:", request.user.username if request.user.is_authenticated else "ANONYMOUS")
         try:
             rating = self.get_object()
-            print("RATING FETCHED SUCCESSFULLY")
-            
-            # Don't allow self-upvoting
-            if rating.user == request.user:
-                print("SELF-UPVOTE ATTEMPT")
-                return Response({'error': 'You cannot upvote your own rating'}, status=400)
+            # print("RATING FETCHED SUCCESSFULLY")
+            user = request.user
 
-            try:
-                # Try to create upvote
-                print("CREATING UPVOTE")
-                UserUpvote.objects.create(user=request.user, rating=rating)
-                rating.upvotes += 1
+            if rating.user == user:
+                # print("SELF-UPVOTE ATTEMPT")
+                return Response({'status': 'error', 'message': 'Cannot upvote your own rating.'}, status=status.HTTP_403_FORBIDDEN)
+
+            if rating.upvotes.filter(id=user.id).exists():
+                # print("REMOVING EXISTING UPVOTE")
+                rating.upvotes.remove(user)
                 rating.save()
-                print("UPVOTE SUCCESSFUL")
-                return Response({'upvotes': rating.upvotes})
-            except IntegrityError:
-                # User has already upvoted, so remove the upvote
-                print("REMOVING EXISTING UPVOTE")
-                UserUpvote.objects.filter(user=request.user, rating=rating).delete()
-                rating.upvotes = max(0, rating.upvotes - 1)  # Ensure we don't go below 0
+                # print("UPVOTE REMOVED SUCCESSFULLY")
+                return Response({'status': 'upvote removed', 'upvotes_count': rating.upvotes.count()}, status=status.HTTP_200_OK)
+            else:
+                # print("CREATING UPVOTE")
+                rating.upvotes.add(user)
                 rating.save()
-                print("UPVOTE REMOVED SUCCESSFULLY")
-                return Response({'upvotes': rating.upvotes})
+                # print("UPVOTE SUCCESSFUL")
+                return Response({'status': 'upvote added', 'upvotes_count': rating.upvotes.count()}, status=status.HTTP_200_OK)
         except Exception as e:
-            print("ERROR IN UPVOTE:", str(e))
-            return Response({'error': str(e)}, status=500)
+            # print("ERROR IN UPVOTE:", str(e))
+            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def check_object_permissions(self, request, obj):
-        print("CHECKING OBJECT PERMISSIONS")
-        print("REQUEST METHOD:", request.method)
-        print("PERMISSIONS:", self.permission_classes)
-        return super().check_object_permissions(request, obj)
+        # print("CHECKING OBJECT PERMISSIONS")
+        # print("REQUEST METHOD:", request.method)
+        # print("PERMISSIONS:", self.permission_classes)
+        super().check_object_permissions(request, obj)
+        if request.method not in permissions.SAFE_METHODS:
+            if obj.user != request.user and not request.user.is_staff:
+                self.permission_denied(
+                    request, message=getattr(permissions.IsOwnerOrAdmin, 'message', None)
+                )
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
@@ -658,80 +656,57 @@ def get_user_details(request):
 @authentication_classes([])
 @throttle_classes([RegisterRateThrottle])
 def register_user(request):
-    print("DEBUG: register_user CALLED")
-    try:
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
+    # print("DEBUG: register_user CALLED")
+    serializer = UserSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
 
-        if not username or not password or not email:
-            return Response(
-                {'error': 'Username, email and password are required'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if User.objects.filter(username=username).exists():
-            return Response(
-                {'error': 'Username already exists'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        email_subject = 'Activate Your Account'
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        # Correctly determine if running in development or production
+        is_development = settings.DEBUG  # Assuming DEBUG is True for development
         
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {'error': 'Email already exists'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Construct the verification link based on environment
+        if is_development:
+            # Use localhost for development
+            verification_link = f"http://localhost:5173/verify-email/{uid}/{token}"
+        else:
+            # Use production domain
+            verification_link = f"https://supplementratings.com/verify-email/{uid}/{token}"
 
-        # Create user but set as inactive
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password,
-            is_active=False
-        )
-
-        # Create verification token
-        verification_token = EmailVerificationToken.objects.create(user=user)
-
-        # Send verification email
-        is_production = config('PRODUCTION', cast=bool, default=None)
-        domain = 'https://supplementratings.com' if is_production else 'http://localhost:5173'
-        verification_url = f"{domain}/verify-email/{verification_token.token}"
+        # HTML email content
+        html_message = render_to_string('email_verification.html', {
+            'user': user,
+            'verification_link': verification_link
+        })
+        plain_message = strip_tags(html_message)
         
+        # print("Email settings:")
+        # print(f"Backend: {settings.EMAIL_BACKEND}")
+        # print(f"Host: {settings.EMAIL_HOST}")
+        # print(f"Port: {settings.EMAIL_PORT}")
+        # print(f"TLS: {settings.EMAIL_USE_TLS}")
+        # print(f"User: {settings.EMAIL_HOST_USER}")
+        # print(f"Password length: {len(settings.EMAIL_HOST_PASSWORD)}")
+
         try:
-            print("Email settings:")
-            print(f"Backend: {settings.EMAIL_BACKEND}")
-            print(f"Host: {settings.EMAIL_HOST}")
-            print(f"Port: {settings.EMAIL_PORT}")
-            print(f"TLS: {settings.EMAIL_USE_TLS}")
-            print(f"User: {settings.EMAIL_HOST_USER}")
-            print(f"Password length: {len(settings.EMAIL_HOST_PASSWORD)}")
-            
             send_mail(
-                'Verify your email',
-                f'Click the following link to verify your email: {verification_url}',
+                email_subject,
+                plain_message,
                 settings.EMAIL_HOST_USER,
-                [email],
+                [user.email],
+                html_message=html_message,
                 fail_silently=False,
             )
         except Exception as mail_error:
-            # If email sending fails, delete the user and token
-            user.delete()
-            print(f"Detailed email error: {str(mail_error)}")
-            return Response(
-                {'error': f'Failed to send verification email: {str(mail_error)}'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+            # print(f"Detailed email error: {str(mail_error)}")
+            user.delete()  # Rollback user creation if email fails
+            return Response({'error': 'Failed to send verification email.', 'details': str(mail_error)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response({
-            'message': 'User registered successfully. Please check your email to verify your account.',
-            'user_id': user.id
-        }, status=status.HTTP_201_CREATED)
-    except Exception as e:
-        return Response(
-            {'error': str(e)}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        return Response({'message': 'User created. Please check your email to verify your account.'}, status=status.HTTP_201_CREATED)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

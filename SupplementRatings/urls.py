@@ -50,23 +50,23 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             })
         return response
     
-class DebugTokenObtainPairView(CustomTokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        try:
-            return super().post(request, *args, **kwargs)
-        except Exception as exc:
-            tb_lines = traceback.format_exc().splitlines()
-            return Response(
-                {"error": str(exc), "traceback": tb_lines},
-                status=500,
-            )
+# class DebugTokenObtainPairView(CustomTokenObtainPairView):
+#     def post(self, request, *args, **kwargs):
+#         try:
+#             return super().post(request, *args, **kwargs)
+#         except Exception as exc:
+#             tb_lines = traceback.format_exc().splitlines()
+#             return Response(
+#                 {"error": str(exc), "traceback": tb_lines},
+#                 status=500,
+#             )
 
 # Define API URLs
 api_urlpatterns = [
     path('upload-supplements-csv/', upload_supplements_csv, name='upload-supplements-csv'),
     path('upload-conditions-csv/', upload_conditions_csv, name='upload-conditions-csv'),
     path('upload-brands-csv/', upload_brands_csv, name='upload-brands-csv'),
-    path('token/obtain/', DebugTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('token/obtain/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('user/me/', get_user_details, name='user-details'),
     path('register/', register_user, name='register-user'),
