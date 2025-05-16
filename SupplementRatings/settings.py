@@ -50,7 +50,7 @@ if DEBUG:
     CSRF_COOKIE_SECURE = False
     CSRF_TRUSTED_ORIGINS = FRONTEND_DEV_URLS
 else:
-    ALLOWED_HOSTS = ['.supplementratings.com']
+    ALLOWED_HOSTS = ['3.15.155.109', '.supplementratings.com']
     CORS_ALLOWED_ORIGINS = [FRONTEND_PROD_URL]
     CORS_ALLOW_CREDENTIALS = True
     SECURE_SSL_REDIRECT = True
@@ -130,8 +130,12 @@ WSGI_APPLICATION = 'SupplementRatings.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
+        'NAME': config('DB_NAME', default='supplement_ratings_dev'),
+        'USER': config('DB_USER', default='myuser'),
+        'PASSWORD': config('DB_PASSWORD'),  # MUST be set in your .env file
+        'HOST': config('DB_HOST', default='localhost'),
+        'PORT': config('DB_PORT', default='5432'),
     }
 }
 

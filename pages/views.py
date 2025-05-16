@@ -1,5 +1,6 @@
 from rest_framework import viewsets, serializers
 from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework import permissions
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
 from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken, Brand, UserUpvote
@@ -8,7 +9,9 @@ from .serializers import (
     RatingSerializer, 
     CommentSerializer, 
     ConditionSerializer,
-    BrandSerializer
+    BrandSerializer,
+    RegisterUserSerializer,
+    BasicUserSerializer
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -30,6 +33,30 @@ import os
 from decouple import config
 from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.utils.html import strip_tags
+
+# Custom Ordering Filter
+class CustomOrderingFilter(filters.OrderingFilter):
+    def get_ordering(self, request, queryset, view):
+        ordering = super().get_ordering(request, queryset, view)
+        if ordering:
+            new_ordering = []
+            for field in ordering:
+                if field == 'avg_rating': # Ascending
+                    new_ordering.append(F('avg_rating').asc(nulls_first=True))
+                elif field == '-avg_rating': # Descending
+                    new_ordering.append(F('avg_rating').desc(nulls_last=True))
+                elif field == 'rating_count': # Ascending
+                     new_ordering.append(F('rating_count').asc(nulls_last=True)) # Ensure consistent null handling for count
+                elif field == '-rating_count': # Descending
+                     new_ordering.append(F('rating_count').desc(nulls_last=True))
+                else:
+                    new_ordering.append(field)
+            return new_ordering
+        return ordering
 
 # logging.warning("DEBUG: REST_FRAMEWORK_THROTTLE_RATES = %s", getattr(settings, 'REST_FRAMEWORK_THROTTLE_RATES', None))
 
@@ -37,16 +64,16 @@ class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = LimitOffsetPagination
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filter_backends = [filters.SearchFilter, CustomOrderingFilter]
     search_fields = ['name', 'category']
-    ordering_fields = ['name', 'id', 'category', 'avg_rating', 'rating_count'] # avg_rating, rating_count for consumer sort
+    ordering_fields = ['name', 'id', 'category', 'avg_rating', 'rating_count']
 
     def get_queryset(self):
         queryset = Supplement.objects.all()
 
         # Annotate for potential sorting/filtering, does not filter by itself.
         queryset = queryset.annotate(
-            avg_rating=Avg('ratings__score'),
+            avg_rating=Avg('ratings__score', output_field=FloatField()),
             rating_count=Count('ratings', distinct=True)
         )
 
@@ -93,19 +120,20 @@ class SupplementViewSet(viewsets.ModelViewSet):
         if has_rating_filters:
             queryset = queryset.filter(rating_related_query).distinct()
         
-        # If ordering is not specified in the request, DRF uses model's default ordering or PK.
-        # To set a default for the consumer view:
-        
         # Check if an explicit ordering or search is being applied by the filters
         # OrderingFilter.ordering_param is 'ordering' by default
         # SearchFilter.search_param is 'search' by default
         is_ordering_requested = self.request.query_params.get(filters.OrderingFilter.ordering_param, None) is not None
         is_search_requested = self.request.query_params.get(filters.SearchFilter.search_param, None) is not None
 
+        # The CustomOrderingFilter will handle the nulls for 'avg_rating' and 'rating_count'.
+        # The default ordering when NO ?ordering= is provided can still be set here.
         if not is_ordering_requested and not is_search_requested and not has_rating_filters:
-             # Apply default sort for the main supplement list for consumers (e.g., highest rating)
-             # This will not apply if '?ordering=...' (e.g., from admin) or '?search=...' is used.
-             queryset = queryset.order_by(F('avg_rating').desc(nulls_last=True), '-rating_count')
+             queryset = queryset.order_by(F('avg_rating').desc(nulls_last=True), F('rating_count').desc(nulls_last=True))
+        
+        # --- TEMPORARY DEBUGGING: PRINT THE QUERY ---
+        # print("DEBUG SQL QUERY:", queryset.query) 
+        # --- END TEMPORARY DEBUGGING ---
 
         return queryset.distinct() # Ensure distinct results
 
@@ -224,7 +252,7 @@ class RatingViewSet(viewsets.ModelViewSet):
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
         if instance.user != request.user and not request.user.is_staff:
-            return Response({'error': 'You can only edit your own ratings, unless you are an admin.'}, status=403)
+            return Response({'error': 'You can only edit your own ratings, unless you are an admin.'}, status=status.HTTP_403_FORBIDDEN)
         
         instance.is_edited = True
         return super().update(request, *args, **kwargs)
@@ -244,46 +272,34 @@ class RatingViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def upvote(self, request, pk=None):
-        # print("REQUEST HEADERS:", request.headers)
-        # print("AUTH:", request.auth)
-        # print("AUTHENTICATORS:", request._authenticator)
-        # print("USER IS AUTHENTICATED:", request.user.is_authenticated)
-        # print("USER:", request.user.username if request.user.is_authenticated else "ANONYMOUS")
         try:
             rating = self.get_object()
-            # print("RATING FETCHED SUCCESSFULLY")
             user = request.user
 
             if rating.user == user:
-                # print("SELF-UPVOTE ATTEMPT")
                 return Response({'status': 'error', 'message': 'Cannot upvote your own rating.'}, status=status.HTTP_403_FORBIDDEN)
 
-            if rating.upvotes.filter(id=user.id).exists():
-                # print("REMOVING EXISTING UPVOTE")
-                rating.upvotes.remove(user)
-                rating.save()
-                # print("UPVOTE REMOVED SUCCESSFULLY")
-                return Response({'status': 'upvote removed', 'upvotes_count': rating.upvotes.count()}, status=status.HTTP_200_OK)
-            else:
-                # print("CREATING UPVOTE")
-                rating.upvotes.add(user)
-                rating.save()
-                # print("UPVOTE SUCCESSFUL")
-                return Response({'status': 'upvote added', 'upvotes_count': rating.upvotes.count()}, status=status.HTTP_200_OK)
+            try:
+                UserUpvote.objects.create(user=request.user, rating=rating)
+                rating.upvotes = F('upvotes') + 1 
+                rating.save(update_fields=['upvotes'])
+                rating.refresh_from_db()
+                return Response({'status': 'upvote added', 'upvotes_count': rating.upvotes}, status=status.HTTP_200_OK)
+            except IntegrityError:
+                UserUpvote.objects.filter(user=request.user, rating=rating).delete()
+                rating.upvotes = F('upvotes') - 1
+                rating.save(update_fields=['upvotes'])
+                rating.refresh_from_db()
+                return Response({'status': 'upvote removed', 'upvotes_count': rating.upvotes}, status=status.HTTP_200_OK)
+
         except Exception as e:
-            # print("ERROR IN UPVOTE:", str(e))
             return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def check_object_permissions(self, request, obj):
-        # print("CHECKING OBJECT PERMISSIONS")
-        # print("REQUEST METHOD:", request.method)
-        # print("PERMISSIONS:", self.permission_classes)
         super().check_object_permissions(request, obj)
         if request.method not in permissions.SAFE_METHODS:
             if obj.user != request.user and not request.user.is_staff:
-                self.permission_denied(
-                    request, message=getattr(permissions.IsOwnerOrAdmin, 'message', None)
-                )
+                self.permission_denied(request)
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
@@ -291,7 +307,7 @@ class CommentViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
     pagination_class = LimitOffsetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['user__username', 'text', 'rating__supplement__name']
+    search_fields = ['user__username', 'content', 'rating__supplement__name']
     ordering_fields = ['created_at', 'upvotes']
 
     def get_queryset(self):
@@ -651,46 +667,39 @@ def get_user_details(request):
         'email': request.user.email
     })
 
+logger = logging.getLogger(__name__) # Added logger for the view
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @authentication_classes([])
 @throttle_classes([RegisterRateThrottle])
 def register_user(request):
-    # print("DEBUG: register_user CALLED")
-    serializer = UserSerializer(data=request.data)
+    serializer = RegisterUserSerializer(data=request.data)
     if serializer.is_valid():
-        user = serializer.save()
-
-        email_subject = 'Activate Your Account'
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-        token = default_token_generator.make_token(user)
-        # Correctly determine if running in development or production
-        is_development = settings.DEBUG  # Assuming DEBUG is True for development
-        
-        # Construct the verification link based on environment
-        if is_development:
-            # Use localhost for development
-            verification_link = f"http://localhost:5173/verify-email/{uid}/{token}"
-        else:
-            # Use production domain
-            verification_link = f"https://supplementratings.com/verify-email/{uid}/{token}"
-
-        # HTML email content
-        html_message = render_to_string('email_verification.html', {
-            'user': user,
-            'verification_link': verification_link
-        })
-        plain_message = strip_tags(html_message)
-        
-        # print("Email settings:")
-        # print(f"Backend: {settings.EMAIL_BACKEND}")
-        # print(f"Host: {settings.EMAIL_HOST}")
-        # print(f"Port: {settings.EMAIL_PORT}")
-        # print(f"TLS: {settings.EMAIL_USE_TLS}")
-        # print(f"User: {settings.EMAIL_HOST_USER}")
-        # print(f"Password length: {len(settings.EMAIL_HOST_PASSWORD)}")
-
         try:
+            user = serializer.save() # User is created, is_active=False
+
+            # Create and save the custom EmailVerificationToken
+            email_verification_token = EmailVerificationToken.objects.create(user=user)
+
+            email_subject = 'Activate Your Account'
+            # The link will now use the token from your EmailVerificationToken model
+            token_for_link = email_verification_token.token 
+
+            is_development = settings.DEBUG
+            
+            if is_development:
+                # Ensure your frontend route for verify-email expects a single token (UUID)
+                verification_link = f"http://localhost:5173/verify-email/{token_for_link}/"
+            else:
+                verification_link = f"https://supplementratings.com/verify-email/{token_for_link}/"
+
+            html_message = render_to_string('email_verification.html', {
+                'user': user,
+                'verification_link': verification_link
+            })
+            plain_message = strip_tags(html_message)
+            
             send_mail(
                 email_subject,
                 plain_message,
@@ -699,35 +708,54 @@ def register_user(request):
                 html_message=html_message,
                 fail_silently=False,
             )
-        except Exception as mail_error:
-            # print(f"Detailed email error: {str(mail_error)}")
-            user.delete()  # Rollback user creation if email fails
-            return Response({'error': 'Failed to send verification email.', 'details': str(mail_error)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        return Response({'message': 'User created. Please check your email to verify your account.'}, status=status.HTTP_201_CREATED)
+            return Response({'message': 'User created. Please check your email to verify your account.'}, status=status.HTTP_201_CREATED)
+        except Exception as e:
+            logger.error(f"Error during user registration (post-validation): {str(e)}", exc_info=True)
+            if 'user' in locals() and user.pk:
+                try:
+                    user.delete()
+                except Exception as del_e:
+                    logger.error(f"Failed to delete user {user.username} after registration error: {str(del_e)}", exc_info=True)
+            return Response({'error': 'An unexpected error occurred during registration processing.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
+        logger.warning(f"User registration failed validation: {serializer.errors}")
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def verify_email(request, token):
+    success_redirect_url = f"{settings.FRONTEND_DEV_URLS[0]}/login?verified=true"
+    failure_base_url = f"{settings.FRONTEND_DEV_URLS[0]}/verification-failed"
+
     try:
         verification = EmailVerificationToken.objects.get(token=token)
         
         if not verification.is_valid():
-            return Response({'error': 'Verification link has expired'}, 
-                          status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'error': 'Verification link has expired', 'redirect_url': f"{failure_base_url}?error=expired"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         user = verification.user
         user.is_active = True
         user.save()
-        
         verification.delete()
         
-        return Response({'message': 'Email verified successfully'})
+        return Response(
+            {'message': 'Email verified successfully', 'redirect_url': success_redirect_url},
+            status=status.HTTP_200_OK
+        )
     except EmailVerificationToken.DoesNotExist:
-        return Response({'error': 'Invalid verification token'}, 
-                       status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {'error': 'Invalid verification token', 'redirect_url': f"{failure_base_url}?error=invalid"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        logger.error(f"Error in verify_email: {str(e)}", exc_info=True)
+        return Response(
+            {'error': 'An server error occurred during email verification.', 'redirect_url': f"{failure_base_url}?error=server"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
