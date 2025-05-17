@@ -20,7 +20,27 @@ function Signup() {
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
-      const errorMessage = error.response?.data?.error || 'Registration failed';
+      
+      let errorMessage = error.message || 'Registration failed'; // Use message from interceptor as a good default
+
+      // Check for specific username conflict within error.data for a more tailored message
+      if (error.data?.username && Array.isArray(error.data.username) && error.data.username.length > 0) {
+        const usernameError = error.data.username[0];
+        if (usernameError.toLowerCase().includes('already exists')) {
+          errorMessage = 'Username already exists. Please choose a different one.';
+        } else {
+          errorMessage = usernameError; 
+        }
+      } else if (error.data?.email && Array.isArray(error.data.email) && error.data.email.length > 0) {
+        const emailError = error.data.email[0];
+        if (emailError.toLowerCase().includes('already exists') || emailError.toLowerCase().includes('email already exists')) {
+          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+        } else {
+          errorMessage = emailError;
+        }
+      }
+      // No need for error.response?.data?.error as error.data is the source now and error.message covers general cases.
+
       toast.error(errorMessage);
     }
   };

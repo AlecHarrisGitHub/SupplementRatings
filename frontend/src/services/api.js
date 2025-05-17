@@ -38,13 +38,45 @@ API.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('isAdmin');
             window.location.href = '/login';
+            // It's important to return a promise that will not resolve
+            // to prevent further processing by the caller if a redirect is happening.
+            return new Promise(() => {}); 
         }
 
-        // Return the actual error message from the backend if available
-        return Promise.reject({
+        // Prepare a more detailed error object to be rejected
+        let customError = {
             status: error.response?.status,
-            message: error.response?.data?.detail || error.response?.data?.error || 'An unexpected error occurred'
-        });
+            data: error.response?.data, // Pass the whole data object from the backend response
+            message: 'An unexpected error occurred' // Default message
+        };
+
+        if (error.response?.data) {
+            const responseData = error.response.data;
+            if (typeof responseData === 'string') {
+                customError.message = responseData;
+            } else if (responseData.detail) {
+                customError.message = responseData.detail;
+            } else if (responseData.error) {
+                customError.message = responseData.error;
+            } else if (typeof responseData === 'object' && Object.keys(responseData).length > 0) {
+                // For DRF validation errors (or other structured errors)
+                // Extract the first error message as a general message
+                const firstErrorKey = Object.keys(responseData)[0];
+                if (Array.isArray(responseData[firstErrorKey]) && responseData[firstErrorKey].length > 0) {
+                    customError.message = responseData[firstErrorKey][0];
+                } else if (typeof responseData[firstErrorKey] === 'string') {
+                    customError.message = responseData[firstErrorKey];
+                } else {
+                    // Fallback if the first error isn't a string/array of strings
+                    // but we still have an object in responseData.
+                    customError.message = "Validation failed. Please check your input.";
+                }
+            }
+        } else if (error.message && !error.response) { // Network errors or other errors without a response object
+            customError.message = error.message;
+        }
+        
+        return Promise.reject(customError);
     }
 );
 
