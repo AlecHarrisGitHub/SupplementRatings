@@ -836,3 +836,26 @@ def upload_brands_csv(request):
         return Response({'error': 'An unexpected critical error occurred. Please check server logs.'}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['GET'])
+@permission_classes([AllowAny]) # Make it easily accessible for testing
+def debug_status_test(request):
+    debug_is_on = settings.DEBUG
+    host = request.get_host()
+    
+    message = f"settings.DEBUG is currently: {debug_is_on} on host: {host}."
+    
+    if settings.DEBUG and not (host.startswith('localhost') or host.startswith('127.0.0.1')):
+        message += " WARNING: DEBUG is TRUE on what appears to be a non-localhost production host! This is a critical misconfiguration."
+    elif not settings.DEBUG and (host.startswith('localhost') or host.startswith('127.0.0.1')):
+        message += " INFO: DEBUG is FALSE, and the host is localhost/127.0.0.1. This might be a local test of production settings or a proxied development setup."
+    elif settings.DEBUG:
+        message += " INFO: DEBUG is TRUE on localhost/127.0.0.1, which is expected for development."
+    else: # not settings.DEBUG and not localhost
+        message += " INFO: DEBUG is FALSE on a non-localhost host, which is expected for production."
+        
+    return Response({
+        "settings_debug_status": debug_is_on,
+        "message": message,
+        "request_host": host
+    })
+

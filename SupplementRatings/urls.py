@@ -12,7 +12,8 @@ from pages.views import (
     upload_brands_csv,
     get_user_details,
     register_user,
-    verify_email
+    verify_email,
+    debug_status_test
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -71,6 +72,7 @@ api_urlpatterns = [
     path('user/me/', get_user_details, name='user-details'),
     path('register/', register_user, name='register-user'),
     path('verify-email/<str:token>/', verify_email, name='verify-email'),
+    path('debug-status-test/', debug_status_test, name='debug-status-test'),
     path('', include(router.urls)),
 ]
 
