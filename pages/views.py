@@ -281,25 +281,26 @@ class RatingViewSet(viewsets.ModelViewSet):
 
             try:
                 UserUpvote.objects.create(user=request.user, rating=rating)
-                rating.upvotes = F('upvotes') + 1 
+                rating.upvotes = F('upvotes') + 1
                 rating.save(update_fields=['upvotes'])
                 rating.refresh_from_db()
                 return Response({'status': 'upvote added', 'upvotes_count': rating.upvotes}, status=status.HTTP_200_OK)
             except IntegrityError:
+                # Assumed that IntegrityError means the user has already upvoted; remove the upvote.
                 UserUpvote.objects.filter(user=request.user, rating=rating).delete()
-                rating.upvotes = F('upvotes') - 1
-                rating.save(update_fields=['upvotes'])
-                rating.refresh_from_db()
+                
+                # Atomically decrement, ensuring upvotes do not go below 0.
+                # This update happens only if upvotes > 0.
+                Rating.objects.filter(pk=rating.pk, upvotes__gt=0).update(upvotes=F('upvotes') - 1)
+                
+                rating.refresh_from_db() # Get the latest state of the rating
                 return Response({'status': 'upvote removed', 'upvotes_count': rating.upvotes}, status=status.HTTP_200_OK)
 
         except Exception as e:
-            return Response({'status': 'error', 'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def check_object_permissions(self, request, obj):
-        super().check_object_permissions(request, obj)
-        if request.method not in permissions.SAFE_METHODS:
-            if obj.user != request.user and not request.user.is_staff:
-                self.permission_denied(request)
+            # Log the full exception details for debugging
+            logging.error(f"Unexpected error in RatingViewSet.upvote for rating pk {pk} by user {request.user.id if request.user else 'Unknown'}: {str(e)}", exc_info=True)
+            # Return a generic error message to the client
+            return Response({'status': 'error', 'message': 'An unexpected error occurred while processing your request.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer

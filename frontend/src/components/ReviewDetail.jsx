@@ -169,7 +169,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             const response = await upvoteRating(localRating.id);
             setLocalRating(prev => ({
                 ...prev,
-                upvotes: response.upvotes,
+                upvotes: response.upvotes_count,
                 has_upvoted: !prev.has_upvoted
             }));
         } catch (error) {

@@ -877,7 +877,7 @@ function SearchableSupplementList() {
                 if (r.id === rating.id) {
                     return {
                         ...r,
-                        upvotes: response.upvotes,
+                        upvotes: response.upvotes_count,
                         has_upvoted: !r.has_upvoted
                     };
                 }
@@ -1199,7 +1199,7 @@ function SearchableSupplementList() {
                                     // Update the rating in both the detail view and the list
                                     const updatedRating = {
                                         ...rating,
-                                        upvotes: response.upvotes,
+                                        upvotes: response.upvotes_count,
                                         has_upvoted: !rating.has_upvoted
                                     };
                                     setSelectedReview(updatedRating);
