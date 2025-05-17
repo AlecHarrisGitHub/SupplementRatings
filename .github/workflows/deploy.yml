@@ -18,7 +18,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      # 3. Add your server to known_hosts (so SSH won’t prompt)
+      # 3. Add your server to known_hosts (so SSH won't prompt)
       - name: Add remote host to known_hosts
         run: |
           mkdir -p ~/.ssh
@@ -32,23 +32,23 @@ jobs:
             cd ~/SupplementRatings
 
             # ---------- 1) back-up existing DB ----------
-            backup_dir="/home/ec2-user/db_backups"
-            mkdir -p "$backup_dir"
-            if [ -f db.sqlite3 ]; then
-              echo "⏳  Backing up db.sqlite3…"
-              cp db.sqlite3 "$backup_dir/db.sqlite3.$(date +%Y%m%d%H%M%S)"
-            fi
+            # backup_dir="/home/ec2-user/db_backups"
+            # mkdir -p "$backup_dir"
+            # if [ -f db.sqlite3 ]; then
+            #   echo "⏳  Backing up db.sqlite3…"
+            #   cp db.sqlite3 "$backup_dir/db.sqlite3.$(date +%Y%m%d%H%M%S)"
+            # fi
 
             # ---------- 2) pull latest code ----------
             git fetch origin
             git reset --hard origin/main
 
             # ---------- 3) restore DB (if missing) ----------
-            if [ ! -f db.sqlite3 ] && ls "$backup_dir"/db.sqlite3.* >/dev/null 2>&1; then
-              echo "🔄  Restoring db.sqlite3…"
-              latest_backup=$(ls -t "$backup_dir"/db.sqlite3.* | head -n 1)
-              cp "$latest_backup" db.sqlite3
-            fi
+            # if [ ! -f db.sqlite3 ] && ls "$backup_dir"/db.sqlite3.* >/dev/null 2>&1; then
+            #   echo "🔄  Restoring db.sqlite3…"
+            #   latest_backup=$(ls -t "$backup_dir"/db.sqlite3.* | head -n 1)
+            #   cp "$latest_backup" db.sqlite3
+            # fi
 
             # ---------- 4) rebuild & restart ----------
             if [ ! -f .env ]; then
