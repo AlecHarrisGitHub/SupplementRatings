@@ -1,5 +1,5 @@
 from rest_framework import viewsets, serializers
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework import permissions
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
@@ -336,6 +336,23 @@ class RatingViewSet(viewsets.ModelViewSet):
             logging.error(f"Unexpected error in RatingViewSet.upvote for rating pk {pk} by user {request.user.id if request.user else 'Unknown'}: {str(e)}", exc_info=True)
             # Return a generic error message to the client
             return Response({'status': 'error', 'message': 'An unexpected error occurred while processing your request.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def my_ratings(self, request):
+        """
+        Returns ratings made by the currently authenticated user.
+        """
+        user = request.user
+        queryset = Rating.objects.filter(user=user).order_by('-created_at')
+        
+        # Paginate the queryset
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer

@@ -87,6 +87,7 @@ class RatingSerializer(serializers.ModelSerializer):
     conditions = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Condition.objects.all()
     )
+    supplement = serializers.StringRelatedField()
 
     class Meta:
         model = Rating

@@ -14,6 +14,7 @@ import { Toaster } from 'react-hot-toast';
 import UploadBrands from './pages/UploadBrands';
 import AdminDashboard from './pages/AdminDashboard';
 import PrivateRoute from './components/PrivateRoute';
+import AccountsPage from './pages/AccountsPage';
 
 function App() {
     return (
@@ -42,6 +43,7 @@ function App() {
                 <Route path="/upload-brands" element={<PrivateRoute><UploadBrands /></PrivateRoute>} />
                 <Route path="/admin-dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
                 <Route path="/verify-email/:token" element={<EmailVerification />} />
+                <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </div>

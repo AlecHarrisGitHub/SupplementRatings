@@ -64,6 +64,9 @@ function Navbar() {
 
                     <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
                         <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
+                        {isAuthenticated && (
+                             <Button color="inherit" component={Link} to="/accounts">My Account</Button>
+                        )}
                         {isAdmin && (
                             <>
                                 <Button color="inherit" component={Link} to="/upload-supplements">Upload Supplements</Button>
