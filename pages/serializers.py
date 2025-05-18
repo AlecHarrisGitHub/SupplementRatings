@@ -84,6 +84,9 @@ class RatingSerializer(serializers.ModelSerializer):
     condition_names = serializers.SerializerMethodField()
     comments = CommentSerializer(many=True, read_only=True)
     has_upvoted = serializers.SerializerMethodField()
+    conditions = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Condition.objects.all()
+    )
 
     class Meta:
         model = Rating

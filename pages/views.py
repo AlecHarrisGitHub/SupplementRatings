@@ -38,6 +38,8 @@ from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.utils.html import strip_tags
 
+logger = logging.getLogger(__name__) # Moved logger to module level
+
 # Custom Ordering Filter
 class CustomOrderingFilter(filters.OrderingFilter):
     def get_ordering(self, request, queryset, view):
@@ -242,6 +244,35 @@ class RatingViewSet(viewsets.ModelViewSet):
     search_fields = ['user__username', 'supplement__name', 'comment']
     ordering_fields = ['created_at', 'updated_at', 'score', 'upvotes']
 
+    def create(self, request, *args, **kwargs):
+        logger.warning(f"RatingViewSet create initial request.data: {request.data}")
+        
+        data = request.data.copy() # Make a mutable copy
+
+        conditions_list = data.getlist('conditions')
+        logger.info(f"Initial conditions_list from data.getlist: {conditions_list}")
+
+        if conditions_list and len(conditions_list) == 1:
+            conditions_str = conditions_list[0]
+            if isinstance(conditions_str, str) and ',' in conditions_str:
+                logger.info(f"Splitting conditions string: '{conditions_str}'")
+                processed_conditions = [pk.strip() for pk in conditions_str.split(',') if pk.strip()]
+                data.setlist('conditions', processed_conditions)
+                logger.info(f"Modified conditions in data: {data.getlist('conditions')}")
+            # No need for an else if here for single string like '85', as getlist already gives ['85'] which setlist handles.
+
+        logger.warning(f"RatingViewSet create modified request.data: {data}")
+        
+        serializer = self.get_serializer(data=data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except serializers.ValidationError as e:
+            logger.error(f"RatingViewSet validation error: {e.detail}")
+            raise # Re-raise the exception to return 400
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
     def get_queryset(self):
         queryset = Rating.objects.all()
         supplement_id = self.request.query_params.get('supplement', None)
@@ -258,6 +289,10 @@ class RatingViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
+        # Log request data for debugging M2M issues
+        logger.warning(f"RatingViewSet perform_create request.data: {self.request.data}")
+        logger.warning(f"RatingViewSet perform_create serializer.initial_data: {serializer.initial_data}")
+
         existing_rating = Rating.objects.filter(
             user=self.request.user,
             supplement_id=serializer.validated_data['supplement'].id
@@ -667,8 +702,6 @@ def get_user_details(request):
         'is_staff': request.user.is_staff,
         'email': request.user.email
     })
-
-logger = logging.getLogger(__name__) # Added logger for the view
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
