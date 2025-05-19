@@ -225,7 +225,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 
 # Default primary key field type
@@ -241,11 +241,33 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 
-# Add to your existing settings
-MEDIA_URL = '/media/'
-if config('PRODUCTION', cast=bool, default=None):
-    MEDIA_ROOT = os.path.join(BASE_DIR.parent, 'data', 'media')
+# Determine if running in production
+IS_PRODUCTION = config('PRODUCTION', default=False, cast=bool)
+
+if IS_PRODUCTION:
+    # AWS S3 settings
+    AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-2') # Your bucket region
+    AWS_S3_FILE_OVERWRITE = False # Default, set to True if you want to overwrite files
+    AWS_DEFAULT_ACL = 'public-read' # Make files publicly readable by default
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400', # Cache for 1 day
+    }
+    AWS_LOCATION = 'media' # Optional: subdirectory in your bucket for media files
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
+
+    # Static and media files
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage' # If you also want to serve static files from S3
+
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_LOCATION}/'
+    # STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/' # If serving static from S3
+
 else:
+    # Local media storage settings (development)
+    MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
