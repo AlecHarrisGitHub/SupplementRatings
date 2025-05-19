@@ -247,9 +247,8 @@ class RatingViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         logger.warning(f"RatingViewSet create initial request.data: {request.data}")
         
-        data = request.data.copy() # Make a mutable copy
-
-        conditions_list = data.getlist('conditions')
+        # Handle conditions first while we still have access to QueryDict methods
+        conditions_list = request.data.getlist('conditions')
         logger.info(f"Initial conditions_list from data.getlist: {conditions_list}")
 
         if conditions_list and len(conditions_list) == 1:
@@ -257,18 +256,29 @@ class RatingViewSet(viewsets.ModelViewSet):
             if isinstance(conditions_str, str) and ',' in conditions_str:
                 logger.info(f"Splitting conditions string: '{conditions_str}'")
                 processed_conditions = [pk.strip() for pk in conditions_str.split(',') if pk.strip()]
-                data.setlist('conditions', processed_conditions)
-                logger.info(f"Modified conditions in data: {data.getlist('conditions')}")
-            # No need for an else if here for single string like '85', as getlist already gives ['85'] which setlist handles.
+                request.data.setlist('conditions', processed_conditions)
+                logger.info(f"Modified conditions in data: {request.data.getlist('conditions')}")
 
-        logger.warning(f"RatingViewSet create modified request.data: {data}")
+        # Create a new dictionary with the processed data
+        data = {
+            'supplement': request.data.get('supplement'),
+            'conditions': request.data.getlist('conditions'),
+            'score': request.data.get('score'),
+            'comment': request.data.get('comment'),
+            'dosage_frequency': request.data.get('dosage_frequency'),
+            'frequency_unit': request.data.get('frequency_unit'),
+        }
+        
+        # Add the file if it exists
+        if 'image' in request.FILES:
+            data['image'] = request.FILES['image']
+
+        logger.warning(f"RatingViewSet create modified data: {data}")
         
         serializer = self.get_serializer(data=data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except serializers.ValidationError as e:
-            logger.error(f"RatingViewSet validation error: {e.detail}")
-            raise # Re-raise the exception to return 400
+        if not serializer.is_valid():
+            logger.error(f"RatingViewSet serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)

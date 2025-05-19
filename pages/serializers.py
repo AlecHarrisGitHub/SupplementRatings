@@ -87,11 +87,12 @@ class RatingSerializer(serializers.ModelSerializer):
     conditions = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Condition.objects.all()
     )
-    supplement = serializers.StringRelatedField()
+    supplement = serializers.PrimaryKeyRelatedField(queryset=Supplement.objects.all())
+    supplement_display = serializers.StringRelatedField(source='supplement', read_only=True)
 
     class Meta:
         model = Rating
-        fields = ['id', 'user', 'supplement', 'conditions', 'condition_names', 
+        fields = ['id', 'user', 'supplement', 'supplement_display', 'conditions', 'condition_names', 
                  'score', 'comment', 'dosage', 'dosage_frequency', 'frequency_unit',
                  'brands', 'created_at', 'comments', 'is_edited', 'upvotes', 'has_upvoted', 'image']
         read_only_fields = ['user', 'upvotes', 'has_upvoted']
