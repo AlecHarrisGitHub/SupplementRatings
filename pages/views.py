@@ -291,30 +291,31 @@ class RatingViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        # The serializer already has the validated data.
-        # We don't need to look at self.request.data here.
-        logger.warning(f"RatingViewSet perform_create serializer.validated_data: {serializer.validated_data}")
-        logger.warning(f"RatingViewSet perform_create serializer.initial_data (for reference): {serializer.initial_data}")
+        logger.info("Entering perform_create") # General entry log
+        logger.debug(f"perform_create - serializer.validated_data: {serializer.validated_data}")
+        logger.debug(f"perform_create - serializer.initial_data (for reference): {serializer.initial_data}")
 
         supplement_obj = serializer.validated_data.get('supplement')
         if not supplement_obj:
-            logger.error("perform_create: Supplement object is None in validated_data.")
-            # This should ideally be caught by serializer.is_valid() if the field is required.
-            # However, adding a check here for robustness.
+            logger.error("perform_create: Supplement object is None or missing in validated_data.")
             raise serializers.ValidationError({'detail': 'Supplement is required and was not provided or validated.'})
 
         existing_rating = Rating.objects.filter(
             user=self.request.user,
-            supplement=supplement_obj # Use the supplement object from validated_data
+            supplement=supplement_obj
         ).first()
 
         if existing_rating:
-            raise serializers.ValidationError({
-                'detail': 'You have already rated this supplement.'
-            })
+            logger.warning(f"User {self.request.user.id} already rated supplement {supplement_obj.id}. Raising ValidationError.")
+            raise serializers.ValidationError({'detail': 'You have already rated this supplement.'})
 
-        # Pass the user to serializer.save()
-        serializer.save(user=self.request.user)
+        logger.info(f"perform_create: Attempting to save rating for user {self.request.user.id} and supplement {supplement_obj.id}")
+        try:
+            serializer.save(user=self.request.user)
+            logger.info(f"perform_create: Successfully saved rating. New rating ID: {serializer.instance.id if serializer.instance else 'Unknown'}")
+        except Exception as e:
+            logger.error(f"perform_create: Exception during serializer.save(): {str(e)}", exc_info=True)
+            raise # Re-raise the exception to ensure it's handled by DRF and results in a 500
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def upvote(self, request, pk=None):

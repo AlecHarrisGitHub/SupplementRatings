@@ -288,10 +288,54 @@ CSRF_COOKIE_NAME = 'csrftoken'
 CSRF_HEADER_NAME = 'X-CSRFToken'
 
 
-import sys
-def _capture_all_exceptions(exc_type, exc_value, tb):
-    logging.error("UNCAUGHT EXCEPTION", exc_info=(exc_type, exc_value, tb))
-sys.excepthook = _capture_all_exceptions
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        # 'file': { # Optional: Add a file handler
+        #     'level': 'DEBUG',
+        #     'class': 'logging.FileHandler',
+        #     'filename': os.path.join(BASE_DIR, 'django_debug.log'),
+        #     'formatter': 'verbose',
+        # },
+    },
+    'root': {
+        'handlers': ['console'], # Add 'file' here if using file handler
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'], # Add 'file' here if using file handler
+            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
+            'propagate': False,
+        },
+        'pages': { # Your app's logger
+            'handlers': ['console'], # Add 'file' here if using file handler
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+# Comment out or remove sys.excepthook if using comprehensive LOGGING
+# import sys
+# def _capture_all_exceptions(exc_type, exc_value, tb):
+#     logging.error("UNCAUGHT EXCEPTION", exc_info=(exc_type, exc_value, tb))
+# sys.excepthook = _capture_all_exceptions
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
 FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
