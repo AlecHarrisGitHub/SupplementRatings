@@ -251,7 +251,7 @@ if IS_PRODUCTION:
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-2') # Your bucket region
     AWS_S3_FILE_OVERWRITE = False # Default, set to True if you want to overwrite files
-    AWS_DEFAULT_ACL = 'public-read' # Make files publicly readable by default
+    AWS_DEFAULT_ACL = None # Disable setting ACLs
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400', # Cache for 1 day
     }
