@@ -255,6 +255,8 @@ if IS_PRODUCTION:
     AWS_S3_OBJECT_PARAMETERS = {
         'CacheControl': 'max-age=86400', # Cache for 1 day
     }
+    AWS_QUERYSTRING_AUTH = True  # Enable signed URLs
+    AWS_QUERYSTRING_EXPIRE = 3600  # URL lifetime in seconds (e.g., 1 hour)
     AWS_LOCATION = 'media' # Optional: subdirectory in your bucket for media files
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com'
 
