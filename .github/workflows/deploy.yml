@@ -12,6 +12,28 @@ jobs:
       # 1. Check out your code
       - uses: actions/checkout@v3
 
+      # Build frontend in CI
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend/dist
+
       # 2. Start an SSH agent and load your private key
       - name: Setup SSH agent
         uses: webfactory/ssh-agent@v0.5.4
@@ -23,6 +45,17 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
+
+      # Download the build artifact and deploy to EC2
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-build
+          path: frontend_dist
+
+      - name: Copy frontend build to EC2
+        run: |
+          scp -o StrictHostKeyChecking=no -r frontend_dist/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist/
 
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
@@ -59,20 +92,10 @@ jobs:
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
 
-            cd frontend
-            rm -rf node_modules
-            npm install react-hot-toast --save
-            npm ci
-            npm run build
-            cd ..
-
-            rm -rf frontend_dist
-            mkdir  frontend_dist
-            mv frontend/dist/* frontend_dist/
-
+            # No frontend build here; just collectstatic and migrate
             python manage.py collectstatic --noinput
             python manage.py migrate
 
             sudo systemctl restart gunicorn
-            sudo systemctl reload  nginx
+            sudo systemctl reload nginx
           EOF
