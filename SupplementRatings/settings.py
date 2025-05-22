@@ -247,7 +247,7 @@ IS_PRODUCTION = config('PRODUCTION', default=False, cast=bool)
 if IS_PRODUCTION:
     # AWS S3 settings
     AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_KEY')
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-2') # Your bucket region
     AWS_S3_FILE_OVERWRITE = False # Default, set to True if you want to overwrite files
