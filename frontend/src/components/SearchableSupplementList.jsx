@@ -787,6 +787,7 @@ function SearchableSupplementList() {
                     <img 
                         src={rating.image_url}
                         alt="Rating attachment"
+                        loading="lazy"
                         style={{ 
                             maxWidth: '300px',
                             maxHeight: '300px',
@@ -1170,6 +1171,7 @@ function SearchableSupplementList() {
                                                 <img 
                                                     src={rating.image_url}
                                                     alt="Rating attachment"
+                                                    loading="lazy"
                                                     style={{ 
                                                         maxWidth: '300px',
                                                         maxHeight: '300px',
