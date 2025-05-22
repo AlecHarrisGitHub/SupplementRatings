@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from .models import Supplement, Rating, Comment, Condition, Brand, UserUpvote
 import logging
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -89,16 +90,40 @@ class RatingSerializer(serializers.ModelSerializer):
     )
     supplement = serializers.PrimaryKeyRelatedField(queryset=Supplement.objects.all())
     supplement_display = serializers.StringRelatedField(source='supplement', read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Rating
-        fields = ['id', 'user', 'supplement', 'supplement_display', 'conditions', 'condition_names', 
-                 'score', 'comment', 'dosage', 'dosage_frequency', 'frequency_unit',
-                 'brands', 'created_at', 'comments', 'is_edited', 'upvotes', 'has_upvoted', 'image']
+        fields = [
+            'id', 'user', 'supplement', 'supplement_display', 'conditions', 
+            'condition_names', 'score', 'comment', 'dosage', 'dosage_frequency', 
+            'frequency_unit', 'brands', 'created_at', 'comments', 'is_edited', 
+            'upvotes', 'has_upvoted', 
+            'image',
+            'image_url'
+        ]
         read_only_fields = ['user', 'upvotes', 'has_upvoted']
+        extra_kwargs = {
+            'image': {'write_only': True, 'required': False}
+        }
 
     def get_condition_names(self, obj):
         return [condition.name for condition in obj.conditions.all()]
+
+    def get_image_url(self, obj):
+        if obj.image and hasattr(obj.image, 'url'):
+            try:
+                if settings.IS_PRODUCTION:
+                    return obj.image.url
+                else:
+                    request = self.context.get('request')
+                    if request:
+                        return request.build_absolute_uri(obj.image.url)
+                    return obj.image.url
+            except Exception as e:
+                logger.error(f"Error generating image URL for {obj.image.name}: {e}")
+                return None
+        return None
 
     def create(self, validated_data):
         conditions_data = validated_data.pop('conditions', [])
