@@ -292,3 +292,6 @@ import sys
 def _capture_all_exceptions(exc_type, exc_value, tb):
     logging.error("UNCAUGHT EXCEPTION", exc_info=(exc_type, exc_value, tb))
 sys.excepthook = _capture_all_exceptions
+
+DATA_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 104857600  # 100 MB
