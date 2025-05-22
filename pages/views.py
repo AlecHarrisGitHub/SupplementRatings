@@ -291,13 +291,21 @@ class RatingViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def perform_create(self, serializer):
-        # Log request data for debugging M2M issues
-        logger.warning(f"RatingViewSet perform_create request.data: {self.request.data}")
-        logger.warning(f"RatingViewSet perform_create serializer.initial_data: {serializer.initial_data}")
+        # The serializer already has the validated data.
+        # We don't need to look at self.request.data here.
+        logger.warning(f"RatingViewSet perform_create serializer.validated_data: {serializer.validated_data}")
+        logger.warning(f"RatingViewSet perform_create serializer.initial_data (for reference): {serializer.initial_data}")
+
+        supplement_obj = serializer.validated_data.get('supplement')
+        if not supplement_obj:
+            logger.error("perform_create: Supplement object is None in validated_data.")
+            # This should ideally be caught by serializer.is_valid() if the field is required.
+            # However, adding a check here for robustness.
+            raise serializers.ValidationError({'detail': 'Supplement is required and was not provided or validated.'})
 
         existing_rating = Rating.objects.filter(
             user=self.request.user,
-            supplement_id=serializer.validated_data['supplement'].id
+            supplement=supplement_obj # Use the supplement object from validated_data
         ).first()
 
         if existing_rating:
@@ -305,6 +313,7 @@ class RatingViewSet(viewsets.ModelViewSet):
                 'detail': 'You have already rated this supplement.'
             })
 
+        # Pass the user to serializer.save()
         serializer.save(user=self.request.user)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
