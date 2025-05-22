@@ -782,10 +782,10 @@ function SearchableSupplementList() {
             <Typography variant="body2" color="text.secondary">
                 {rating.comment}
             </Typography>
-            {rating.image && (
+            {rating.image_url && (
                 <Box sx={{ mt: 2 }}>
                     <img 
-                        src={rating.image}
+                        src={rating.image_url}
                         alt="Rating attachment"
                         style={{ 
                             maxWidth: '300px',
@@ -1165,10 +1165,10 @@ function SearchableSupplementList() {
                                         <Typography variant="body2" color="text.secondary">
                                             {rating.comment}
                                         </Typography>
-                                        {rating.image && (
+                                        {rating.image_url && (
                                             <Box sx={{ mt: 2 }}>
                                                 <img 
-                                                    src={rating.image}
+                                                    src={rating.image_url}
                                                     alt="Rating attachment"
                                                     style={{ 
                                                         maxWidth: '300px',

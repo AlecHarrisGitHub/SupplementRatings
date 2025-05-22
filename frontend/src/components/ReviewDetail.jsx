@@ -105,14 +105,14 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                 </Box>
             ) : (
                 <>
-                    <Typography variant="body1" sx={{ mt: 1, mb: comment.image ? 2 : 0 }}>
+                    <Typography variant="body1" sx={{ mt: 1, mb: comment.image_url ? 2 : 0 }}>
                         {comment.content}
                     </Typography>
                     
-                    {comment.image && (
+                    {comment.image_url && (
                         <Box sx={{ mt: 1, mb: 2 }}>
                             <img 
-                                src={comment.image}
+                                src={comment.image_url}
                                 alt="Comment attachment"
                                 style={{ 
                                     maxWidth: '200px',
@@ -122,7 +122,7 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                                 }}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    handleImageClick(e, comment.image);
+                                    handleImageClick(e, comment.image_url);
                                 }}
                             />
                         </Box>
@@ -393,10 +393,10 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                 <Typography variant="body1">
                                     {localRating.comment}
                                 </Typography>
-                                {localRating.image && (
+                                {localRating.image_url && (
                                     <Box sx={{ mt: 2 }}>
                                         <img 
-                                            src={localRating.image}
+                                            src={localRating.image_url}
                                             alt="Rating attachment"
                                             style={{ 
                                                 maxWidth: '300px',
@@ -404,7 +404,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                                 borderRadius: '4px',
                                                 cursor: 'pointer'
                                             }}
-                                            onClick={(e) => handleImageClick(e, localRating.image)}
+                                            onClick={(e) => handleImageClick(e, localRating.image_url)}
                                         />
                                     </Box>
                                 )}
@@ -437,10 +437,10 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                         <Typography variant="body1">
                             {selectedComment.content}
                         </Typography>
-                        {selectedComment.image && (
+                        {selectedComment.image_url && (
                             <Box sx={{ mt: 2 }}>
                                 <img 
-                                    src={selectedComment.image}
+                                    src={selectedComment.image_url}
                                     alt="Comment attachment"
                                     style={{ 
                                         maxWidth: '300px',
@@ -448,7 +448,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                         borderRadius: '4px',
                                         cursor: 'pointer'
                                     }}
-                                    onClick={(e) => handleImageClick(e, selectedComment.image)}
+                                    onClick={(e) => handleImageClick(e, selectedComment.image_url)}
                                 />
                             </Box>
                         )}

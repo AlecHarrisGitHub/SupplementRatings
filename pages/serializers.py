@@ -4,6 +4,9 @@ from django.contrib.auth.password_validation import validate_password
 from .models import Supplement, Rating, Comment, Condition, Brand, UserUpvote
 import logging
 from django.conf import settings
+import boto3
+from botocore.client import Config
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -111,18 +114,41 @@ class RatingSerializer(serializers.ModelSerializer):
         return [condition.name for condition in obj.conditions.all()]
 
     def get_image_url(self, obj):
-        if obj.image and hasattr(obj.image, 'url'):
-            try:
-                if settings.IS_PRODUCTION:
-                    return obj.image.url
-                else:
-                    request = self.context.get('request')
-                    if request:
-                        return request.build_absolute_uri(obj.image.url)
-                    return obj.image.url
-            except Exception as e:
-                logger.error(f"Error generating image URL for {obj.image.name}: {e}")
-                return None
+        logger.warning(f"get_image_url: IS_PRODUCTION value: {settings.IS_PRODUCTION}")
+        if obj.image and hasattr(obj.image, 'name') and obj.image.name:
+            if settings.IS_PRODUCTION:
+                try:
+                    object_key = obj.image.name 
+                    
+                    s3_client = boto3.client(
+                        's3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name=settings.AWS_S3_REGION_NAME,
+                        config=Config(signature_version='s3v4')
+                    )
+                    
+                    presigned_url = s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={
+                            'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                            'Key': object_key
+                        },
+                        ExpiresIn=settings.AWS_QUERYSTRING_EXPIRE
+                    )
+                    logger.info(f"Generated presigned URL: {presigned_url} for key: {object_key}")
+                    return presigned_url
+                except ClientError as e:
+                    logger.error(f"ClientError generating presigned URL for S3 key {object_key}: {e}")
+                    return None
+                except Exception as e:
+                    logger.error(f"Unexpected error generating presigned URL for S3 key {object_key}: {e}", exc_info=True)
+                    return None
+            else:
+                request = self.context.get('request')
+                if request:
+                    return request.build_absolute_uri(obj.image.url)
+                return obj.image.url # Fallback for dev if no request context
         return None
 
     def create(self, validated_data):
