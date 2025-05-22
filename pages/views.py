@@ -245,6 +245,8 @@ class RatingViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'updated_at', 'score', 'upvotes']
 
     def create(self, request, *args, **kwargs):
+        logger.warning(f"request.data: {request.data}")
+        logger.warning(f"request.FILES: {request.FILES}")
         logger.warning(f"RatingViewSet create initial request.data: {request.data}")
         
         # Handle conditions first while we still have access to QueryDict methods
