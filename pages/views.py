@@ -247,10 +247,10 @@ class RatingViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         logger.warning(f"request.data: {request.data}")
         logger.warning(f"request.FILES: {request.FILES}")
-        logger.warning(f"RatingViewSet create initial request.data: {request.data}")
-        
-        # Handle conditions first while we still have access to QueryDict methods
-        conditions_list = request.data.getlist('conditions')
+
+        # Work on a copy, never mutate request.data directly
+        data = request.data.copy()
+        conditions_list = data.getlist('conditions')
         logger.info(f"Initial conditions_list from data.getlist: {conditions_list}")
 
         if conditions_list and len(conditions_list) == 1:
@@ -258,25 +258,15 @@ class RatingViewSet(viewsets.ModelViewSet):
             if isinstance(conditions_str, str) and ',' in conditions_str:
                 logger.info(f"Splitting conditions string: '{conditions_str}'")
                 processed_conditions = [pk.strip() for pk in conditions_str.split(',') if pk.strip()]
-                request.data.setlist('conditions', processed_conditions)
-                logger.info(f"Modified conditions in data: {request.data.getlist('conditions')}")
+                data.setlist('conditions', processed_conditions)
+                logger.info(f"Modified conditions in data: {data.getlist('conditions')}")
 
-        # Create a new dictionary with the processed data
-        data = {
-            'supplement': request.data.get('supplement'),
-            'conditions': request.data.getlist('conditions'),
-            'score': request.data.get('score'),
-            'comment': request.data.get('comment'),
-            'dosage_frequency': request.data.get('dosage_frequency'),
-            'frequency_unit': request.data.get('frequency_unit'),
-        }
-        
         # Add the file if it exists
         if 'image' in request.FILES:
             data['image'] = request.FILES['image']
 
         logger.warning(f"RatingViewSet create modified data: {data}")
-        
+
         serializer = self.get_serializer(data=data)
         if not serializer.is_valid():
             logger.error(f"RatingViewSet serializer errors: {serializer.errors}")
