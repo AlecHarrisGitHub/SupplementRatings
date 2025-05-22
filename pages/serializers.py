@@ -115,11 +115,18 @@ class RatingSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         logger.warning(f"get_image_url: IS_PRODUCTION value: {settings.IS_PRODUCTION}")
+        logger.debug(f"get_image_url: obj.image.name: {obj.image.name if obj.image else 'No image'}")
+
         if obj.image and hasattr(obj.image, 'name') and obj.image.name:
             if settings.IS_PRODUCTION:
                 try:
-                    object_key = obj.image.name 
+                    s3_key = obj.image.name
+                    # If AWS_LOCATION is used and it's not already part of obj.image.name, prepend it.
+                    if settings.AWS_LOCATION and not s3_key.startswith(settings.AWS_LOCATION + '/'):
+                         s3_key = f"{settings.AWS_LOCATION.strip('/')}/{s3_key.lstrip('/')}"
                     
+                    logger.info(f"Calculated S3 key for presigning: {s3_key}")
+
                     s3_client = boto3.client(
                         's3',
                         aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -132,23 +139,24 @@ class RatingSerializer(serializers.ModelSerializer):
                         'get_object',
                         Params={
                             'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                            'Key': object_key
+                            'Key': s3_key  # Use the correctly prefixed key
                         },
                         ExpiresIn=settings.AWS_QUERYSTRING_EXPIRE
                     )
-                    logger.info(f"Generated presigned URL: {presigned_url} for key: {object_key}")
+                    logger.info(f"Generated presigned URL: {presigned_url} for key: {s3_key}")
                     return presigned_url
                 except ClientError as e:
-                    logger.error(f"ClientError generating presigned URL for S3 key {object_key}: {e}")
+                    logger.error(f"ClientError generating presigned URL for S3 key {s3_key}: {e}")
                     return None
                 except Exception as e:
-                    logger.error(f"Unexpected error generating presigned URL for S3 key {object_key}: {e}", exc_info=True)
+                    logger.error(f"Unexpected error generating presigned URL for S3 key {s3_key if 's3_key' in locals() else obj.image.name}: {e}", exc_info=True)
                     return None
             else:
+                # Development
                 request = self.context.get('request')
                 if request:
                     return request.build_absolute_uri(obj.image.url)
-                return obj.image.url # Fallback for dev if no request context
+                return obj.image.url
         return None
 
     def create(self, validated_data):
