@@ -1,5 +1,15 @@
 # pages/urls.py
 
 from django.urls import path
+from .views import profile_update_view, ProfileImageUpdateAPIView, get_user_details # Import get_user_details
 
-urlpatterns = []
+urlpatterns = [
+    # URL for the Django template-based profile page
+    path('profile/', profile_update_view, name='profile_page'), 
+    
+    # API endpoint for SPA to update profile image
+    path('api/profile/image-upload/', ProfileImageUpdateAPIView.as_view(), name='profile_image_update_api'),
+
+    # API endpoint to get current authenticated user's details
+    path('api/user/me/', get_user_details, name='current_user_details'),
+]

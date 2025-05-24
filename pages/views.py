@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticate
 from rest_framework import permissions
 from django.db.models import Avg, Case, When, FloatField, F, Value, BooleanField, Exists, OuterRef, ExpressionWrapper, Count, Q
 from django.db.models.functions import Round
-from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken, Brand, UserUpvote
+from .models import Supplement, Rating, Comment, Condition, EmailVerificationToken, Brand, UserUpvote, Profile
 from .serializers import (
     SupplementSerializer, 
     RatingSerializer, 
@@ -11,7 +11,8 @@ from .serializers import (
     ConditionSerializer,
     BrandSerializer,
     RegisterUserSerializer,
-    BasicUserSerializer
+    BasicUserSerializer,
+    ProfileSerializer
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -37,6 +38,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.utils.html import strip_tags
+from .forms import ProfileUpdateForm
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from rest_framework.parsers import MultiPartParser, FormParser # For file uploads
 
 logger = logging.getLogger(__name__) # Moved logger to module level
 
@@ -717,20 +723,14 @@ def upload_conditions_csv(request):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def test_auth(request):
-    return Response({
-        'message': 'Authentication successful',
-        'user': request.user.username,
-        'is_staff': request.user.is_staff
-    })
+    return Response({"message": "Admin content"})
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_details(request):
-    return Response({
-        'username': request.user.username,
-        'is_staff': request.user.is_staff,
-        'email': request.user.email
-    })
+    user = request.user
+    serializer = BasicUserSerializer(user, context={'request': request})
+    return Response(serializer.data)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -898,4 +898,58 @@ def upload_brands_csv(request):
         logging.error(f"Critical error in upload_brands_csv: {str(e)}")
         return Response({'error': 'An unexpected critical error occurred. Please check server logs.'}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ProfileImageUpdateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication] # Ensure this matches your SPA auth
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        if not hasattr(request.user, 'profile'):
+            # This case should ideally be handled by the signal creating a profile
+            # but as a safeguard:
+            Profile.objects.get_or_create(user=request.user)
+        
+        profile = request.user.profile
+        # We are using a Django form here. A DRF serializer could also be used.
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        
+        if form.is_valid():
+            form.save()
+            # After saving, get the updated profile to serialize its image URL
+            updated_profile = Profile.objects.get(user=request.user)
+            serializer = ProfileSerializer(updated_profile, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+@authentication_classes([JWTAuthentication]) # Or your session auth if not using JWT for this
+def profile_update_view(request):
+    # This view will now primarily be for the Django template page if accessed directly (e.g. by admin)
+    # For SPA, the GET request for profile data will likely go to /api/user/me/
+    # and POST for image upload to ProfileImageUpdateAPIView
+    profile_instance = Profile.objects.get_or_create(user=request.user)[0]
+
+    if request.method == 'POST':
+        form = ProfileUpdateForm(request.POST, request.FILES, instance=profile_instance)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated!')
+            return redirect('profile') # Redirect back to the same Django template page
+        # else form will be passed to render with errors
+    else: # GET
+        form = ProfileUpdateForm(instance=profile_instance)
+
+    # Data for the Django template
+    profile_serializer = ProfileSerializer(profile_instance, context={'request': request})
+    user_serializer = BasicUserSerializer(request.user, context={'request': request})
+    
+    context = {
+        'u_form': form, 
+        'profile_data': profile_serializer.data,
+        'user_data': user_serializer.data
+    }
+    return render(request, 'pages/profile.html', context)
 

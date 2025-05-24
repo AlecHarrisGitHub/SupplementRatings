@@ -17,25 +17,24 @@ import {
 function Login() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const response = await loginUser({ username, password });
       if (response.access) {
-        const userData = {
-          username: username,
-          id: response.id,
-          is_staff: response.is_staff
-        };
-        login(response.access, response.is_staff, userData);
+        login(response.access);
         toast.success('Logged in successfully!');
-        navigate('/supplements');
+        navigate("/supplements");
       }
     } catch (error) {
       toast.error(error.message || 'Invalid username or password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,6 +55,7 @@ function Login() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              disabled={loading}
             />
             <TextField
               fullWidth
@@ -66,6 +66,7 @@ function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
             />
             <Button
               type="submit"
@@ -74,8 +75,9 @@ function Login() {
               color="primary"
               size="large"
               sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              Login
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </Paper>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { 
     TextField, 
     List, 
@@ -20,7 +20,8 @@ import {
     Skeleton,
     Select,
     MenuItem,
-    Divider
+    Divider,
+    Avatar
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating, getCategories } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -231,6 +232,99 @@ const FilterDrawer = ({
                 </Box>
             </Box>
         </Drawer>
+    );
+};
+
+const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRating, handleReviewClick }) => {
+    // Fallback for default image, ensure it's accessible
+    const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg'; 
+
+    return (
+        <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <Avatar 
+                        src={rating.user.profile_image_url || defaultProfileImage} 
+                        alt={rating.user.username}
+                        sx={{ width: 40, height: 40 }}
+                    />
+                    <Typography variant="subtitle1" fontWeight="bold">
+                        {rating.user.username}
+                    </Typography>
+                    {rating.is_edited && (
+                        <Typography component="span" variant="caption" color="text.secondary">
+                            {" (edited)"}
+                        </Typography>
+                    )}
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton 
+                        onClick={(e) => handleUpvoteRating(e, rating)}
+                        color={rating.has_upvoted ? "primary" : "default"}
+                        disabled={!user || rating.user.id === user?.id}
+                        size="small"
+                    >
+                        <ThumbUpIcon fontSize="small" />
+                        <Typography variant="caption" sx={{ ml: 0.5 }}>
+                            {rating.upvotes}
+                        </Typography>
+                    </IconButton>
+                    {user && user.id === rating.user.id && (
+                        <Button 
+                            size="small" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditRating(rating);
+                            }}
+                        >
+                            Edit
+                        </Button>
+                    )}
+                    <Rating value={rating.score} readOnly />
+                </Box>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Conditions: {rating.condition_names.join(', ')}
+            </Typography>
+            {(rating.dosage || rating.dosage_frequency) && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Dosage: {rating.dosage?.replace(/\s+/g, '')}
+                    {rating.dosage_frequency && rating.frequency_unit && 
+                        ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
+                </Typography>
+            )}
+            {rating.brands && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Brands Used: {rating.brands}
+                </Typography>
+            )}
+            {rating.comment && 
+                <Typography variant="body2" color="text.secondary" sx={{mb: rating.image_url ? 1 : 0}}>
+                    {rating.comment}
+                </Typography>
+            }
+            {rating.image_url && (
+                <Box sx={{ mt: rating.comment ? 1 : 0, mb: 1 }}>
+                    <img 
+                        src={rating.image_url}
+                        alt="Rating attachment"
+                        loading="lazy"
+                        style={{ 
+                            maxWidth: '300px',
+                            maxHeight: '300px',
+                            borderRadius: '4px',
+                            cursor: 'pointer' // Assuming you might add a modal click later
+                        }}
+                        // onClick={() => handleImageClick(rating.image_url)} // If you have an image modal
+                    />
+                </Box>
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <Button size="small" onClick={() => handleReviewClick(rating)}>
+                    View Details
+                </Button>
+            </Box>
+        </Paper>
     );
 };
 
@@ -727,83 +821,6 @@ function SearchableSupplementList() {
         </Box>
     );
 
-    const RatingDisplay = ({ rating }) => (
-        <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle1" fontWeight="bold">
-                    {rating.user.username}
-                    {rating.is_edited && (
-                        <Typography component="span" variant="caption" color="text.secondary">
-                            {" (edited)"}
-                        </Typography>
-                    )}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <IconButton 
-                        onClick={(e) => handleUpvoteRating(e, rating)}
-                        color={rating.has_upvoted ? "primary" : "default"}
-                        disabled={!user || rating.user.id === user?.id}
-                        size="small"
-                    >
-                        <ThumbUpIcon fontSize="small" />
-                        <Typography variant="caption" sx={{ ml: 0.5 }}>
-                            {rating.upvotes}
-                        </Typography>
-                    </IconButton>
-                    {user && user.id === rating.user.id && (
-                        <Button 
-                            size="small" 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditRating(rating);
-                            }}
-                        >
-                            Edit
-                        </Button>
-                    )}
-                    <Rating value={rating.score} readOnly />
-                </Box>
-            </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Conditions: {rating.condition_names.join(', ')}
-            </Typography>
-            {(rating.dosage || rating.dosage_frequency) && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Dosage: {rating.dosage?.replace(/\s+/g, '')}
-                    {rating.dosage_frequency && rating.frequency_unit && 
-                        ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
-                </Typography>
-            )}
-            {rating.brands && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Brands Used: {rating.brands}
-                </Typography>
-            )}
-            <Typography variant="body2" color="text.secondary">
-                {rating.comment}
-            </Typography>
-            {rating.image_url && (
-                <Box sx={{ mt: 2 }}>
-                    <img 
-                        src={rating.image_url}
-                        alt="Rating attachment"
-                        loading="lazy"
-                        style={{ 
-                            maxWidth: '300px',
-                            maxHeight: '300px',
-                            borderRadius: '4px'
-                        }}
-                    />
-                </Box>
-            )}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                <Button size="small" onClick={() => handleReviewClick(rating)}>
-                    View Details
-                </Button>
-            </Box>
-        </Paper>
-    );
-
     const handleRemoveCondition = (conditionToRemove) => {
         const updatedConditions = appliedFilterConditions.filter(
             c => c.id !== conditionToRemove.id
@@ -1090,102 +1107,18 @@ function SearchableSupplementList() {
                             getSortedRatings(selectedSupplement.ratings)
                                 .filter(rating => rating.comment)
                                 .map((rating) => (
-                                    <ListItem 
-                                        key={rating.id}
-                                        onClick={() => setSelectedReview(rating)}
-                                        sx={{ 
-                                            mb: 2,
-                                            flexDirection: 'column',
-                                            alignItems: 'flex-start',
-                                            bgcolor: 'background.paper',
-                                            borderRadius: 1,
-                                            boxShadow: 1,
-                                            p: 2,
-                                            cursor: 'pointer',
-                                            '&:hover': {
-                                                bgcolor: 'action.hover'
-                                            }
+                                    <SupplementRatingItem 
+                                        key={rating.id} 
+                                        rating={rating} 
+                                        user={user}
+                                        handleEditRating={(r) => {
+                                            handleEditRating(r);
                                         }}
-                                    >
-                                        <Box sx={{ 
-                                            width: '100%',
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            alignItems: 'center',
-                                            mb: 1
-                                        }}>
-                                            <Typography variant="subtitle2">
-                                                {rating.user.username}
-                                                {rating.is_edited && (
-                                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                                        (edited)
-                                                    </Typography>
-                                                )}
-                                            </Typography>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <IconButton 
-                                                    onClick={(e) => handleUpvoteRating(e, rating)}
-                                                    color={rating.has_upvoted ? "primary" : "default"}
-                                                    disabled={!user || rating.user.id === user?.id}
-                                                    size="small"
-                                                >
-                                                    <ThumbUpIcon fontSize="small" />
-                                                    <Typography variant="caption" sx={{ ml: 0.5 }}>
-                                                        {rating.upvotes}
-                                                    </Typography>
-                                                </IconButton>
-                                                {user && user.id === rating.user.id && (
-                                                    <Button 
-                                                        size="small" 
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleEditRating(rating);
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </Button>
-                                                )}
-                                                <Rating value={rating.score} readOnly />
-                                            </Box>
-                                        </Box>
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                            Conditions: {rating.condition_names.join(', ')}
-                                        </Typography>
-                                        {(rating.dosage || rating.dosage_frequency) && (
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                Dosage: {rating.dosage?.replace(/\s+/g, '')}
-                                                {rating.dosage_frequency && rating.frequency_unit && 
-                                                    ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
-                                            </Typography>
-                                        )}
-                                        {rating.brands && (
-                                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                                Brands Used: {rating.brands}
-                                            </Typography>
-                                        )}
-                                        <Typography variant="body2" color="text.secondary">
-                                            {rating.comment}
-                                        </Typography>
-                                        {rating.image_url && (
-                                            <Box sx={{ mt: 2 }}>
-                                                <img 
-                                                    src={rating.image_url}
-                                                    alt="Rating attachment"
-                                                    loading="lazy"
-                                                    style={{ 
-                                                        maxWidth: '300px',
-                                                        maxHeight: '300px',
-                                                        borderRadius: '4px'
-                                                    }}
-                                                />
-                                            </Box>
-                                        )}
-                                        {rating.comments?.length > 0 && (
-                                            <Typography variant="caption" sx={{ mt: 1, color: 'primary.main' }}>
-                                                {rating.comments.length} comment(s)
-                                            </Typography>
-                                        )}
-                                    </ListItem>
+                                        handleUpvoteRating={(e, r) => {
+                                            handleUpvoteRating(e, r);
+                                        }}
+                                        handleReviewClick={setSelectedReview} 
+                                    />
                                 ))
                         ) : (
                             <ReviewDetail 

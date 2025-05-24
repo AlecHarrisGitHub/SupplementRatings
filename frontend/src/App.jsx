@@ -38,10 +38,10 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />
-                <Route path="/upload-supplements" element={<PrivateRoute><UploadCSV type="supplements" /></PrivateRoute>} />
-                <Route path="/upload-conditions" element={<PrivateRoute><UploadCSV type="conditions" /></PrivateRoute>} />
-                <Route path="/upload-brands" element={<PrivateRoute><UploadBrands /></PrivateRoute>} />
-                <Route path="/admin-dashboard" element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+                <Route path="/upload-supplements" element={<PrivateRoute adminOnly={true}><UploadCSV type="supplements" /></PrivateRoute>} />
+                <Route path="/upload-conditions" element={<PrivateRoute adminOnly={true}><UploadCSV type="conditions" /></PrivateRoute>} />
+                <Route path="/upload-brands" element={<PrivateRoute adminOnly={true}><UploadBrands /></PrivateRoute>} />
+                <Route path="/admin-dashboard" element={<PrivateRoute adminOnly={true}><AdminDashboard /></PrivateRoute>} />
                 <Route path="/verify-email/:token" element={<EmailVerification />} />
                 <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
                 <Route path="*" element={<NotFound />} />

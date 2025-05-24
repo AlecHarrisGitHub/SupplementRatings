@@ -540,6 +540,43 @@ export const searchAllComments = async (params = {}) => {
     }
 };
 
+// Function to update profile image
+export const updateProfileImage = async (imageData) => {
+    try {
+        const response = await API.post('profile/image-upload/', imageData, {
+            headers: {
+                // 'Content-Type': 'multipart/form-data' // Handled by browser for FormData
+            }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error updating profile image:', error);
+        throw error.response?.data || error;
+    }
+};
+
+export const getCurrentUserDetails = async () => {
+    try {
+        const response = await API.get('user/me/'); // Corrected endpoint
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching current user details:', error);
+        throw error;
+    }
+};
+
+// If you have admin-specific API calls, they might go here
+// Example:
+// export const getAdminStats = async () => {
+// try {
+// const response = await API.get('admin/stats/');
+// return response.data;
+// } catch (error) {
+// console.error('Error fetching admin stats:', error);
+// throw error;
+// }
+// };
+
 // export const setAuthToken = (token) => {
 //     if (token) {
 //         API.defaults.headers.common['Authorization'] = `Bearer ${token}`;

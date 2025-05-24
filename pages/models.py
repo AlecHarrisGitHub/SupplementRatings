@@ -7,6 +7,59 @@ from django.core.files.base import ContentFile
 from PIL import Image as PILImage
 from io import BytesIO
 import os
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+
+    def __str__(self):
+        return f'{self.user.username} Profile'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+
+        if self.image:
+            try:
+                img = PILImage.open(self.image.path)
+
+                if img.height > 300 or img.width > 300:
+                    output_size = (300, 300)
+                    img.thumbnail(output_size, PILImage.Resampling.LANCZOS)
+                    
+                    buffer = BytesIO()
+                    save_format = 'WEBP'
+                    save_kwargs = {'quality': 80}
+                    
+                    if img.mode != 'RGB' and img.mode != 'RGBA':
+                         img = img.convert('RGBA') if save_format == 'WEBP' else img.convert('RGB')
+
+                    img.save(buffer, format=save_format, **save_kwargs)
+                    
+                    file_name_without_ext, _ = os.path.splitext(self.image.name)
+                    new_file_name = file_name_without_ext + '.webp'
+                    
+                    self.image.save(new_file_name, ContentFile(buffer.getvalue()), save=False)
+                    super().save(*args, **kwargs) # Save again to update the image field with the new name
+            except Exception as e:
+                print(f"Error processing profile image for {self.user.username}: {e}")
+
+
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+    else:
+        # For existing users (not newly created), ensure a profile exists.
+        Profile.objects.get_or_create(user=instance)
+    
+    # Now that the profile is guaranteed to exist, call save() on it.
+    try:
+        instance.profile.save()
+    except Exception as e:
+        print(f"Error saving profile for user {instance.username} in signal (possibly during Profile.save()): {e}")
 
 
 class Supplement(models.Model):

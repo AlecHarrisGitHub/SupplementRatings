@@ -9,6 +9,7 @@ import {
     List,
     ListItem,
     IconButton,
+    Avatar
 } from '@mui/material';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import { addComment, updateComment, upvoteRating, upvoteComment } from '../services/api';
@@ -17,13 +18,16 @@ import { toast } from 'react-toastify';
 import ImageUpload from './ImageUpload';
 import ImageModal from './ImageModal';
 
+const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
+
 function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser, onUpvote }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);
 
     const handleEdit = async () => {
         try {
-            const updatedComment = await onEdit(comment.id, editedContent);
+            await onEdit(comment.id, editedContent);
+            // Optimistically update, or rely on parent to refresh
             comment.content = editedContent;
             comment.is_edited = true;
             setIsEditing(false);
@@ -33,19 +37,14 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
     };
 
     const handleUpvoteClick = (e) => {
-        e.stopPropagation(); // Prevent comment click event
-        onUpvote(comment);
-    };
-
-    const handleImageClick = (e, imageUrl) => {
         e.stopPropagation();
-        // Implement the logic to open the image modal with the image URL
+        onUpvote(comment);
     };
 
     return (
         <ListItem 
             onClick={() => onCommentClick(comment)}
-            sx={{ 
+            sx={{
                 mb: 2,
                 flexDirection: 'column',
                 alignItems: 'flex-start',
@@ -60,107 +59,89 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                 }
             }}
         >
-            <Box sx={{ 
-                width: '100%',
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'flex-start'
-            }}>
-                <Typography variant="subtitle2" fontWeight="bold">
-                    {comment.user.username}
-                    {comment.is_edited && (
-                        <Typography component="span" variant="caption" color="text.secondary">
-                            {" (edited)"}
+            <Box sx={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1 }}>
+                <Avatar 
+                    src={comment.user.profile_image_url || defaultProfileImage} 
+                    alt={comment.user.username}
+                    sx={{ width: isNested ? 32 : 40, height: isNested ? 32 : 40, mt: 0.5 }}
+                />
+                <Box sx={{ flexGrow: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="subtitle2" fontWeight="bold">
+                            {comment.user.username}
+                            {comment.is_edited && (
+                                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
+                                    (edited)
+                                </Typography>
+                            )}
                         </Typography>
+                        <IconButton 
+                            onClick={handleUpvoteClick}
+                            color={comment.has_upvoted ? "primary" : "default"}
+                            size="small"
+                            disabled={!currentUser || comment.user.id === currentUser.id}
+                        >
+                            <ThumbUpIcon fontSize="small" />
+                            <Typography variant="caption" sx={{ ml: 0.5 }}>{comment.upvotes}</Typography>
+                        </IconButton>
+                    </Box>
+                    {!isEditing ? (
+                        <Typography variant="body2" sx={{ mt: 0.5 }}>{comment.content}</Typography>
+                    ) : (
+                        <TextField
+                            fullWidth
+                            multiline
+                            variant="outlined"
+                            size="small"
+                            value={editedContent}
+                            onChange={(e) => setEditedContent(e.target.value)}
+                            sx={{ mt: 1 }}
+                        />
                     )}
-                </Typography>
-                <IconButton 
-                    onClick={handleUpvoteClick}
-                    color={comment.has_upvoted ? "primary" : "default"}
-                    size="small"
-                    disabled={!currentUser || comment.user.id === currentUser.id}
-                >
-                    <ThumbUpIcon fontSize="small" />
-                    <Typography variant="caption" sx={{ ml: 0.5 }}>
-                        {comment.upvotes}
-                    </Typography>
-                </IconButton>
-            </Box>
-            
-            {isEditing ? (
-                <Box onClick={(e) => e.stopPropagation()} sx={{ width: '100%', mt: 1 }}>
-                    <TextField
-                        fullWidth
-                        multiline
-                        value={editedContent}
-                        onChange={(e) => setEditedContent(e.target.value)}
-                        sx={{ mb: 1 }}
-                    />
-                    <Button onClick={handleEdit} variant="contained" size="small" sx={{ mr: 1 }}>
-                        Save
-                    </Button>
-                    <Button onClick={() => setIsEditing(false)} size="small">
-                        Cancel
-                    </Button>
-                </Box>
-            ) : (
-                <>
-                    <Typography variant="body1" sx={{ mt: 1, mb: comment.image_url ? 2 : 0 }}>
-                        {comment.content}
-                    </Typography>
-                    
-                    {comment.image_url && (
-                        <Box sx={{ mt: 1, mb: 2 }}>
+                    {comment.image_url && !isEditing && (
+                        <Box sx={{ mt: 1 }}>
                             <img 
-                                src={comment.image_url}
-                                alt="Comment attachment"
-                                style={{ 
-                                    maxWidth: '200px',
-                                    maxHeight: '200px',
-                                    borderRadius: '4px',
-                                    cursor: 'pointer'
-                                }}
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleImageClick(e, comment.image_url);
-                                }}
+                                src={comment.image_url} 
+                                alt="Comment attachment" 
+                                style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', cursor: 'pointer' }}
                             />
                         </Box>
                     )}
-                    
-                    {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
-                        <Button 
-                            size="small" 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                setIsEditing(true);
-                            }}
-                            sx={{ mt: 1 }}
-                        >
-                            Edit
-                        </Button>
-                    )}
-                </>
-            )}
+                    <Box sx={{ mt: 1, display: 'flex', gap: 1}}>
+                        {isEditing ? (
+                            <>
+                                <Button size="small" onClick={handleEdit} variant="contained">Save</Button>
+                                <Button size="small" onClick={() => setIsEditing(false)}>Cancel</Button>
+                            </>
+                        ) : (
+                            <>
+                                {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
+                                    <Button size="small" onClick={(e) => { e.stopPropagation(); setIsEditing(true); }} sx={{mr:1}}>Edit</Button>
+                                )}
+                            </>
+                        )}
+                    </Box>
+                </Box>
+            </Box>
         </ListItem>
     );
 }
 
 function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [newComment, setNewComment] = useState('');
-    const { isAuthenticated, user } = useAuth();
+    const { isAuthenticated, user: currentUser } = useAuth();
     const [selectedComment, setSelectedComment] = useState(null);
     const [localRating, setLocalRating] = useState(rating);
     const [newImage, setNewImage] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(null);
+    const [selectedImageForModal, setSelectedImageForModal] = useState(null);
 
     const handleUpvoteRating = async () => {
         if (!isAuthenticated) {
             toast.error('Please log in to upvote');
             return;
         }
-        if (localRating.user.id === user.id) {
+        if (localRating.user.id === currentUser.id) {
             toast.error('You cannot upvote your own rating');
             return;
         }
@@ -177,22 +158,22 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
     };
 
-    const handleUpvoteComment = async (comment) => {
+    const handleUpvoteComment = async (commentToUpvote) => {
         if (!isAuthenticated) {
             toast.error('Please log in to upvote');
             return;
         }
-        if (comment.user.id === user.id) {
+        if (commentToUpvote.user.id === currentUser.id) {
             toast.error('You cannot upvote your own comment');
             return;
         }
 
         try {
-            const response = await upvoteComment(comment.id);
+            const response = await upvoteComment(commentToUpvote.id);
             // Update the comment's upvote count in the local state
             const updateComments = (comments) => {
                 return comments.map(c => {
-                    if (c.id === comment.id) {
+                    if (c.id === commentToUpvote.id) {
                         return {
                             ...c,
                             upvotes: response.upvotes,
@@ -220,7 +201,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
             // Update selected comment if we're viewing replies
             if (selectedComment) {
-                if (selectedComment.id === comment.id) {
+                if (selectedComment.id === commentToUpvote.id) {
                     // If the upvoted comment is the selected comment
                     setSelectedComment(prev => ({
                         ...prev,
@@ -292,14 +273,14 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
     };
 
-    const handleCommentClick = (comment) => {
+    const handleCommentClick = (commentData) => {
         // Always get the latest version of the comment from the rating's comments
-        const updatedComment = rating.comments.find(c => c.id === comment.id);
+        const updatedComment = rating.comments.find(c => c.id === commentData.id);
         if (updatedComment) {
             setSelectedComment({
                 ...updatedComment,
-                upvotes: comment.upvotes,
-                has_upvoted: comment.has_upvoted,
+                upvotes: commentData.upvotes,
+                has_upvoted: commentData.has_upvoted,
                 replies: (updatedComment.replies || []).map(reply => ({
                     ...reply,
                     upvotes: reply.upvotes || 0,
@@ -309,10 +290,10 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         } else {
             // If we can't find the comment in rating.comments (shouldn't happen), use the original
             setSelectedComment({
-                ...comment,
-                upvotes: comment.upvotes || 0,
-                has_upvoted: comment.has_upvoted || false,
-                replies: (comment.replies || []).map(reply => ({
+                ...commentData,
+                upvotes: commentData.upvotes || 0,
+                has_upvoted: commentData.has_upvoted || false,
+                replies: (commentData.replies || []).map(reply => ({
                     ...reply,
                     upvotes: reply.upvotes || 0,
                     has_upvoted: reply.has_upvoted || false
@@ -321,215 +302,148 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
     };
 
-    const handleImageClick = (e, imageUrl) => {
+    const handleImageClickInModal = (e, imageUrl) => {
         e.stopPropagation();
-        setSelectedImage(imageUrl);
+        setSelectedImageForModal(imageUrl);
         setModalOpen(true);
     };
+    
+    const currentItem = selectedComment || localRating;
+    const isShowingCommentDetail = !!selectedComment;
 
-    const currentItem = selectedComment || rating;
-    const isShowingComment = !!selectedComment;
+    // Ensure localRating and its user object are available
+    if (!localRating || !localRating.user) {
+        return <Typography>Loading review details...</Typography>; // Or some other placeholder
+    }
 
     return (
         <Box>
             <Button 
-                onClick={isShowingComment ? () => setSelectedComment(null) : onBack} 
+                onClick={isShowingCommentDetail ? () => setSelectedComment(null) : onBack} 
                 sx={{ mb: 2 }}
             >
-                {isShowingComment ? 'Back to Review' : 'Back to Reviews'}
+                {isShowingCommentDetail ? 'Back to Review' : 'Back to Reviews'}
             </Button>
 
-            <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
-                {!isShowingComment ? (
+            <Paper elevation={3} sx={{ p: {xs: 2, md: 3}, mb: 3 }}>
+                {!isShowingCommentDetail ? (
                     <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="subtitle1" fontWeight="bold">
-                                {localRating.user.username}
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                            <Avatar 
+                                src={localRating.user.profile_image_url || defaultProfileImage} 
+                                alt={localRating.user.username}
+                                sx={{ width: 56, height: 56 }}
+                            />
+                            <Box sx={{ flexGrow: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                    <Typography variant="h6">
+                                        {localRating.user.username}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <IconButton onClick={handleUpvoteRating} color={localRating.has_upvoted ? "primary" : "default"} disabled={!isAuthenticated || localRating.user.id === currentUser?.id}>
+                                            <ThumbUpIcon />
+                                            {localRating.upvotes}
+                                        </IconButton>
+                                        {currentUser && currentUser.id === localRating.user.id && (
+                                            <Button size="small" onClick={() => onEditRating && onEditRating(localRating)}>Edit</Button>
+                                        )}
+                                        <MuiRating value={localRating.score} readOnly />
+                                    </Box>
+                                </Box>
                                 {localRating.is_edited && (
-                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" gutterBottom>
                                         (edited)
                                     </Typography>
                                 )}
-                            </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <IconButton 
-                                    onClick={handleUpvoteRating}
-                                    color={localRating.has_upvoted ? "primary" : "default"}
-                                    disabled={!isAuthenticated || localRating.user.id === user?.id}
-                                >
-                                    <ThumbUpIcon />
-                                    <Typography variant="caption" sx={{ ml: 0.5 }}>
-                                        {localRating.upvotes}
+                                <Typography variant="body2" color="text.secondary">
+                                    Purpose: {localRating.condition_names.join(', ')}
+                                </Typography>
+                                {(localRating.dosage || localRating.dosage_frequency) && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Dosage: {localRating.dosage?.replace(/\s+/g, '')}
+                                        {localRating.dosage_frequency && localRating.frequency_unit && 
+                                            ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}`}
                                     </Typography>
-                                </IconButton>
-                                {user && user.id === localRating.user.id && (
-                                    <Button 
-                                        size="small"
-                                        onClick={() => onEditRating && onEditRating(localRating)}
-                                    >
-                                        Edit
-                                    </Button>
                                 )}
-                                <MuiRating value={localRating.score} readOnly />
+                                {localRating.brands && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Brands Used: {localRating.brands}
+                                    </Typography>
+                                )}
                             </Box>
                         </Box>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Purpose: {localRating.condition_names.join(', ')}
-                        </Typography>
-                        {(localRating.dosage || localRating.dosage_frequency) && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Dosage: {localRating.dosage?.replace(/\s+/g, '')}
-                                {localRating.dosage_frequency && localRating.frequency_unit && 
-                                    ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}`}
-                            </Typography>
-                        )}
-                        {localRating.brands && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                Brands Used: {localRating.brands}
-                            </Typography>
-                        )}
                         {localRating.comment && (
-                            <Box sx={{ mt: 2 }}>
-                                <Typography variant="body1">
-                                    {localRating.comment}
-                                </Typography>
-                                {localRating.image_url && (
-                                    <Box sx={{ mt: 2 }}>
-                                        <img 
-                                            src={localRating.image_url}
-                                            alt="Rating attachment"
-                                            style={{ 
-                                                maxWidth: '300px',
-                                                maxHeight: '300px',
-                                                borderRadius: '4px',
-                                                cursor: 'pointer'
-                                            }}
-                                            onClick={(e) => handleImageClick(e, localRating.image_url)}
-                                        />
-                                    </Box>
-                                )}
+                            <Typography variant="body1" paragraph sx={{whiteSpace: 'pre-wrap'}}>{localRating.comment}</Typography>
+                        )}
+                        {localRating.image_url && (
+                            <Box sx={{ mt: 2, cursor: 'pointer' }} onClick={(e) => handleImageClickInModal(e, localRating.image_url)}>
+                                <img src={localRating.image_url} alt="Rating attachment" style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '4px' }}/>
                             </Box>
                         )}
                     </Box>
                 ) : (
-                    // Show Selected Comment
-                    <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="subtitle1" fontWeight="bold">
-                                {selectedComment.user.username}
-                                {selectedComment.is_edited && (
-                                    <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
-                                        (edited)
+                    <Box sx={{ mb: 3 }}> 
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1 }}>
+                            <Avatar src={selectedComment.user.profile_image_url || defaultProfileImage} alt={selectedComment.user.username} sx={{ width: 40, height: 40, mt: 0.5 }}/>
+                            <Box sx={{ flexGrow: 1 }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Typography variant="subtitle1" fontWeight="bold">
+                                        {selectedComment.user.username}
+                                        {selectedComment.is_edited && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>(edited)</Typography>}
                                     </Typography>
+                                    <IconButton onClick={() => handleUpvoteComment(selectedComment)} color={selectedComment.has_upvoted ? "primary" : "default"} disabled={!isAuthenticated || selectedComment.user.id === currentUser?.id}>
+                                        <ThumbUpIcon fontSize="small"/>
+                                        {selectedComment.upvotes}
+                                    </IconButton>
+                                </Box>
+                                <Typography variant="body1" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{selectedComment.content}</Typography>
+                                {selectedComment.image_url && (
+                                    <Box sx={{ mt: 1, cursor: 'pointer' }} onClick={(e) => handleImageClickInModal(e, selectedComment.image_url)}>
+                                        <img src={selectedComment.image_url} alt="Comment attachment" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px' }}/>
+                                    </Box>
                                 )}
-                            </Typography>
-                            <IconButton 
-                                onClick={() => handleUpvoteComment(selectedComment)}
-                                color={selectedComment.has_upvoted ? "primary" : "default"}
-                                disabled={!isAuthenticated || selectedComment.user.id === user?.id}
-                            >
-                                <ThumbUpIcon />
-                                <Typography variant="caption" sx={{ ml: 0.5 }}>
-                                    {selectedComment.upvotes}
-                                </Typography>
-                            </IconButton>
-                        </Box>
-                        <Typography variant="body1">
-                            {selectedComment.content}
-                        </Typography>
-                        {selectedComment.image_url && (
-                            <Box sx={{ mt: 2 }}>
-                                <img 
-                                    src={selectedComment.image_url}
-                                    alt="Comment attachment"
-                                    style={{ 
-                                        maxWidth: '300px',
-                                        maxHeight: '300px',
-                                        borderRadius: '4px',
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={(e) => handleImageClick(e, selectedComment.image_url)}
-                                />
                             </Box>
-                        )}
+                        </Box>
                     </Box>
                 )}
-
-                <List>
-                    {(currentItem.comments || currentItem.replies || []).map((comment) => (
-                        <CommentBox 
-                            key={comment.id} 
-                            comment={comment}
-                            onCommentClick={handleCommentClick}
-                            isNested={isShowingComment}
-                            onEdit={async (commentId, content) => {
-                                try {
-                                    console.log('Editing comment. Current user:', user); // Debug log
-                                    const updatedComment = await updateComment(commentId, content);
-                                    if (isShowingComment) {
-                                        // If editing a reply
-                                        const updatedReplies = currentItem.replies.map(c => 
-                                            c.id === commentId ? {...updatedComment, is_edited: true} : c
-                                        );
-                                        setSelectedComment(prev => ({
-                                            ...prev,
-                                            replies: updatedReplies
-                                        }));
-                                    } else {
-                                        // If editing a main comment
-                                        const updatedComments = rating.comments.map(c => 
-                                            c.id === commentId ? {...updatedComment, is_edited: true} : c
-                                        );
-                                        rating.comments = updatedComments;
-                                        // Force a re-render by creating a new array
-                                        setSelectedComment(null); // Reset selected comment to trigger re-render
-                                    }
-                                    // Still call the parent's refresh function but don't wait for it
-                                    onCommentAdded();
-                                } catch (error) {
-                                    console.error('Error updating comment:', error);
-                                    toast.error('Failed to update comment');
-                                }
-                            }}
-                            currentUser={user}
-                            onUpvote={handleUpvoteComment}
-                        />
-                    ))}
-                </List>
 
                 {isAuthenticated && (
-                    <Box component="form" onSubmit={handleSubmitComment} sx={{ mt: 3 }}>
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={3}
-                            variant="outlined"
-                            placeholder={`Reply to ${isShowingComment ? 'comment' : 'review'}...`}
-                            value={newComment}
-                            onChange={(e) => setNewComment(e.target.value)}
-                            sx={{ mb: 2 }}
-                        />
-                        <ImageUpload 
-                            onImageSelect={(file) => setNewImage(file)}
-                            currentImage={null}
-                        />
-                        <Button 
-                            type="submit" 
-                            variant="contained"
-                            disabled={!newComment.trim()}
-                            sx={{ mt: 2 }}
-                        >
-                            Add Reply
+                    <form onSubmit={handleSubmitComment} style={{ marginTop: isShowingCommentDetail ? '16px' : '0px' }}>
+                        <Typography variant="subtitle1" sx={{ mb: 1}}>
+                            {isShowingCommentDetail ? 'Reply to comment' : 'Leave a comment'}
+                        </Typography>
+                        <TextField fullWidth multiline rows={3} variant="outlined" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write your comment..." sx={{ mb: 1 }}/>
+                        <ImageUpload onFileSelect={setNewImage} selectedFile={newImage} />
+                        <Button type="submit" variant="contained" sx={{ mt: 1 }} disabled={!newComment.trim() && !newImage}>
+                            {isShowingCommentDetail ? 'Post Reply' : 'Post Comment'}
                         </Button>
-                    </Box>
+                    </form>
                 )}
+
+                <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+                    {isShowingCommentDetail ? 'Replies' : 'Comments'}
+                </Typography>
+                <List>
+                    {(currentItem.comments || currentItem.replies || []).map((commentItem) => (
+                        <CommentBox 
+                            key={commentItem.id} 
+                            comment={commentItem}
+                            onCommentClick={handleCommentClick}
+                            isNested={isShowingCommentDetail}
+                            onEdit={updateComment}
+                            currentUser={currentUser}
+                            onUpvote={() => handleUpvoteComment(commentItem)}
+                        />
+                    ))}
+                    {((currentItem.comments || currentItem.replies || []).length === 0) && (
+                        <Typography>No {isShowingCommentDetail ? 'replies' : 'comments'} yet.</Typography>
+                    )}
+                </List>
             </Paper>
 
-            <ImageModal 
-                open={modalOpen}
-                onClose={() => setModalOpen(false)}
-                imageUrl={selectedImage}
-            />
+            {selectedImageForModal && (
+                <ImageModal imageUrl={selectedImageForModal} onClose={() => setModalOpen(false)} open={modalOpen} />
+            )}
         </Box>
     );
 }

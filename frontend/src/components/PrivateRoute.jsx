@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Your AuthContext
 import { CircularProgress, Box } from '@mui/material';
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = ({ children, adminOnly = false }) => {
     const { isAuthenticated, isAdmin, loading } = useAuth();
     const location = useLocation();
 
@@ -22,13 +22,11 @@ const PrivateRoute = ({ children }) => {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // For admin routes, also check if the user is an admin
-    // This assumes routes like /admin-dashboard are only for admins
-    // If a route is private but not specifically admin, you might omit this check or have different PrivateRoute types
-    if (!isAdmin) {
-        // Redirect to a generic page or home if not an admin (or show an access denied message)
-        // For simplicity, redirecting to home. You could also have a dedicated "Access Denied" page.
-        return <Navigate to="/" state={{ error: 'Access Denied' }} replace />;
+    // If the route requires admin privileges, and the user is not an admin, redirect.
+    if (adminOnly && !isAdmin) {
+        // Redirect to a generic page or home if not an admin for an adminOnly route.
+        // Or show an "Access Denied" message/page.
+        return <Navigate to="/" state={{ error: 'Access Denied - Admin Only' }} replace />;
     }
 
     return children;

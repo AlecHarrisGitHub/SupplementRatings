@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Supplement, Rating, Comment, Condition, Brand, UserUpvote
+from .models import Supplement, Rating, Comment, Condition, Brand, UserUpvote, Profile
 import logging
 from django.conf import settings
 import boto3
@@ -49,9 +49,50 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
 
 class BasicUserSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username']
+        fields = ['id', 'username', 'profile_image_url']
+
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        # obj is User instance, so access profile via obj.profile
+        if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.profile.image.url)
+            return obj.profile.image.url
+        
+        # Fallback to default image URL
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return default_image_path
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    user = BasicUserSerializer(read_only=True)
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Profile
+        fields = ['user', 'image', 'image_url']
+        extra_kwargs = {
+            'image': {'write_only': True, 'required': False}
+        }
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        if obj.image and hasattr(obj.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return f"/media/profile_pics/default.jpg"
 
 
 class CommentSerializer(serializers.ModelSerializer):

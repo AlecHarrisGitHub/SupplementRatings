@@ -1,0 +1,107 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Profile</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .profile-img-container {
+            position: relative;
+            cursor: pointer;
+            width: 150px; /* Match image size */
+            height: 150px; /* Match image size */
+            border-radius: 50%;
+            overflow: hidden; /* Ensures pseudo-elements for overlay stay within bounds */
+            display: inline-block; /* To center it properly if text-align is used on parent */
+        }
+        .profile-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block; /* Remove extra space below image */
+            border-radius: 50%; /* Ensure image itself is round if container is */
+        }
+        .profile-img-container:hover::after {
+            content: 'Change Photo';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 50%; /* Match container */
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        /* Visually hide the actual file input but keep it accessible */
+        #profileUpdateForm input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            border: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-4 text-center"> <!-- Centering content -->
+                <form id="profileUpdateForm" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ u_form.image }} <!-- Renders the actual file input, which will be hidden by CSS -->
+                    <div class="profile-img-container mb-3" onclick="document.getElementById('id_image').click();" title="Click to change profile picture">
+                        <img src="{{ profile_data.image_url }}" alt="{{ user_data.username }} Profile Image" class="profile-img">
+                    </div>
+                </form>
+                <h2>{{ user_data.username }}</h2>
+                <p class="text-muted">{{ user_data.email }}</p>
+            </div>
+            <div class="col-md-8">
+                <h3>Profile Settings</h3>
+                <p>To change your profile picture, click on the current picture to your left. Your picture will be updated automatically after you select a new one.</p>
+                <p>If you see a default image, it means you haven't uploaded a custom one yet or the previous one couldn't be loaded.</p>
+                
+                <!-- You can add other profile-related forms or information here if needed -->
+            </div>
+        </div>
+        {% if messages %}
+            <div class="row mt-3">
+                <div class="col-md-12">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        const imageInput = document.getElementById('id_image'); // Django usually renders file input with id_image
+        if (imageInput) {
+            imageInput.onchange = function() {
+                if (this.files && this.files[0]) {
+                    // Optionally, you could add a loading indicator here
+                    document.getElementById('profileUpdateForm').submit();
+                }
+            };
+        }
+    </script>
+</body>
+</html> 
