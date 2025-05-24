@@ -13,11 +13,13 @@ import {
     Chip,
     Button,
     Avatar,
-    Snackbar
+    Snackbar,
+    Autocomplete,
+    TextField as MuiTextField
 } from '@mui/material';
 import { format } from 'date-fns';
 import { Link as RouterLink } from 'react-router-dom';
-import { updateProfileImage as updateProfileImageAPI } from '../services/api';
+import { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI } from '../services/api';
 import { styled } from '@mui/material/styles';
 
 const Input = styled('input')({
@@ -38,6 +40,13 @@ function AccountsPage() {
     const [uploadError, setUploadError] = useState(null);
     const [uploadSuccess, setUploadSuccess] = useState(false);
     const fileInputRef = useRef(null);
+
+    const [allConditions, setAllConditions] = useState([]);
+    const [selectedConditions, setSelectedConditions] = useState([]);
+    const [loadingAllConditions, setLoadingAllConditions] = useState(true);
+    const [conditionsError, setConditionsError] = useState(null);
+    const [savingConditions, setSavingConditions] = useState(false);
+    const [saveConditionsSuccess, setSaveConditionsSuccess] = useState(false);
 
     const fetchRatings = async (url) => {
         if (!user) {
@@ -85,6 +94,31 @@ function AccountsPage() {
         fetchRatings('/api/ratings/my_ratings/');
     }, [user]);
 
+    useEffect(() => {
+        const fetchAllConditions = async () => {
+            try {
+                setLoadingAllConditions(true);
+                const conditionsData = await getAllConditions(); // Assuming this returns { results: [...] } or an array
+                setAllConditions(Array.isArray(conditionsData) ? conditionsData : conditionsData.results || []);
+                setConditionsError(null);
+            } catch (err) {
+                console.error("Error fetching all conditions:", err);
+                setConditionsError(err.message || "Could not load conditions list.");
+            } finally {
+                setLoadingAllConditions(false);
+            }
+        };
+        fetchAllConditions();
+    }, []);
+
+    useEffect(() => {
+        // Initialize selectedConditions from user context when user data or allConditions are loaded
+        if (user && user.chronic_conditions && allConditions.length > 0) {
+            const userConditionIds = user.chronic_conditions.map(c => c.id);
+            setSelectedConditions(allConditions.filter(c => userConditionIds.includes(c.id)));
+        }
+    }, [user, allConditions]);
+
     const handleLoadMore = () => {
         if (nextPage) {
             fetchRatings(nextPage);
@@ -118,7 +152,26 @@ function AccountsPage() {
         }
     };
 
-    if (loadingRatings && ratings.length === 0) {
+    const handleSaveChronicConditions = async () => {
+        setSavingConditions(true);
+        setConditionsError(null);
+        setSaveConditionsSuccess(false);
+        const conditionIds = selectedConditions.map(c => c.id);
+        try {
+            const updatedConditionsData = await updateUserChronicConditionsAPI(conditionIds);
+            // Update AuthContext with the new chronic conditions
+            // The API returns the new list of condition objects for the user
+            updateUser({ chronic_conditions: updatedConditionsData });
+            setSaveConditionsSuccess(true);
+        } catch (err) {
+            console.error("Error saving chronic conditions:", err);
+            setConditionsError(err.message || "Failed to save chronic conditions.");
+        } finally {
+            setSavingConditions(false);
+        }
+    };
+
+    if (loadingRatings && ratings.length === 0 && loadingAllConditions) {
         return <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Container>;
     }
 
@@ -170,11 +223,60 @@ function AccountsPage() {
                     </Box>
                 )}
 
+                {/* Chronic Conditions Management Section */}
+                <Box sx={{ mt: 4, mb: 3, p: 2, border: '1px solid #eee', borderRadius: '4px' }}>
+                    <Typography variant="h5" component="h2" gutterBottom>
+                        Manage Your Chronic Conditions
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Optionally, list any chronic conditions you manage. If you add conditions here, 
+                        you'll see a quick-add option ("Use My Saved Chronic Conditions") when rating supplements, 
+                        which will automatically include them as purposes for your rating.
+                    </Typography>
+                    {loadingAllConditions ? (
+                        <CircularProgress size={24} />
+                    ) : conditionsError && !allConditions.length ? (
+                         <Alert severity="error">{conditionsError}</Alert>
+                    ) : (
+                        <Autocomplete
+                            multiple
+                            id="chronic-conditions-autocomplete"
+                            options={allConditions}
+                            getOptionLabel={(option) => option.name}
+                            value={selectedConditions}
+                            onChange={(event, newValue) => {
+                                setSelectedConditions(newValue);
+                            }}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            renderInput={(params) => (
+                                <MuiTextField
+                                    {...params}
+                                    variant="outlined"
+                                    label="Select Chronic Conditions"
+                                    placeholder="Type to search conditions..."
+                                />
+                            )}
+                            sx={{ mb: 2 }}
+                        />
+                    )}
+                    {conditionsError && allConditions.length > 0 && <Alert severity="error" sx={{mb:2}}>{conditionsError}</Alert>}
+                    <Button 
+                        variant="contained" 
+                        onClick={handleSaveChronicConditions} 
+                        disabled={loadingAllConditions || savingConditions}
+                    >
+                        {savingConditions ? <CircularProgress size={24} /> : 'Save Chronic Conditions'}
+                    </Button>
+                </Box>
+
                 <Snackbar
-                    open={uploadSuccess}
+                    open={uploadSuccess || saveConditionsSuccess}
                     autoHideDuration={4000}
-                    onClose={() => setUploadSuccess(false)}
-                    message="Profile picture updated!"
+                    onClose={() => {
+                        setUploadSuccess(false);
+                        setSaveConditionsSuccess(false);
+                    }}
+                    message={uploadSuccess ? "Profile picture updated!" : (saveConditionsSuccess ? "Chronic conditions saved!" : "")}
                 />
 
                 <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 2, borderBottom: '1px solid #ddd', pb: 1 }}>

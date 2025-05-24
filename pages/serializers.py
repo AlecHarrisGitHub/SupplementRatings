@@ -10,6 +10,11 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
+class ConditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Condition
+        fields = ['id', 'name']
+
 class RegisterUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -50,10 +55,11 @@ class RegisterUserSerializer(serializers.ModelSerializer):
 
 class BasicUserSerializer(serializers.ModelSerializer):
     profile_image_url = serializers.SerializerMethodField()
+    chronic_conditions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile_image_url']
+        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions']
 
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
@@ -70,14 +76,21 @@ class BasicUserSerializer(serializers.ModelSerializer):
             return request.build_absolute_uri(default_image_path)
         return default_image_path
 
+    def get_chronic_conditions(self, obj):
+        if hasattr(obj, 'profile') and hasattr(obj.profile, 'chronic_conditions'):
+            conditions = obj.profile.chronic_conditions.all()
+            return ConditionSerializer(conditions, many=True, context=self.context).data
+        return []
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = BasicUserSerializer(read_only=True)
     image_url = serializers.SerializerMethodField()
+    chronic_conditions = ConditionSerializer(many=True, read_only=True)
 
     class Meta:
         model = Profile
-        fields = ['user', 'image', 'image_url']
+        fields = ['user', 'image', 'image_url', 'chronic_conditions']
         extra_kwargs = {
             'image': {'write_only': True, 'required': False}
         }
@@ -225,12 +238,6 @@ class SupplementSerializer(serializers.ModelSerializer):
     def get_ratings(self, obj):
         ratings_queryset = obj.ratings.all()
         return RatingSerializer(ratings_queryset, many=True, context=self.context).data
-
-
-class ConditionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Condition
-        fields = ['id', 'name']
 
 
 class BrandSerializer(serializers.ModelSerializer):

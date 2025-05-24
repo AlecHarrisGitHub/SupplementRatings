@@ -1,7 +1,12 @@
 # pages/urls.py
 
 from django.urls import path
-from .views import profile_update_view, ProfileImageUpdateAPIView, get_user_details # Import get_user_details
+from .views import (
+    profile_update_view, 
+    ProfileImageUpdateAPIView, 
+    get_user_details,
+    UserChronicConditionsAPIView
+)
 
 urlpatterns = [
     # URL for the Django template-based profile page
@@ -12,4 +17,7 @@ urlpatterns = [
 
     # API endpoint to get current authenticated user's details
     path('api/user/me/', get_user_details, name='current_user_details'),
+
+    # API endpoint for managing user's chronic conditions
+    path('api/user/chronic-conditions/', UserChronicConditionsAPIView.as_view(), name='user_chronic_conditions_api'),
 ]

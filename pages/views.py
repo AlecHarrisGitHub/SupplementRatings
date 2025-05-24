@@ -953,3 +953,40 @@ def profile_update_view(request):
     }
     return render(request, 'pages/profile.html', context)
 
+class UserChronicConditionsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get(self, request, *args, **kwargs):
+        from .serializers import ConditionSerializer # Keep local import for now, or revert to top-level if preferred after this works
+        profile = request.user.profile
+        conditions = profile.chronic_conditions.all()
+        serializer = ConditionSerializer(conditions, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def put(self, request, *args, **kwargs):
+        from .serializers import ConditionSerializer # Keep local import for now
+        profile = request.user.profile
+        condition_ids = request.data.get('condition_ids', [])
+
+        if not isinstance(condition_ids, list):
+            return Response({'error': 'condition_ids must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            valid_conditions = Condition.objects.filter(id__in=condition_ids)
+            if len(valid_conditions) != len(set(condition_ids)):
+                all_db_condition_ids = set(Condition.objects.values_list('id', flat=True))
+                invalid_ids = [cid for cid in condition_ids if cid not in all_db_condition_ids]
+                if invalid_ids:
+                    return Response({'error': f'Invalid condition IDs provided: {invalid_ids}'}, status=status.HTTP_400_BAD_REQUEST)
+
+            profile.chronic_conditions.set(valid_conditions)
+            updated_conditions = profile.chronic_conditions.all()
+            serializer = ConditionSerializer(updated_conditions, many=True, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            # Ensure logger is defined if using it here, or fall back to print
+            # logger.error(f"Error updating chronic conditions for user {request.user.username}: {str(e)}")
+            print(f"Error updating chronic conditions for user {request.user.username}: {str(e)}")
+            return Response({'error': 'An unexpected error occurred while updating conditions.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

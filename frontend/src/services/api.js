@@ -565,6 +565,26 @@ export const getCurrentUserDetails = async () => {
     }
 };
 
+export const getUserChronicConditions = async () => {
+    try {
+        const response = await API.get('user/chronic-conditions/');
+        return response.data; // Expects an array of condition objects
+    } catch (error) {
+        console.error('Error fetching user chronic conditions:', error);
+        throw error;
+    }
+};
+
+export const updateUserChronicConditions = async (conditionIds) => {
+    try {
+        const response = await API.put('user/chronic-conditions/', { condition_ids: conditionIds });
+        return response.data; // Expects the updated array of condition objects
+    } catch (error) {
+        console.error('Error updating user chronic conditions:', error);
+        throw error.response?.data || error;
+    }
+};
+
 // If you have admin-specific API calls, they might go here
 // Example:
 // export const getAdminStats = async () => {
