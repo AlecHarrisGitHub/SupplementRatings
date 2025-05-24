@@ -231,7 +231,7 @@ function AccountsPage() {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         Optionally, list any chronic conditions you manage. If you add conditions here, 
                         you'll see a quick-add option ("Use My Saved Chronic Conditions") when rating supplements, 
-                        which will automatically include them as purposes for your rating.
+                        which will automatically include them as intended purposes for using the supplement.
                     </Typography>
                     {loadingAllConditions ? (
                         <CircularProgress size={24} />

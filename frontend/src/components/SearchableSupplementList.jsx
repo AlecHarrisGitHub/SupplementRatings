@@ -21,7 +21,8 @@ import {
     Select,
     MenuItem,
     Divider,
-    Avatar
+    Avatar,
+    Chip
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating, getCategories } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -32,6 +33,9 @@ import ReviewDetail from './ReviewDetail';
 import debounce from 'lodash/debounce';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ImageUpload from './ImageUpload';
+import StarIcon from '@mui/icons-material/Star';
+
+const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
 
 const ConditionTag = ({ condition, onRemove }) => (
     <Box
@@ -329,6 +333,7 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
 };
 
 function SearchableSupplementList() {
+    const { user, isAuthenticated } = useAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [supplements, setSupplements] = useState([]);
     const [selectedSupplement, setSelectedSupplement] = useState(null);
@@ -340,9 +345,6 @@ function SearchableSupplementList() {
     const [conditions, setConditions] = useState([]);
     const [selectedConditions, setSelectedConditions] = useState([]);
     const [searchCondition, setSearchCondition] = useState('');
-    const { user } = useAuth();
-    
-    // New state for filter drawer
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [selectedFilterConditions, setSelectedFilterConditions] = useState([]);
     const [selectedFilterBrands, setSelectedFilterBrands] = useState([]);
@@ -372,18 +374,16 @@ function SearchableSupplementList() {
     const [selectedBrand, setSelectedBrand] = useState(null);
     const [ratingDosageFrequency, setRatingDosageFrequency] = useState('1');
     const [ratingFrequencyUnit, setRatingFrequencyUnit] = useState('day');
-
-    // Add new state for sort order near the other state declarations
-    const [sortOrder, setSortOrder] = useState('likes'); // 'likes' or 'recent'
-
-    // Add new state for sort selection
+    const [sortOrder, setSortOrder] = useState('likes');
     const [selectedSortBy, setSelectedSortBy] = useState('highest_rating');
     const [appliedSortBy, setAppliedSortBy] = useState('highest_rating');
-
     const [categories, setCategories] = useState([]);
     const [ratingDialogAttemptedSubmit, setRatingDialogAttemptedSubmit] = useState(false);
+    const [expandedReviews, setExpandedReviews] = useState({});
+    const [selectedReviewDetail, setSelectedReviewDetail] = useState(null);
+    const [nextPageUrl, setNextPageUrl] = useState(null);
+    const [loadingMore, setLoadingMore] = useState(false);
 
-    // Add this useEffect after the other useEffect hooks
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -397,7 +397,6 @@ function SearchableSupplementList() {
         fetchCategories();
     }, []);
 
-    // Debounced search function
     const debouncedSearch = useCallback(
         debounce((term) => {
             setCurrentSearch(term);
@@ -405,11 +404,6 @@ function SearchableSupplementList() {
         []
     );
 
-    // Add console log for debugging
-    // console.log('User in SearchableSupplementList:', user);
-    // console.log('Rating user:', selectedSupplement?.ratings?.[0]?.user);
-
-    // Add this near the top of the component, after the state declarations
     const memoizedHandleSearchChange = useCallback((e) => {
         setSearchTerm(e.target.value);
         debouncedSearch(e.target.value);
@@ -514,17 +508,6 @@ function SearchableSupplementList() {
             let filteredRatings = data.ratings;
             let ratingCount = data.rating_count;
             
-            // Add console logs for debugging
-            // console.log('Applied filters:', {
-            //     conditions: appliedFilterConditions,
-            //     brands: appliedFilterBrands,
-            //     dosage: appliedFilterDosage,
-            //     dosageUnit: appliedFilterDosageUnit,
-            //     frequency: appliedFilterFrequency,
-            //     frequencyUnit: appliedFilterFrequencyUnit
-            // });
-            // console.log('Original ratings:', data.ratings);
-            
             if (appliedFilterConditions.length > 0 || 
                 appliedFilterBrands.length > 0 || 
                 appliedFilterDosage || 
@@ -559,13 +542,6 @@ function SearchableSupplementList() {
 
                     // Check frequency filter
                     if (appliedFilterFrequency) {
-                        // console.log('Checking frequency for rating:', {
-                        //     ratingDosageFrequency: rating.dosage_frequency,
-                        //     ratingFrequencyUnit: rating.frequency_unit,
-                        //     filterFrequency: appliedFilterFrequency,
-                        //     filterUnit: appliedFilterFrequencyUnit
-                        // });
-                        
                         // Convert all values to strings for comparison
                         const ratingDosageFrequency = String(rating.dosage_frequency);
                         const filterFrequency = String(appliedFilterFrequency);
@@ -581,8 +557,6 @@ function SearchableSupplementList() {
                 });
                 ratingCount = filteredRatings.length;
             }
-            
-            // console.log('Filtered ratings:', filteredRatings);
             
             // Ensure all rating data is preserved
             filteredRatings = filteredRatings.map(rating => ({
@@ -702,7 +676,9 @@ function SearchableSupplementList() {
         }
         setRatingDialogAttemptedSubmit(true);
 
-        if (selectedConditions.length === 0 || !ratingScore) {
+        const actualConditionsToSubmit = selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
+
+        if (actualConditionsToSubmit.length === 0 || !ratingScore) {
             toast.error("Purpose and Rating are required.");
             return;
         }
@@ -710,7 +686,11 @@ function SearchableSupplementList() {
         try {
             const formData = new FormData();
             formData.append('supplement', selectedSupplement.id);
-            formData.append('conditions', selectedConditions.map(c => c.id));
+            
+            actualConditionsToSubmit.forEach(condition => {
+                formData.append('conditions', condition.id);
+            });
+            
             formData.append('score', ratingScore);
             formData.append('comment', ratingComment || '');
             
@@ -922,6 +902,84 @@ function SearchableSupplementList() {
         });
     };
 
+    // Prepare options for the rating dialog's conditions Autocomplete
+    const ratingDialogConditionOptions = useMemo(() => {
+        let options = [...conditions];
+        if (user && user.chronic_conditions && user.chronic_conditions.length > 0) {
+            const specialOption = { 
+                id: SPECIAL_CHRONIC_CONDITIONS_ID, 
+                name: '✨ Use My Saved Chronic Conditions' 
+            };
+            // Check if special option is already effectively selected via all chronic conditions being present
+            const allUserChronicSelected = user.chronic_conditions.every(uc => 
+                selectedConditions.some(rc => rc.id === uc.id)
+            );
+            // Add special option if not all user chronic conditions are already selected
+            // or if the special option itself is part of selectedConditions
+            if (!allUserChronicSelected || selectedConditions.some(rc => rc.id === SPECIAL_CHRONIC_CONDITIONS_ID)) {
+                 options.unshift(specialOption);
+            }
+        }
+        return options.sort((a, b) => { // Sort with special option at top
+            if (a.id === SPECIAL_CHRONIC_CONDITIONS_ID) return -1;
+            if (b.id === SPECIAL_CHRONIC_CONDITIONS_ID) return 1;
+            return a.name.localeCompare(b.name);
+        });
+    }, [conditions, user, selectedConditions]);
+
+    const handleRatingConditionsChange = (event, newValue) => {
+        const userChronicConditions = (user && user.chronic_conditions) || [];
+        let newSelected = [...newValue];
+        
+        const specialOptionIsSelected = newValue.some(option => option.id === SPECIAL_CHRONIC_CONDITIONS_ID);
+        const specialOptionWasSelected = selectedConditions.some(option => option.id === SPECIAL_CHRONIC_CONDITIONS_ID);
+
+        if (specialOptionIsSelected && !specialOptionWasSelected) { // Special option was just added
+            userChronicConditions.forEach(uc => {
+                if (!newSelected.some(nc => nc.id === uc.id)) {
+                    newSelected.push(uc); // Add user's chronic conditions
+                }
+            });
+        } else if (!specialOptionIsSelected && specialOptionWasSelected) { // Special option was just removed
+            // Remove user's chronic conditions, but keep the ones that might have been added individually
+            // This logic can be tricky: if a user selected "Use My Saved" then deselected one of their chronic conditions,
+            // then deselected "Use My Saved", should that one condition remain?
+            // Simplest approach: remove all that match user.chronic_conditions unless they are in newValue explicitly
+            newSelected = newSelected.filter(nc => {
+                if (nc.id === SPECIAL_CHRONIC_CONDITIONS_ID) return false; // remove special option if present
+                const isUserChronic = userChronicConditions.some(uc => uc.id === nc.id);
+                if (isUserChronic) {
+                    // Check if this condition is still in newValue (meaning it was re-selected or wasn't removed)
+                    return newValue.some(val => val.id === nc.id && val.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
+                }
+                return true; // keep non-chronic conditions
+            });
+             // Ensure the special option itself is not in the actual selected conditions list if deselected
+            newSelected = newSelected.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
+        }
+        
+        // Deduplicate and filter out the special option if it was only a trigger
+        const finalSelected = [];
+        const addedIds = new Set();
+        // Add special option first if it's in newSelected, so it appears in the input field
+        if (newSelected.some(c => c.id === SPECIAL_CHRONIC_CONDITIONS_ID)) {
+            const specialOpt = ratingDialogConditionOptions.find(opt => opt.id === SPECIAL_CHRONIC_CONDITIONS_ID);
+            if (specialOpt) {
+                 finalSelected.push(specialOpt);
+                 addedIds.add(SPECIAL_CHRONIC_CONDITIONS_ID);
+            }
+        }
+        // Add other conditions
+        newSelected.forEach(condition => {
+            if (condition.id !== SPECIAL_CHRONIC_CONDITIONS_ID && !addedIds.has(condition.id)) {
+                finalSelected.push(condition);
+                addedIds.add(condition.id);
+            }
+        });
+        
+        setSelectedConditions(finalSelected);
+    };
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
@@ -1042,12 +1100,12 @@ function SearchableSupplementList() {
                             <Typography variant="h5">
                                 {selectedSupplement.name}
                             </Typography>
-                            {appliedFilterConditions.length > 0 && (
+                            {selectedConditions.length > 0 && (
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', mb: 2 }}>
                                     <Typography variant="body2" sx={{ mr: 1 }}>
                                         Showing ratings for:
                                     </Typography>
-                                    {appliedFilterConditions.map(condition => (
+                                    {selectedConditions.map(condition => (
                                         <ConditionTag
                                             key={condition.id}
                                             condition={condition}
@@ -1166,25 +1224,6 @@ function SearchableSupplementList() {
                 </DialogTitle>
                 <DialogContent>
                     <Box component="form" onSubmit={handleRatingSubmit} sx={{ mt: 2 }}>
-                        <Autocomplete
-                            multiple
-                            options={conditions}
-                            getOptionLabel={(option) => option.name}
-                            value={selectedConditions}
-                            onChange={(_, newValue) => setSelectedConditions(newValue)}
-                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Purpose *"
-                                    required
-                                    margin="normal"
-                                    error={selectedConditions.length === 0 && ratingDialogAttemptedSubmit}
-                                    helperText={selectedConditions.length === 0 && ratingDialogAttemptedSubmit ? "At least one purpose is required" : ""}
-                                />
-                            )}
-                        />
-                        
                         <Box sx={{ mb: 2, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                             <Typography component="legend">Rating *</Typography>
                             <Rating
@@ -1272,6 +1311,39 @@ function SearchableSupplementList() {
                             onImageSelect={(file) => setRatingImage(file)}
                             currentImage={editingRating?.image || null}
                         />
+                        <Autocomplete
+                            multiple
+                            id="rating-conditions-autocomplete"
+                            options={ratingDialogConditionOptions}
+                            value={selectedConditions}
+                            onChange={handleRatingConditionsChange}
+                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                            getOptionLabel={(option) => option.name}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => (
+                                    <Chip 
+                                        variant="outlined" 
+                                        label={option.name} 
+                                        {...getTagProps({ index })} 
+                                        sx={option.id === SPECIAL_CHRONIC_CONDITIONS_ID ? {backgroundColor: '#e0e0e0'} : {}}
+                                    />
+                                ))
+                            }
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    variant="outlined"
+                                    label="Purpose *"
+                                    placeholder="Select conditions"
+                                    margin="normal"
+                                    required
+                                    error={selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID).length === 0 && ratingDialogAttemptedSubmit}
+                                    helperText={selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID).length === 0 && ratingDialogAttemptedSubmit ? "At least one purpose is required" : ""}
+                                />
+                            )}
+                            sx={{ mb: 2 }}
+                        />
                     </Box>
                 </DialogContent>
                 <DialogActions>
@@ -1279,7 +1351,7 @@ function SearchableSupplementList() {
                     <Button 
                         onClick={handleRatingSubmit}
                         variant="contained" 
-                        disabled={selectedConditions.length === 0 || !ratingScore}
+                        disabled={selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID).length === 0 || !ratingScore}
                     >
                         Submit
                     </Button>
