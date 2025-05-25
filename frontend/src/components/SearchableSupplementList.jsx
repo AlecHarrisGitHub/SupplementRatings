@@ -87,7 +87,11 @@ const FilterDrawer = ({
     onClearFilter,
     selectedFilterCategory,
     setSelectedFilterCategory,
-    categories
+    categories,
+    selectedFilterBenefits,
+    setSelectedFilterBenefits,
+    selectedFilterSideEffects,
+    setSelectedFilterSideEffects
 }) => {
     // Sort categories alphabetically
     const sortedCategories = React.useMemo(() => {
@@ -204,7 +208,38 @@ const FilterDrawer = ({
                     </Select>
                 </Box>
 
-                {/* Sort options moved to bottom */}
+                <Autocomplete
+                    multiple
+                    options={conditions}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedFilterBenefits}
+                    onChange={(_, newValue) => setSelectedFilterBenefits(newValue)}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Filter by Benefits"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
+                />
+
+                <Autocomplete
+                    multiple
+                    options={conditions}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedFilterSideEffects}
+                    onChange={(_, newValue) => setSelectedFilterSideEffects(newValue)}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Filter by Side Effects"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
+                />
+
                 <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
                     Sort By
                 </Typography>
@@ -301,6 +336,16 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 Conditions: {rating.condition_names.join(', ')}
             </Typography>
+            {rating.benefit_names && rating.benefit_names.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Benefits: {rating.benefit_names.join(', ')}
+                </Typography>
+            )}
+            {rating.side_effect_names && rating.side_effect_names.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Side Effects: {rating.side_effect_names.join(', ')}
+                </Typography>
+            )}
             {(rating.dosage || rating.dosage_frequency) && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Dosage: {rating.dosage?.replace(/\s+/g, '')}
@@ -350,9 +395,13 @@ function SearchableSupplementList() {
     const [ratingComment, setRatingComment] = useState('');
     const [conditions, setConditions] = useState([]);
     const [selectedConditions, setSelectedConditions] = useState([]);
+    const [selectedBenefits, setSelectedBenefits] = useState([]);
+    const [selectedSideEffects, setSelectedSideEffects] = useState([]);
     const [searchCondition, setSearchCondition] = useState('');
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
     const [selectedFilterConditions, setSelectedFilterConditions] = useState([]);
+    const [selectedFilterBenefits, setSelectedFilterBenefits] = useState([]);
+    const [selectedFilterSideEffects, setSelectedFilterSideEffects] = useState([]);
     const [selectedFilterBrands, setSelectedFilterBrands] = useState([]);
     const [selectedFilterDosage, setSelectedFilterDosage] = useState('');
     const [selectedFilterDosageUnit, setSelectedFilterDosageUnit] = useState('mg');
@@ -367,6 +416,8 @@ function SearchableSupplementList() {
     const [appliedFilterFrequency, setAppliedFilterFrequency] = useState('');
     const [appliedFilterFrequencyUnit, setAppliedFilterFrequencyUnit] = useState('day');
     const [appliedFilterCategory, setAppliedFilterCategory] = useState('');
+    const [appliedFilterBenefits, setAppliedFilterBenefits] = useState([]);
+    const [appliedFilterSideEffects, setAppliedFilterSideEffects] = useState([]);
 
     const [selectedReview, setSelectedReview] = useState(null);
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -425,6 +476,12 @@ function SearchableSupplementList() {
                     ...(appliedFilterConditions.length > 0 ? { 
                         conditions: appliedFilterConditions.map(c => c.name).join(',') 
                     } : {}),
+                    ...(appliedFilterBenefits.length > 0 ? {
+                        benefits: appliedFilterBenefits.map(b => b.name).join(',')
+                    } : {}),
+                    ...(appliedFilterSideEffects.length > 0 ? {
+                        side_effects: appliedFilterSideEffects.map(se => se.name).join(',')
+                    } : {}),
                     ...(appliedFilterBrands.length > 0 ? {
                         brands: appliedFilterBrands.map(b => b.name).join(',')
                     } : {}),
@@ -450,7 +507,7 @@ function SearchableSupplementList() {
             }
         };
         fetchSupplements();
-    }, [currentSearch, appliedFilterCategory, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit, appliedSortBy]);
+    }, [currentSearch, appliedFilterCategory, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit, appliedSortBy, appliedFilterBenefits, appliedFilterSideEffects]);
 
     useEffect(() => {
         const fetchConditions = async () => {
@@ -469,13 +526,23 @@ function SearchableSupplementList() {
     useEffect(() => {
         if (selectedSupplement && selectedSupplement.originalRatings) {
             let newFilteredRatings;
-            if (appliedFilterConditions.length > 0) {
+            if (appliedFilterConditions.length > 0 || appliedFilterBenefits.length > 0 || appliedFilterSideEffects.length > 0) {
                 const lowercasedFilterConditionNames = appliedFilterConditions.map(c => c.name.toLowerCase());
-                newFilteredRatings = selectedSupplement.originalRatings.filter(rating =>
-                    rating.condition_names && rating.condition_names.some(rn => 
+                const lowercasedFilterBenefitNames = appliedFilterBenefits.map(b => b.name.toLowerCase());
+                const lowercasedFilterSideEffectNames = appliedFilterSideEffects.map(se => se.name.toLowerCase());
+                
+                newFilteredRatings = selectedSupplement.originalRatings.filter(rating => {
+                    const matchesConditions = appliedFilterConditions.length === 0 || (rating.condition_names && rating.condition_names.some(rn => 
                         lowercasedFilterConditionNames.includes(rn.toLowerCase())
-                    )
-                );
+                    ));
+                    const matchesBenefits = appliedFilterBenefits.length === 0 || (rating.benefit_names && rating.benefit_names.some(bn => 
+                        lowercasedFilterBenefitNames.includes(bn.toLowerCase())
+                    ));
+                    const matchesSideEffects = appliedFilterSideEffects.length === 0 || (rating.side_effect_names && rating.side_effect_names.some(sen => 
+                        lowercasedFilterSideEffectNames.includes(sen.toLowerCase())
+                    ));
+                    return matchesConditions && matchesBenefits && matchesSideEffects;
+                });
             } else {
                 newFilteredRatings = selectedSupplement.originalRatings;
             }
@@ -491,7 +558,7 @@ function SearchableSupplementList() {
                 }));
             }
         }
-    }, [appliedFilterConditions, selectedSupplement]);
+    }, [appliedFilterConditions, appliedFilterBenefits, appliedFilterSideEffects, selectedSupplement]);
 
     useEffect(() => {
         const fetchBrands = async () => {
@@ -602,6 +669,12 @@ function SearchableSupplementList() {
                 ...(appliedFilterConditions.length > 0 ? { 
                     conditions: appliedFilterConditions.map(c => c.name).join(',') 
                 } : {}),
+                ...(appliedFilterBenefits.length > 0 ? {
+                    benefits: appliedFilterBenefits.map(b => b.name).join(',')
+                } : {}),
+                ...(appliedFilterSideEffects.length > 0 ? {
+                    side_effects: appliedFilterSideEffects.map(se => se.name).join(',')
+                } : {}),
                 ...(appliedFilterBrands.length > 0 ? {
                     brands: appliedFilterBrands.map(b => b.name).join(',')
                 } : {}),
@@ -631,6 +704,8 @@ function SearchableSupplementList() {
     const handleEditRating = (rating) => {
         setEditingRating(rating);
         setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
+        setSelectedBenefits(rating.benefits ? rating.benefits.map(id => conditions.find(c => c.id === id)) : []);
+        setSelectedSideEffects(rating.side_effects ? rating.side_effects.map(id => conditions.find(c => c.id === id)) : []);
         setRatingScore(rating.score);
         setRatingComment(rating.comment || '');
         setRatingImage(null);
@@ -662,6 +737,8 @@ function SearchableSupplementList() {
         setRatingScore(1);
         setRatingComment('');
         setSelectedConditions([]);
+        setSelectedBenefits([]);
+        setSelectedSideEffects([]);
         setRatingDosage('');
         setRatingBrands('');
         setSelectedBrand(null);
@@ -706,6 +783,12 @@ function SearchableSupplementList() {
             actualConditionsToSubmit.forEach(condition => {
                 formData.append('conditions', condition.id);
             });
+            selectedBenefits.forEach(benefit => {
+                formData.append('benefits', benefit.id);
+            });
+            selectedSideEffects.forEach(sideEffect => {
+                formData.append('side_effects', sideEffect.id);
+            });
             
             formData.append('score', ratingScore);
             formData.append('comment', ratingComment || '');
@@ -747,6 +830,8 @@ function SearchableSupplementList() {
     const handleApplyFilter = () => {
         setAppliedFilterCategory(selectedFilterCategory);
         setAppliedFilterConditions(selectedFilterConditions);
+        setAppliedFilterBenefits(selectedFilterBenefits);
+        setAppliedFilterSideEffects(selectedFilterSideEffects);
         setAppliedFilterBrands(selectedFilterBrands);
         setAppliedFilterDosage(selectedFilterDosage);
         setAppliedFilterDosageUnit(selectedFilterDosageUnit);
@@ -760,6 +845,8 @@ function SearchableSupplementList() {
         setSelectedFilterCategory('');
         setAppliedFilterCategory('');
         setSelectedFilterConditions([]);
+        setSelectedFilterBenefits([]);
+        setSelectedFilterSideEffects([]);
         setSelectedFilterBrands([]);
         setSelectedFilterDosage('');
         setSelectedFilterDosageUnit('mg');
@@ -773,6 +860,8 @@ function SearchableSupplementList() {
         setAppliedFilterFrequency('');
         setAppliedFilterFrequencyUnit('day');
         setAppliedSortBy('highest_rating');
+        setAppliedFilterBenefits([]);
+        setAppliedFilterSideEffects([]);
         setFilterDrawerOpen(false);
     };
 
@@ -1041,6 +1130,10 @@ function SearchableSupplementList() {
                 selectedFilterCategory={selectedFilterCategory}
                 setSelectedFilterCategory={setSelectedFilterCategory}
                 categories={categories}
+                selectedFilterBenefits={selectedFilterBenefits}
+                setSelectedFilterBenefits={setSelectedFilterBenefits}
+                selectedFilterSideEffects={selectedFilterSideEffects}
+                setSelectedFilterSideEffects={setSelectedFilterSideEffects}
             />
 
             {/* Main Content */}
@@ -1293,6 +1386,42 @@ function SearchableSupplementList() {
                                     variant="outlined"
                                     label="Intended Purpose"
                                     placeholder="Select conditions"
+                                    margin="normal"
+                                />
+                            )}
+                            sx={{ mb: 2 }}
+                        />
+
+                        <Autocomplete
+                            multiple
+                            options={conditions}
+                            getOptionLabel={(option) => option.name}
+                            value={selectedBenefits}
+                            onChange={(_, newValue) => setSelectedBenefits(newValue)}
+                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Benefits"
+                                    placeholder="Select benefits"
+                                    margin="normal"
+                                />
+                            )}
+                            sx={{ mb: 2 }}
+                        />
+
+                        <Autocomplete
+                            multiple
+                            options={conditions}
+                            getOptionLabel={(option) => option.name}
+                            value={selectedSideEffects}
+                            onChange={(_, newValue) => setSelectedSideEffects(newValue)}
+                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Side Effects"
+                                    placeholder="Select side effects"
                                     margin="normal"
                                 />
                             )}

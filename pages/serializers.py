@@ -140,10 +140,18 @@ class CommentSerializer(serializers.ModelSerializer):
 class RatingSerializer(serializers.ModelSerializer):
     user = BasicUserSerializer(read_only=True)
     condition_names = serializers.SerializerMethodField()
+    benefit_names = serializers.SerializerMethodField()
+    side_effect_names = serializers.SerializerMethodField()
     comments = CommentSerializer(many=True, read_only=True)
     has_upvoted = serializers.SerializerMethodField()
     conditions = serializers.PrimaryKeyRelatedField(
         many=True, queryset=Condition.objects.all()
+    )
+    benefits = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Condition.objects.all(), required=False
+    )
+    side_effects = serializers.PrimaryKeyRelatedField(
+        many=True, queryset=Condition.objects.all(), required=False
     )
     supplement = serializers.PrimaryKeyRelatedField(queryset=Supplement.objects.all())
     supplement_display = serializers.StringRelatedField(source='supplement', read_only=True)
@@ -153,7 +161,8 @@ class RatingSerializer(serializers.ModelSerializer):
         model = Rating
         fields = [
             'id', 'user', 'supplement', 'supplement_display', 'conditions', 
-            'condition_names', 'score', 'comment', 'dosage', 'dosage_frequency', 
+            'condition_names', 'benefits', 'benefit_names', 'side_effects', 'side_effect_names',
+            'score', 'comment', 'dosage', 'dosage_frequency', 
             'frequency_unit', 'brands', 'created_at', 'comments', 'is_edited', 
             'upvotes', 'has_upvoted', 
             'image',
@@ -166,6 +175,12 @@ class RatingSerializer(serializers.ModelSerializer):
 
     def get_condition_names(self, obj):
         return [condition.name for condition in obj.conditions.all()]
+
+    def get_benefit_names(self, obj):
+        return [condition.name for condition in obj.benefits.all()]
+
+    def get_side_effect_names(self, obj):
+        return [condition.name for condition in obj.side_effects.all()]
 
     def get_image_url(self, obj):
         logger.warning(f"get_image_url: IS_PRODUCTION value: {settings.IS_PRODUCTION}")
@@ -215,9 +230,42 @@ class RatingSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         conditions_data = validated_data.pop('conditions', [])
+        benefits_data = validated_data.pop('benefits', [])
+        side_effects_data = validated_data.pop('side_effects', [])
         rating = Rating.objects.create(**validated_data)
         rating.conditions.set(conditions_data)
+        rating.benefits.set(benefits_data)
+        rating.side_effects.set(side_effects_data)
         return rating
+
+    def update(self, instance, validated_data):
+        conditions_data = validated_data.pop('conditions', None)
+        benefits_data = validated_data.pop('benefits', None)
+        side_effects_data = validated_data.pop('side_effects', None)
+
+        # Update scalar fields
+        instance.score = validated_data.get('score', instance.score)
+        instance.comment = validated_data.get('comment', instance.comment)
+        instance.dosage = validated_data.get('dosage', instance.dosage)
+        instance.dosage_frequency = validated_data.get('dosage_frequency', instance.dosage_frequency)
+        instance.frequency_unit = validated_data.get('frequency_unit', instance.frequency_unit)
+        instance.brands = validated_data.get('brands', instance.brands)
+        instance.is_edited = True # Mark as edited
+        # Handle image separately if it's part of validated_data
+        if 'image' in validated_data:
+            instance.image = validated_data.get('image', instance.image)
+
+        instance.save()
+
+        # Update M2M fields
+        if conditions_data is not None:
+            instance.conditions.set(conditions_data)
+        if benefits_data is not None:
+            instance.benefits.set(benefits_data)
+        if side_effects_data is not None:
+            instance.side_effects.set(side_effects_data)
+            
+        return instance
 
     def get_has_upvoted(self, obj):
         request = self.context.get('request')

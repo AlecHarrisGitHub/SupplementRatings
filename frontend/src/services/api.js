@@ -130,6 +130,18 @@ export const getSupplements = async (params = {}, skipCache = false) => {
         delete apiParams.sort_by;
     }
 
+    // Handle benefits and side_effects filters (expecting comma-separated strings of condition names)
+    if (apiParams.benefits) {
+        // The backend expects condition IDs for M2M fields, not names directly in GET params for filtering.
+        // This part assumes your backend API endpoint for supplements is set up to filter by benefit names or IDs.
+        // If it expects IDs, you'd need to convert names to IDs here, which is complex without another API call.
+        // For now, we'll pass names as is, assuming the backend can handle it (e.g., via a custom filter).
+        // If it needs to be IDs, this will need adjustment or backend modification.
+    }
+    if (apiParams.side_effects) {
+        // Similar assumption as for benefits.
+    }
+
     try {
         const response = await API.get('supplements/', { params: apiParams });
         if (params.offset === 0) {  // Only cache first page, use original params for cache key
@@ -188,6 +200,7 @@ export const getRatingsForSupplement = async (supplementId) => {
 };
 
 export const addRating = async (formData) => {
+    // formData should already contain benefits and side_effects as arrays of IDs
     try {
         const response = await API.post('ratings/', formData, {
             headers: {
@@ -357,23 +370,20 @@ export const updateComment = async (commentId, content, image = null) => {
 };
 
 export const updateRating = async (ratingId, formData) => {
+    // formData should already contain benefits and side_effects as arrays of IDs
     try {
-        // Log FormData contents for debugging
-        // for (let pair of formData.entries()) {
-        //     console.log('FormData:', pair[0], pair[1]);
-        // }
-
         const response = await API.put(`ratings/${ratingId}/`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
         });
-        cache.clear();
+        cache.clear(); // Clear cache on update
         return response.data;
     } catch (error) {
-        console.error('Error updating rating:', error);
-        console.error('Error response:', error.response?.data);
-        throw error;
+        throw {
+            userMessage: error.response?.data?.detail || 
+                        'Unable to update rating. Please check your input and try again.'
+        };
     }
 };
 

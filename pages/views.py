@@ -43,6 +43,8 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from rest_framework.parsers import MultiPartParser, FormParser # For file uploads
+from django_filters.rest_framework import DjangoFilterBackend # Import DjangoFilterBackend
+from .filters import SupplementFilter # Import your custom filter
 
 logger = logging.getLogger(__name__) # Moved logger to module level
 
@@ -72,78 +74,57 @@ class SupplementViewSet(viewsets.ModelViewSet):
     serializer_class = SupplementSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
     pagination_class = LimitOffsetPagination
-    filter_backends = [filters.SearchFilter, CustomOrderingFilter]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, CustomOrderingFilter]
+    filterset_class = SupplementFilter # Use your custom filterset
     search_fields = ['name', 'category']
     ordering_fields = ['name', 'id', 'category', 'avg_rating', 'rating_count']
 
     def get_queryset(self):
         queryset = Supplement.objects.all()
 
-        # Annotate for potential sorting/filtering, does not filter by itself.
+        # Build a Q object for filtering ratings within annotations
+        rating_aggregation_q_filter = Q()
+        
+        conditions_param = self.request.query_params.get('conditions', None)
+        if conditions_param:
+            condition_names = [name.strip() for name in conditions_param.split(',') if name.strip()]
+            if condition_names:
+                rating_aggregation_q_filter &= Q(ratings__conditions__name__in=condition_names)
+
+        benefits_param = self.request.query_params.get('benefits', None)
+        if benefits_param:
+            benefit_names = [name.strip() for name in benefits_param.split(',') if name.strip()]
+            if benefit_names:
+                rating_aggregation_q_filter &= Q(ratings__benefits__name__in=benefit_names)
+
+        side_effects_param = self.request.query_params.get('side_effects', None)
+        if side_effects_param:
+            side_effect_names = [name.strip() for name in side_effects_param.split(',') if name.strip()]
+            if side_effect_names:
+                rating_aggregation_q_filter &= Q(ratings__side_effects__name__in=side_effect_names)
+        
+        # Annotate with filtered aggregations
+        # The `filter` argument to Avg and Count applies to the related 'ratings' queryset
         queryset = queryset.annotate(
-            avg_rating=Avg('ratings__score', output_field=FloatField()),
-            rating_count=Count('ratings', distinct=True)
+            avg_rating=Round(
+                Avg('ratings__score', 
+                    filter=rating_aggregation_q_filter # This Q object filters the ratings being aggregated
+                ),
+                2, 
+                output_field=FloatField()
+            ),
+            rating_count=Count(
+                'ratings__id', 
+                filter=rating_aggregation_q_filter, # This Q object filters the ratings being counted
+                distinct=True
+            )
         )
-
-        # Handle direct category filter
-        category_param = self.request.query_params.get('category', None)
-        if category_param:
-            queryset = queryset.filter(category__iexact=category_param)
-
-        # The SearchFilter will handle `?search=`, and OrderingFilter will handle `?ordering=`.
-        # Specific consumer-facing filters based on rating attributes:
-        conditions_search = self.request.query_params.get('conditions', None)
-        brands_search = self.request.query_params.get('brands', None) # Frontend sends comma-separated string of brand names
-        dosage_search = self.request.query_params.get('dosage', None)
-        frequency_search = self.request.query_params.get('frequency', None)
-
-        rating_related_query = Q()
-        has_rating_filters = False
-
-        if conditions_search:
-            condition_names = conditions_search.split(',')
-            rating_related_query &= Q(ratings__conditions__name__in=[name.strip() for name in condition_names])
-            has_rating_filters = True
         
-        if brands_search:
-            brand_names = [name.strip() for name in brands_search.split(',') if name.strip()]
-            if brand_names:
-                brand_q_objects = Q()
-                for b_name in brand_names:
-                    brand_q_objects |= Q(ratings__brands__icontains=b_name)
-                rating_related_query &= brand_q_objects
-                has_rating_filters = True
-
-        if dosage_search:
-            rating_related_query &= Q(ratings__dosage=dosage_search)
-            has_rating_filters = True
-        
-        if frequency_search:
-            frequency_parts = frequency_search.split('_')
-            if len(frequency_parts) == 2:
-                rating_related_query &= Q(ratings__dosage_frequency=frequency_parts[0])
-                rating_related_query &= Q(ratings__frequency_unit=frequency_parts[1])
-                has_rating_filters = True
-
-        if has_rating_filters:
-            queryset = queryset.filter(rating_related_query).distinct()
-        
-        # Check if an explicit ordering or search is being applied by the filters
-        # OrderingFilter.ordering_param is 'ordering' by default
-        # SearchFilter.search_param is 'search' by default
         is_ordering_requested = self.request.query_params.get(filters.OrderingFilter.ordering_param, None) is not None
-        is_search_requested = self.request.query_params.get(filters.SearchFilter.search_param, None) is not None
+        if not is_ordering_requested:
+            queryset = queryset.order_by(F('avg_rating').desc(nulls_last=True), F('rating_count').desc(nulls_last=True), 'name')
 
-        # The CustomOrderingFilter will handle the nulls for 'avg_rating' and 'rating_count'.
-        # The default ordering when NO ?ordering= is provided can still be set here.
-        if not is_ordering_requested and not is_search_requested and not has_rating_filters:
-             queryset = queryset.order_by(F('avg_rating').desc(nulls_last=True), F('rating_count').desc(nulls_last=True))
-        
-        # --- TEMPORARY DEBUGGING: PRINT THE QUERY ---
-        # print("DEBUG SQL QUERY:", queryset.query) 
-        # --- END TEMPORARY DEBUGGING ---
-
-        return queryset.distinct() # Ensure distinct results
+        return queryset.distinct()
 
     @action(detail=False, methods=['get'])
     def categories(self, request):

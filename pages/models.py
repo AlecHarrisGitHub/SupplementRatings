@@ -9,6 +9,7 @@ from io import BytesIO
 import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 
 class Profile(models.Model):
@@ -90,10 +91,12 @@ class Rating(models.Model):
         ('year', 'Per Year')
     ]
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    supplement = models.ForeignKey(Supplement, related_name='ratings', on_delete=models.CASCADE)
-    conditions = models.ManyToManyField(Condition, related_name='ratings')
-    score = models.IntegerField()
+    supplement = models.ForeignKey(Supplement, on_delete=models.CASCADE, related_name='ratings')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ratings')
+    conditions = models.ManyToManyField(Condition, related_name='condition_ratings')
+    benefits = models.ManyToManyField(Condition, related_name='benefit_ratings', blank=True)
+    side_effects = models.ManyToManyField(Condition, related_name='side_effect_ratings', blank=True)
+    score = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
     comment = models.TextField(blank=True, null=True)
     dosage = models.CharField(max_length=50, blank=True, null=True)
     dosage_frequency = models.PositiveIntegerField(blank=True, null=True)
