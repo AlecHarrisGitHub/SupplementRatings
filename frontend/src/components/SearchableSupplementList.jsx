@@ -462,21 +462,30 @@ function SearchableSupplementList() {
 
     useEffect(() => {
         if (selectedSupplement && selectedSupplement.originalRatings) {
+            let newFilteredRatings;
             if (appliedFilterConditions.length > 0) {
-                setSelectedSupplement(prev => ({
-                    ...prev,
-                    ratings: prev.originalRatings.filter(
-                        rating => appliedFilterConditions.some(c => c.name === rating.condition_name)
+                const lowercasedFilterConditionNames = appliedFilterConditions.map(c => c.name.toLowerCase());
+                newFilteredRatings = selectedSupplement.originalRatings.filter(rating =>
+                    rating.condition_names && rating.condition_names.some(rn => 
+                        lowercasedFilterConditionNames.includes(rn.toLowerCase())
                     )
-                }));
+                );
             } else {
+                newFilteredRatings = selectedSupplement.originalRatings;
+            }
+
+            const currentRatings = selectedSupplement.ratings || [];
+            const currentRatingIds = JSON.stringify(currentRatings.map(r => r.id).sort());
+            const newRatingIds = JSON.stringify(newFilteredRatings.map(r => r.id).sort());
+
+            if (currentRatingIds !== newRatingIds) {
                 setSelectedSupplement(prev => ({
                     ...prev,
-                    ratings: prev.originalRatings
+                    ratings: newFilteredRatings
                 }));
             }
         }
-    }, [appliedFilterConditions]);
+    }, [appliedFilterConditions, selectedSupplement]);
 
     useEffect(() => {
         const fetchBrands = async () => {
