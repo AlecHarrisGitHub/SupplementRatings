@@ -244,7 +244,18 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
     const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg'; 
 
     return (
-        <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+        <Paper 
+            elevation={3} 
+            sx={{ 
+                p: 2, 
+                mb: 2,
+                cursor: 'pointer', // Make the whole item clickable
+                '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)' // Optional: visual feedback on hover
+                }
+            }}
+            onClick={() => handleReviewClick(rating)} // Handle click on the whole item
+        >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <Avatar 
@@ -323,11 +334,6 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
                     />
                 </Box>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
-                <Button size="small" onClick={() => handleReviewClick(rating)}>
-                    View Details
-                </Button>
-            </Box>
         </Paper>
     );
 };
@@ -687,8 +693,9 @@ function SearchableSupplementList() {
 
         const actualConditionsToSubmit = selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
 
-        if (actualConditionsToSubmit.length === 0 || !ratingScore) {
-            toast.error("Purpose and Rating are required.");
+        // Validation: Only ratingScore is now mandatory
+        if (!ratingScore) {
+            toast.error("Rating is required.");
             return;
         }
 
@@ -1256,6 +1263,42 @@ function SearchableSupplementList() {
                             </Typography>
                         </Divider>
 
+                        {/* "Intended Purpose" Autocomplete moved here */}
+                        <Autocomplete
+                            multiple
+                            id="rating-conditions-autocomplete"
+                            options={ratingDialogConditionOptions}
+                            value={selectedConditions}
+                            onChange={handleRatingConditionsChange}
+                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
+                            getOptionLabel={(option) => option.name}
+                            isOptionEqualToValue={(option, value) => option.id === value.id}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => {
+                                    const { key, ...otherTagProps } = getTagProps({ index });
+                                    return (
+                                        <Chip 
+                                            key={key}
+                                            variant="outlined" 
+                                            label={option.name} 
+                                            {...otherTagProps} 
+                                            sx={option.id === SPECIAL_CHRONIC_CONDITIONS_ID ? {backgroundColor: '#e0e0e0'} : {}}
+                                        />
+                                    );
+                                })
+                            }
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    variant="outlined"
+                                    label="Intended Purpose"
+                                    placeholder="Select conditions"
+                                    margin="normal"
+                                />
+                            )}
+                            sx={{ mb: 2 }}
+                        />
+
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
                             <TextField
                                 label="Dosage"
@@ -1320,43 +1363,6 @@ function SearchableSupplementList() {
                             onImageSelect={(file) => setRatingImage(file)}
                             currentImage={editingRating?.image || null}
                         />
-                        <Autocomplete
-                            multiple
-                            id="rating-conditions-autocomplete"
-                            options={ratingDialogConditionOptions}
-                            value={selectedConditions}
-                            onChange={handleRatingConditionsChange}
-                            onInputChange={(_, newInputValue) => setSearchCondition(newInputValue)}
-                            getOptionLabel={(option) => option.name}
-                            isOptionEqualToValue={(option, value) => option.id === value.id}
-                            renderTags={(value, getTagProps) =>
-                                value.map((option, index) => {
-                                    const { key, ...otherTagProps } = getTagProps({ index });
-                                    return (
-                                        <Chip 
-                                            key={key}
-                                            variant="outlined" 
-                                            label={option.name} 
-                                            {...otherTagProps} 
-                                            sx={option.id === SPECIAL_CHRONIC_CONDITIONS_ID ? {backgroundColor: '#e0e0e0'} : {}}
-                                        />
-                                    );
-                                })
-                            }
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    variant="outlined"
-                                    label="Purpose *"
-                                    placeholder="Select conditions"
-                                    margin="normal"
-                                    required
-                                    error={selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID).length === 0 && ratingDialogAttemptedSubmit}
-                                    helperText={selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID).length === 0 && ratingDialogAttemptedSubmit ? "At least one purpose is required" : ""}
-                                />
-                            )}
-                            sx={{ mb: 2 }}
-                        />
                     </Box>
                 </DialogContent>
                 <DialogActions>
@@ -1364,7 +1370,7 @@ function SearchableSupplementList() {
                     <Button 
                         onClick={handleRatingSubmit}
                         variant="contained" 
-                        disabled={selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID).length === 0 || !ratingScore}
+                        disabled={!ratingScore}
                     >
                         Submit
                     </Button>
