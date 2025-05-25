@@ -137,6 +137,38 @@ const FilterDrawer = ({
                 />
                 
                 <Autocomplete
+                    multiple
+                    options={conditions}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedFilterBenefits}
+                    onChange={(_, newValue) => setSelectedFilterBenefits(newValue)}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Filter by Benefits For"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
+                />
+
+                <Autocomplete
+                    multiple
+                    options={conditions}
+                    getOptionLabel={(option) => option.name}
+                    value={selectedFilterSideEffects}
+                    onChange={(_, newValue) => setSelectedFilterSideEffects(newValue)}
+                    renderInput={(params) => (
+                        <TextField
+                            {...params}
+                            label="Filter by Side Effects"
+                            margin="normal"
+                        />
+                    )}
+                    sx={{ mb: 2 }}
+                />
+
+                <Autocomplete
                     options={sortedCategories}
                     getOptionLabel={(option) => option}
                     value={selectedFilterCategory}
@@ -207,38 +239,6 @@ const FilterDrawer = ({
                         <MenuItem value="year">Per Year</MenuItem>
                     </Select>
                 </Box>
-
-                <Autocomplete
-                    multiple
-                    options={conditions}
-                    getOptionLabel={(option) => option.name}
-                    value={selectedFilterBenefits}
-                    onChange={(_, newValue) => setSelectedFilterBenefits(newValue)}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Filter by Benefits"
-                            margin="normal"
-                        />
-                    )}
-                    sx={{ mb: 2 }}
-                />
-
-                <Autocomplete
-                    multiple
-                    options={conditions}
-                    getOptionLabel={(option) => option.name}
-                    value={selectedFilterSideEffects}
-                    onChange={(_, newValue) => setSelectedFilterSideEffects(newValue)}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Filter by Side Effects"
-                            margin="normal"
-                        />
-                    )}
-                    sx={{ mb: 2 }}
-                />
 
                 <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
                     Sort By
@@ -338,7 +338,7 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
             </Typography>
             {rating.benefit_names && rating.benefit_names.length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Benefits: {rating.benefit_names.join(', ')}
+                    Benefits For: {rating.benefit_names.join(', ')}
                 </Typography>
             )}
             {rating.side_effect_names && rating.side_effect_names.length > 0 && (
@@ -1402,7 +1402,7 @@ function SearchableSupplementList() {
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label="Benefits"
+                                    label="Benefits For"
                                     placeholder="Select benefits"
                                     margin="normal"
                                 />
