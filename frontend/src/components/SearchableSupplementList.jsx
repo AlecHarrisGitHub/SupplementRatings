@@ -278,6 +278,16 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
     // Fallback for default image, ensure it's accessible
     const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg'; 
 
+    // Function to format the date
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const year = date.getFullYear();
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        return `${month}/${day}/${year}`;
+    };
+
     return (
         <Paper 
             elevation={3} 
@@ -379,6 +389,11 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
                     />
                 </Box>
             )}
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                    {formatDate(rating.created_at)}
+                </Typography>
+            </Box>
         </Paper>
     );
 };

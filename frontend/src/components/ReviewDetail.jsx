@@ -20,6 +20,16 @@ import ImageModal from './ImageModal';
 
 const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
 
+// Function to format the date (can be shared if moved to a utils file)
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${month}/${day}/${year}`;
+};
+
 function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser, onUpvote }) {
     const [isEditing, setIsEditing] = useState(false);
     const [editedContent, setEditedContent] = useState(comment.content);
@@ -120,6 +130,11 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                                 )}
                             </>
                         )}
+                    </Box>
+                    <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
+                        <Typography variant="caption" color="text.secondary">
+                            {formatDate(comment.created_at)}
+                        </Typography>
                     </Box>
                 </Box>
             </Box>
