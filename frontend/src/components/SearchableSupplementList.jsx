@@ -129,7 +129,7 @@ const FilterDrawer = ({
                     renderInput={(params) => (
                         <TextField
                             {...params}
-                            label="Filter by Purpose"
+                            label="Intended Purpose"
                             margin="normal"
                         />
                     )}
@@ -145,7 +145,7 @@ const FilterDrawer = ({
                     renderInput={(params) => (
                         <TextField
                             {...params}
-                            label="Filter by Benefits For"
+                            label="Benefits For"
                             margin="normal"
                         />
                     )}
@@ -161,7 +161,7 @@ const FilterDrawer = ({
                     renderInput={(params) => (
                         <TextField
                             {...params}
-                            label="Filter by Side Effects"
+                            label="Side Effects"
                             margin="normal"
                         />
                     )}
@@ -192,7 +192,7 @@ const FilterDrawer = ({
                     renderInput={(params) => (
                         <TextField
                             {...params}
-                            label="Filter by Brands"
+                            label="Brands"
                             margin="normal"
                         />
                     )}
@@ -334,7 +334,7 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
                 </Box>
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Conditions: {rating.condition_names.join(', ')}
+                Intended Purpose: {rating.condition_names.join(', ')}
             </Typography>
             {rating.benefit_names && rating.benefit_names.length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
