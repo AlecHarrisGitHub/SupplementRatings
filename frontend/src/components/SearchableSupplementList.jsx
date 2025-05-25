@@ -1321,14 +1321,18 @@ function SearchableSupplementList() {
                             getOptionLabel={(option) => option.name}
                             isOptionEqualToValue={(option, value) => option.id === value.id}
                             renderTags={(value, getTagProps) =>
-                                value.map((option, index) => (
-                                    <Chip 
-                                        variant="outlined" 
-                                        label={option.name} 
-                                        {...getTagProps({ index })} 
-                                        sx={option.id === SPECIAL_CHRONIC_CONDITIONS_ID ? {backgroundColor: '#e0e0e0'} : {}}
-                                    />
-                                ))
+                                value.map((option, index) => {
+                                    const { key, ...otherTagProps } = getTagProps({ index });
+                                    return (
+                                        <Chip 
+                                            key={key}
+                                            variant="outlined" 
+                                            label={option.name} 
+                                            {...otherTagProps} 
+                                            sx={option.id === SPECIAL_CHRONIC_CONDITIONS_ID ? {backgroundColor: '#e0e0e0'} : {}}
+                                        />
+                                    );
+                                })
                             }
                             renderInput={(params) => (
                                 <TextField
