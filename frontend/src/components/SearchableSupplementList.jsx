@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { 
     TextField, 
     List, 
@@ -303,14 +304,18 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
         >
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <Avatar 
-                        src={rating.user.profile_image_url || defaultProfileImage} 
-                        alt={rating.user.username}
-                        sx={{ width: 40, height: 40 }}
-                    />
-                    <Typography variant="subtitle1" fontWeight="bold">
-                        {rating.user.username}
-                    </Typography>
+                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none' }}>
+                        <Avatar 
+                            src={rating.user.profile_image_url || defaultProfileImage} 
+                            alt={rating.user.username}
+                            sx={{ width: 40, height: 40, cursor: 'pointer' }}
+                        />
+                    </RouterLink>
+                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <Typography variant="subtitle1" fontWeight="bold" sx={{ cursor: 'pointer', "&:hover": { textDecoration: 'underline'} }}>
+                            {rating.user.username}
+                        </Typography>
+                    </RouterLink>
                     {rating.is_edited && (
                         <Typography component="span" variant="caption" color="text.secondary">
                             {" (edited)"}

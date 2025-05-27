@@ -588,10 +588,20 @@ export const getUserChronicConditions = async () => {
 export const updateUserChronicConditions = async (conditionIds) => {
     try {
         const response = await API.put('user/chronic-conditions/', { condition_ids: conditionIds });
-        return response.data; // Expects the updated array of condition objects
+        return response.data;
     } catch (error) {
-        console.error('Error updating user chronic conditions:', error);
-        throw error.response?.data || error;
+        console.error('Error updating chronic conditions:', error);
+        throw error;
+    }
+};
+
+export const getUserPublicProfile = async (username) => {
+    try {
+        const response = await API.get(`profiles/${username}/`); // Matches the new backend URL structure
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching public profile for ${username}:`, error);
+        throw error; // Let the component handle the error message via toast
     }
 };
 

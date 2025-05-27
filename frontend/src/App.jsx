@@ -15,6 +15,7 @@ import UploadBrands from './pages/UploadBrands';
 import AdminDashboard from './pages/AdminDashboard';
 import PrivateRoute from './components/PrivateRoute';
 import AccountsPage from './pages/AccountsPage';
+import UserProfilePage from './pages/UserProfilePage';
 
 function App() {
     return (
@@ -44,6 +45,7 @@ function App() {
                 <Route path="/admin-dashboard" element={<PrivateRoute adminOnly={true}><AdminDashboard /></PrivateRoute>} />
                 <Route path="/verify-email/:token" element={<EmailVerification />} />
                 <Route path="/accounts" element={<PrivateRoute><AccountsPage /></PrivateRoute>} />
+                <Route path="/profile/:username" element={<UserProfilePage />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </div>

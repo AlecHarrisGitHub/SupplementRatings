@@ -292,3 +292,60 @@ class BrandSerializer(serializers.ModelSerializer):
     class Meta:
         model = Brand
         fields = ['id', 'name']
+
+
+class PublicRatingSerializer(RatingSerializer):
+    # Explicitly define supplement_name to ensure it's correctly populated
+    supplement_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Rating
+        fields = [
+            'id', 
+            'supplement_name',
+            'score', 
+            'comment', 
+            'created_at', 
+            'image_url', 
+            'condition_names', 
+            'benefit_names', 
+            'side_effect_names', 
+            'dosage', 
+            'dosage_frequency', 
+            'frequency_unit', 
+            'brands'
+        ]
+
+    def get_supplement_name(self, obj):
+        if obj.supplement:
+            return obj.supplement.name
+        return None # Or some default like "Unknown Supplement"
+
+
+class PublicProfileUserSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+    # Explicitly NOT including chronic_conditions here
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'profile_image_url']
+
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.profile.image.url)
+            return obj.profile.image.url
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return default_image_path
+
+class PublicProfileSerializer(serializers.ModelSerializer):
+    user = PublicProfileUserSerializer(source='*') # Pass the whole User object to PublicProfileUserSerializer
+    ratings = PublicRatingSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = User # The public profile is for a User
+        fields = ['user', 'ratings']

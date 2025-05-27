@@ -5,7 +5,8 @@ from .views import (
     profile_update_view, 
     ProfileImageUpdateAPIView, 
     get_user_details,
-    UserChronicConditionsAPIView
+    UserChronicConditionsAPIView,
+    PublicProfileRetrieveView
 )
 
 urlpatterns = [
@@ -20,4 +21,7 @@ urlpatterns = [
 
     # API endpoint for managing user's chronic conditions
     path('api/user/chronic-conditions/', UserChronicConditionsAPIView.as_view(), name='user_chronic_conditions_api'),
+
+    # API endpoint for fetching a user's public profile
+    path('api/profiles/<str:username>/', PublicProfileRetrieveView.as_view(), name='public_profile_retrieve'),
 ]

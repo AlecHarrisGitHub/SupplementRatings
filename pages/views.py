@@ -12,7 +12,8 @@ from .serializers import (
     BrandSerializer,
     RegisterUserSerializer,
     BasicUserSerializer,
-    ProfileSerializer
+    ProfileSerializer,
+    PublicProfileSerializer
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -970,4 +971,27 @@ class UserChronicConditionsAPIView(APIView):
             # logger.error(f"Error updating chronic conditions for user {request.user.username}: {str(e)}")
             print(f"Error updating chronic conditions for user {request.user.username}: {str(e)}")
             return Response({'error': 'An unexpected error occurred while updating conditions.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PublicProfileRetrieveView(APIView):
+    permission_classes = [AllowAny] # Publicly accessible
+
+    def get(self, request, username, *args, **kwargs):
+        try:
+            # Pre-fetch related data for efficiency
+            user_with_ratings = User.objects.prefetch_related(
+                'ratings__supplement', 
+                'ratings__conditions', 
+                'ratings__benefits',
+                'ratings__side_effects',
+                'ratings__comments', # If comments are part of PublicRatingSerializer or needed indirectly
+                'profile' # Ensure profile is fetched for profile_image_url
+            ).get(username=username, is_active=True) # Only show active users
+            
+            serializer = PublicProfileSerializer(user_with_ratings, context={'request': request})
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            logger.error(f"Error retrieving public profile for {username}: {str(e)}", exc_info=True)
+            return Response({'error': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

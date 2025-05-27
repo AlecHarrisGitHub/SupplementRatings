@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link as RouterLink } from 'react-router-dom';
 import { 
     Box, 
     Typography, 
@@ -70,21 +71,20 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
             }}
         >
             <Box sx={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1 }}>
-                <Avatar 
-                    src={comment.user.profile_image_url || defaultProfileImage} 
-                    alt={comment.user.username}
-                    sx={{ width: isNested ? 32 : 40, height: isNested ? 32 : 40, mt: 0.5 }}
-                />
+                <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none' }}>
+                    <Avatar 
+                        src={comment.user.profile_image_url || defaultProfileImage} 
+                        alt={comment.user.username}
+                        sx={{ width: isNested ? 32 : 40, height: isNested ? 32 : 40, mt: 0.5, cursor: 'pointer' }}
+                    />
+                </RouterLink>
                 <Box sx={{ flexGrow: 1 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="subtitle2" fontWeight="bold">
-                            {comment.user.username}
-                            {comment.is_edited && (
-                                <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-                                    (edited)
-                                </Typography>
-                            )}
-                        </Typography>
+                        <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" sx={{ cursor: 'pointer', "&:hover": { textDecoration: 'underline'} }}>
+                                {comment.user.username}
+                            </Typography>
+                        </RouterLink>
                         <IconButton 
                             onClick={handleUpvoteClick}
                             color={comment.has_upvoted ? "primary" : "default"}
