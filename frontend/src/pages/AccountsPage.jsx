@@ -15,12 +15,19 @@ import {
     Avatar,
     Snackbar,
     Autocomplete,
-    TextField as MuiTextField
+    TextField as MuiTextField,
+    Rating as MuiRating,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogContentText,
+    DialogTitle
 } from '@mui/material';
 import { format } from 'date-fns';
-import { Link as RouterLink } from 'react-router-dom';
-import { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI } from '../services/api';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI, deleteMyRating } from '../services/api';
 import { styled } from '@mui/material/styles';
+import { toast } from 'react-toastify';
 
 const Input = styled('input')({
     display: 'none',
@@ -30,6 +37,7 @@ const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jp
 
 function AccountsPage() {
     const { user, updateUser } = useAuth();
+    const navigate = useNavigate();
     const [ratings, setRatings] = useState([]);
     const [loadingRatings, setLoadingRatings] = useState(true);
     const [ratingsError, setRatingsError] = useState(null);
@@ -47,6 +55,9 @@ function AccountsPage() {
     const [conditionsError, setConditionsError] = useState(null);
     const [savingConditions, setSavingConditions] = useState(false);
     const [saveConditionsSuccess, setSaveConditionsSuccess] = useState(false);
+
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+    const [ratingToDelete, setRatingToDelete] = useState(null);
 
     const fetchRatings = async (url) => {
         if (!user) {
@@ -171,6 +182,40 @@ function AccountsPage() {
         }
     };
 
+    const handleEditRating = (rating) => {
+        navigate(`/supplements/${rating.supplement}`, { 
+            state: { 
+                ratingId: rating.id, 
+                openEditMode: true 
+            }
+        });
+    };
+
+    const confirmDeleteRating = (ratingId) => {
+        setRatingToDelete(ratingId);
+        setOpenDeleteDialog(true);
+    };
+
+    const handleDeleteRating = async () => {
+        if (!ratingToDelete) return;
+        try {
+            await deleteMyRating(ratingToDelete);
+            setRatings(prevRatings => prevRatings.filter(r => r.id !== ratingToDelete));
+            toast.success("Rating deleted successfully!");
+        } catch (err) {
+            console.error("Error deleting rating:", err);
+            toast.error(err.message || "Failed to delete rating.");
+        } finally {
+            setOpenDeleteDialog(false);
+            setRatingToDelete(null);
+        }
+    };
+
+    const handleCloseDeleteDialog = () => {
+        setOpenDeleteDialog(false);
+        setRatingToDelete(null);
+    };
+
     if (loadingRatings && ratings.length === 0 && loadingAllConditions) {
         return <Container sx={{ display: 'flex', justifyContent: 'center', mt: 5 }}><CircularProgress /></Container>;
     }
@@ -217,8 +262,8 @@ function AccountsPage() {
                             </Box>
                         </label>
                         <Typography variant="h6" gutterBottom>
-                            Welcome back, {user.username}!
-                        </Typography>
+                        Welcome back, {user.username}!
+                    </Typography>
                         {uploadError && <Alert severity="error" sx={{mt: 1, width: '100%'}} onClose={() => setUploadError(null)}>{uploadError}</Alert>}
                     </Box>
                 )}
@@ -294,29 +339,47 @@ function AccountsPage() {
                 {ratings.length > 0 && (
                     <List>
                         {ratings.map((rating) => (
-                            <ListItem key={rating.id} divider sx={{ alignItems: 'flex-start', py: 2 }}>
-                                <ListItemText
-                                    primaryTypographyProps={{ variant: 'h6', component: 'div' }}
-                                    primary={`${rating.supplement_display || 'Supplement'} - Score: ${rating.score}/5`}
-                                    secondaryTypographyProps={{ component: 'div' }}
-                                    secondary={
-                                        <>
-                                            {rating.comment && <Typography variant="body1" sx={{ my: 1 }}>{rating.comment}</Typography>}
-                                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1, mb: 0.5 }}>
-                                                {Array.isArray(rating.condition_names) && rating.condition_names.map(cn => 
-                                                    <Chip key={cn} label={`Used for: ${cn}`} size="small" variant="outlined" />
-                                                )}
-                                                {rating.brands && 
-                                                    <Chip label={`Brand: ${rating.brands}`} size="small" variant="outlined" />
-                                                }
+                            <Paper key={rating.id} elevation={1} sx={{ mb: 2, p: 2 }}>
+                                <Typography variant="subtitle1" component={RouterLink} to={`/supplements/${rating.supplement}`} state={{ ratingId: rating.id }} sx={{ textDecoration: 'none', color: 'primary.main', "&:hover": { textDecoration: 'underline'}}}>
+                                    {rating.supplement_display || 'Supplement Name Missing'} 
+                                </Typography>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, mt: 0.5 }}>
+                                    <MuiRating value={rating.score} readOnly size="small"/>
+                                    <Box>
+                                        <Button size="small" onClick={() => handleEditRating(rating)} sx={{ mr: 1 }}>Edit</Button>
+                                        <Button size="small" color="error" onClick={() => confirmDeleteRating(rating.id)}>Delete</Button>
+                                    </Box>
+                                </Box>
+                                {rating.comment && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>{rating.comment}</Typography>}
+                                {rating.condition_names && rating.condition_names.length > 0 && 
+                                    <Typography variant="caption" display="block" color="text.secondary">Intended Purpose: {rating.condition_names.join(', ')}</Typography>}
+                                {rating.benefit_names && rating.benefit_names.length > 0 && 
+                                    <Typography variant="caption" display="block" color="text.secondary">Benefits For: {rating.benefit_names.join(', ')}</Typography>}
+                                {rating.side_effect_names && rating.side_effect_names.length > 0 && 
+                                    <Typography variant="caption" display="block" color="text.secondary">Side Effects: {rating.side_effect_names.join(', ')}</Typography>}
+                                {rating.brands && 
+                                    <Typography variant="caption" display="block" color="text.secondary">Brand(s): {rating.brands}</Typography>}
+                                {rating.dosage && (
+                                    <Typography variant="caption" display="block" color="text.secondary">
+                                        Dosage: {rating.dosage.replace(/\s+/g, '')}
+                                        {(rating.dosage_frequency && rating.frequency_unit) ? 
+                                            ` ${rating.dosage_frequency}x / ${rating.frequency_unit}` : ''}
+                                    </Typography>
+                                )}
+                                {rating.image_url && (
+                                    <Box sx={{ mt: 1, mb: 1, textAlign: 'left' }}>
+                                        <img 
+                                            src={rating.image_url} 
+                                            alt={`Rating for ${rating.supplement_display}`}
+                                            style={{ maxWidth: '150px', maxHeight: '150px', borderRadius: '4px' }}
+                                        />
                                             </Box>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Rated on: {format(new Date(rating.created_at), 'PPpp')}
+                                )}
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 1}}>
+                                    {format(new Date(rating.created_at), 'MM/dd/yyyy')}
+                                    {rating.is_edited && <Typography component="span" variant="caption" color="text.secondary"> (edited)</Typography>}
                                             </Typography>
-                                        </>
-                                    }
-                                />
-                            </ListItem>
+                            </Paper>
                         ))}
                     </List>
                 )}
@@ -329,6 +392,28 @@ function AccountsPage() {
                     </Box>
                 )}
             </Paper>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog
+                open={openDeleteDialog}
+                onClose={handleCloseDeleteDialog}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">{"Confirm Deletion"}</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        Are you sure you want to delete this rating? This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
+                    <Button onClick={handleDeleteRating} color="error" autoFocus>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
         </Container>
     );
 }

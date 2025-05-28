@@ -506,6 +506,17 @@ export const deleteCondition = async (conditionId, options = {}) => {
     }
 };
 
+export const deleteMyRating = async (ratingId) => {
+    try {
+        const response = await API.delete(`ratings/${ratingId}/`);
+        cache.clear(); // Clear cache as ratings data has changed
+        return response.data; // Or handle 204 No Content
+    } catch (error) {
+        console.error('Error deleting rating:', error);
+        throw error; // Rethrow or handle more gracefully
+    }
+};
+
 export const deleteRatingByAdmin = async (ratingId) => {
     try {
         const response = await API.delete(`/ratings/${ratingId}/`);

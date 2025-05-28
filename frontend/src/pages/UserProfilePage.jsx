@@ -108,7 +108,7 @@ function UserProfilePage() {
                             <Paper key={rating.id} elevation={1} sx={{ mb: 2, p: 2, "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}>
                                 <ListItemText 
                                     primary={
-                                        <Typography variant="subtitle1" component={RouterLink} to={`/supplements/${rating.supplement_id || rating.supplement}`} sx={{ textDecoration: 'none', color: 'primary.main', "&:hover": { textDecoration: 'underline'}}}>
+                                        <Typography variant="subtitle1" component={RouterLink} to={`/supplements/${rating.supplement}`} state={{ ratingId: rating.id }} sx={{ textDecoration: 'none', color: 'primary.main', "&:hover": { textDecoration: 'underline'}}}>
                                             {rating.supplement_name || 'Supplement Name Missing'} 
                                         </Typography>
                                     }

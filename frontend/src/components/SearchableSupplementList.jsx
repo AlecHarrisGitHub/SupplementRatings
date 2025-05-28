@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useParams, useNavigate } from 'react-router-dom';
 import { 
     TextField, 
     List, 
@@ -275,7 +275,7 @@ const FilterDrawer = ({
     );
 };
 
-const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRating, handleReviewClick }) => {
+const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating, handleUpvoteRating, handleReviewClick, id }, ref) => {
     // Fallback for default image, ensure it's accessible
     const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg'; 
 
@@ -291,6 +291,8 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
 
     return (
         <Paper 
+            id={id}
+            ref={ref}
             elevation={3} 
             sx={{ 
                 p: 2, 
@@ -348,9 +350,11 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
                     <Rating value={rating.score} readOnly />
                 </Box>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                Intended Purpose: {rating.condition_names.join(', ')}
-            </Typography>
+            {rating.condition_names && rating.condition_names.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    Intended Purpose: {rating.condition_names.join(', ')}
+                </Typography>
+            )}
             {rating.benefit_names && rating.benefit_names.length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Benefits For: {rating.benefit_names.join(', ')}
@@ -361,11 +365,12 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
                     Side Effects: {rating.side_effect_names.join(', ')}
                 </Typography>
             )}
-            {(rating.dosage || rating.dosage_frequency) && (
+            {/* Stricter condition for Dosage display */}
+            {rating.dosage && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Dosage: {rating.dosage?.replace(/\s+/g, '')}
-                    {rating.dosage_frequency && rating.frequency_unit && 
-                        ` ${rating.dosage_frequency}x / ${rating.frequency_unit}`}
+                    Dosage: {rating.dosage.replace(/\s+/g, '')}
+                    {(rating.dosage_frequency && rating.frequency_unit) ? 
+                        ` ${rating.dosage_frequency}x / ${rating.frequency_unit}` : ''}
                 </Typography>
             )}
             {rating.brands && (
@@ -401,10 +406,15 @@ const SupplementRatingItem = ({ rating, user, handleEditRating, handleUpvoteRati
             </Box>
         </Paper>
     );
-};
+});
 
 function SearchableSupplementList() {
     const { user, isAuthenticated } = useAuth();
+    const location = useLocation();
+    const { id: supplementIdFromParams } = useParams();
+    const navigate = useNavigate();
+    const ratingRefs = useRef({});
+
     const [searchTerm, setSearchTerm] = useState('');
     const [supplements, setSupplements] = useState([]);
     const [selectedSupplement, setSelectedSupplement] = useState(null);
@@ -460,6 +470,7 @@ function SearchableSupplementList() {
     const [selectedReviewDetail, setSelectedReviewDetail] = useState(null);
     const [nextPageUrl, setNextPageUrl] = useState(null);
     const [loadingMore, setLoadingMore] = useState(false);
+    const [ratingDialogDosageUnit, setRatingDialogDosageUnit] = useState('mg');
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -602,7 +613,7 @@ function SearchableSupplementList() {
         }
     };
 
-    const handleSupplementClick = async (supplementId) => {
+    const handleSupplementClick = useCallback(async (supplementId) => {
         try {
             setLoading(true);
             setSelectedReview(null);
@@ -678,7 +689,7 @@ function SearchableSupplementList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterFrequency, appliedFilterDosageUnit, appliedFilterFrequencyUnit]);
 
     const handleBackToList = async () => {
         try {
@@ -721,68 +732,74 @@ function SearchableSupplementList() {
         }
     };
 
-    const handleEditRating = (rating) => {
+    const parseDosage = useCallback((dosageString) => {
+        if (!dosageString) return { value: '', unit: 'mg' };
+        const match = dosageString.match(/^(\d*\.?\d+)\s*([a-zA-Zμg]+)$/);
+        if (match) {
+            return { value: match[1], unit: match[2] };
+        }
+        if (String(dosageString).match(/^(\d*\.?\d+)$/)) {
+            return { value: dosageString, unit: 'mg' };
+        }
+        return { value: dosageString, unit: 'mg' };
+    }, []);
+    
+    const handleEditRating = useCallback((rating) => {
         setEditingRating(rating);
-        setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)));
-        setSelectedBenefits(rating.benefits ? rating.benefits.map(id => conditions.find(c => c.id === id)) : []);
-        setSelectedSideEffects(rating.side_effects ? rating.side_effects.map(id => conditions.find(c => c.id === id)) : []);
+        setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)).filter(c => c));
+        setSelectedBenefits(rating.benefits ? rating.benefits.map(id => conditions.find(c => c.id === id)).filter(c => c) : []);
+        setSelectedSideEffects(rating.side_effects ? rating.side_effects.map(id => conditions.find(c => c.id === id)).filter(c => c) : []);
         setRatingScore(rating.score);
         setRatingComment(rating.comment || '');
         setRatingImage(null);
         
-        // Handle dosage - strip the unit if present
-        if (rating.dosage) {
-            const dosageValue = rating.dosage.replace(new RegExp(`${selectedSupplement.dosage_unit}$`), '').trim();
-            setRatingDosage(dosageValue);
-        } else {
-            setRatingDosage('');
-        }
+        const parsedDosage = parseDosage(rating.dosage);
+        setRatingDosage(parsedDosage.value);
+        setRatingDialogDosageUnit(parsedDosage.unit);
         
-        // Handle brand
+        setRatingDosageFrequency(rating.dosage_frequency || '1');
+        setRatingFrequencyUnit(rating.frequency_unit || 'day');
+
         if (rating.brands) {
-            setSelectedBrand({ id: null, name: rating.brands });
+            const brandObj = brands.find(b => b.name.toLowerCase() === rating.brands.toLowerCase());
+            setSelectedBrand(brandObj || { name: rating.brands });
         } else {
             setSelectedBrand(null);
         }
         
-        setRatingDosageFrequency('1');
-        setRatingFrequencyUnit('day');
         setRatingDialogOpen(true);
-    };
+        setRatingDialogAttemptedSubmit(false);
+    }, [conditions, brands, parseDosage]);
 
     const [ratingImage, setRatingImage] = useState(null);
 
-    // Modify the resetFormState function to be more thorough
-    const resetFormState = () => {
+    const resetFormState = useCallback(() => {
         setRatingScore(1);
         setRatingComment('');
         setSelectedConditions([]);
         setSelectedBenefits([]);
         setSelectedSideEffects([]);
         setRatingDosage('');
-        setRatingBrands('');
+        setRatingDialogDosageUnit('mg');
         setSelectedBrand(null);
         setRatingDosageFrequency('1');
         setRatingFrequencyUnit('day');
         setRatingImage(null);
         setEditingRating(null);
         setRatingDialogAttemptedSubmit(false);
-    };
+    }, []);
 
-    // Add this function to handle opening the rating dialog for a new rating
     const handleAddRating = () => {
         resetFormState();
         setRatingDialogOpen(true);
     };
 
-    // Modify the handleCloseRatingDialog function
     const handleCloseRatingDialog = () => {
         resetFormState();
         setRatingDialogOpen(false);
     };
 
-    // Also modify the handleRatingSubmit function to reset form after successful submission
-    const handleRatingSubmit = async (e) => {
+    const handleRatingSubmit = useCallback(async (e) => {
         if (e) {
             e.preventDefault();
         }
@@ -790,7 +807,6 @@ function SearchableSupplementList() {
 
         const actualConditionsToSubmit = selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
 
-        // Validation: Only ratingScore is now mandatory
         if (!ratingScore) {
             toast.error("Rating is required.");
             return;
@@ -813,21 +829,39 @@ function SearchableSupplementList() {
             formData.append('score', ratingScore);
             formData.append('comment', ratingComment || '');
             
+            // Dosage fields
             if (ratingDosage) {
-                formData.append('dosage', `${ratingDosage}${selectedSupplement.dosage_unit || 'mg'}`);
+                formData.append('dosage', `${ratingDosage}${ratingDialogDosageUnit}`);
+                // Only send frequency and unit if dosage is present
+                if (ratingDosageFrequency && ratingFrequencyUnit) {
+                    formData.append('dosage_frequency', ratingDosageFrequency);
+                    formData.append('frequency_unit', ratingFrequencyUnit);
+                }
+            } else if (editingRating && editingRating.dosage) {
+                // If editing and ratingDosage is now empty, explicitly send empty to clear
+                formData.append('dosage', ''); 
+                // Backend will clear frequency/unit if dosage becomes null/empty
             }
-            if (ratingDosageFrequency) {
-                formData.append('dosage_frequency', ratingDosageFrequency);
-            }
-            if (ratingFrequencyUnit) {
-                formData.append('frequency_unit', ratingFrequencyUnit);
-            }
-            if (selectedBrand) {
+
+            // Brands
+            if (selectedBrand && selectedBrand.name) {
                 formData.append('brands', selectedBrand.name);
+            } else if (editingRating && editingRating.brands) {
+                // If editing and selectedBrand is now null/empty, explicitly send empty to clear
+                formData.append('brands', '');
             }
-            if (ratingImage) {
+
+            // Image handling for create/update/clear
+            if (ratingImage instanceof File) { // A new file is selected
                 formData.append('image', ratingImage);
+            } else if (editingRating && editingRating.image_url && ratingImage === null) {
+                // User wants to remove the existing image, send an empty string for 'image'
+                // The backend serializer will interpret this as None for the FileField if setup correctly,
+                // or our pop('image', 'UNCHANGED') logic handles it via `image_data is None`.
+                formData.append('image', ''); 
             }
+            // If ratingImage is null and not editing, or ratingImage is undefined, 
+            // do nothing, and the backend won't update the image (due to 'UNCHANGED' sentinel).
 
             if (editingRating) {
                 await updateRating(editingRating.id, formData);
@@ -836,16 +870,17 @@ function SearchableSupplementList() {
                 await addRating(formData);
                 toast.success('Rating added successfully');
             }
-
-            // Reset form and refresh data
+            
             resetFormState();
             setRatingDialogOpen(false);
             
-            await handleSupplementClick(selectedSupplement.id);
+            if (selectedSupplement && selectedSupplement.id) {
+                handleSupplementClick(selectedSupplement.id);
+            }
         } catch (error) {
-            toast.error('Failed to submit rating. Please try again.');
+            toast.error(error.userMessage || 'Failed to submit rating. Please try again.');
         }
-    };
+    }, [selectedConditions, ratingScore, selectedSupplement, selectedBenefits, selectedSideEffects, ratingDosage, ratingDialogDosageUnit, ratingDosageFrequency, ratingFrequencyUnit, selectedBrand, ratingImage, editingRating, resetFormState, handleSupplementClick, ratingComment]);
 
     const handleApplyFilter = () => {
         setAppliedFilterCategory(selectedFilterCategory);
@@ -914,7 +949,6 @@ function SearchableSupplementList() {
         }
     };
 
-    // Loading skeleton component
     const LoadingSkeleton = () => (
         <Box>
             {[...Array(5)].map((_, i) => (
@@ -1015,7 +1049,6 @@ function SearchableSupplementList() {
         }
     };
 
-    // Add this helper function before the return statement
     const getSortedRatings = (ratings) => {
         return [...ratings].sort((a, b) => {
             if (sortOrder === 'likes') {
@@ -1027,7 +1060,6 @@ function SearchableSupplementList() {
         });
     };
 
-    // Prepare options for the rating dialog's conditions Autocomplete
     const ratingDialogConditionOptions = useMemo(() => {
         let options = [...conditions];
         if (user && user.chronic_conditions && user.chronic_conditions.length > 0) {
@@ -1104,6 +1136,50 @@ function SearchableSupplementList() {
         
         setSelectedConditions(finalSelected);
     };
+
+    useEffect(() => {
+        if (supplementIdFromParams) {
+            // Check if the currently selected supplement is already the one from params
+            // or if there's no selected supplement yet, to avoid redundant fetches if already loaded
+            // by a previous click within the component.
+            if (!selectedSupplement || selectedSupplement.id?.toString() !== supplementIdFromParams) {
+                 handleSupplementClick(supplementIdFromParams);
+            }
+        }
+    }, [supplementIdFromParams]); // Re-run if the ID in the URL changes
+
+    useEffect(() => {
+        if (location.state && location.state.ratingId && selectedSupplement && ratingRefs.current[location.state.ratingId]) {
+            // let attempts = 0; // This was the original, correct placement
+            const maxAttempts = 5;
+            let attempts = 0; // Moved here to ensure it's reset for each run of tryScrollAndEdit logic if effect re-runs
+
+            const tryScrollAndEdit = () => {
+                const element = ratingRefs.current[location.state.ratingId];
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
+                    if (location.state.openEditMode) {
+                        const ratingToEdit = selectedSupplement.ratings.find(r => r.id === location.state.ratingId);
+                        if (ratingToEdit) {
+                            handleEditRating(ratingToEdit);
+                        }
+                        navigate(location.pathname, { 
+                            replace: true, 
+                            state: { ...location.state, openEditMode: false } 
+                        });
+                    } else if (location.state && !location.state.hasOwnProperty('openEditMode')){
+                        // If openEditMode was not part of the state, but ratingId was (for scrolling)
+                        // no specific navigation state change needed here based on openEditMode.
+                    }
+                } else if (attempts < maxAttempts) {
+                    attempts++; 
+                    setTimeout(tryScrollAndEdit, 100);
+                }
+            };
+            tryScrollAndEdit();
+        }
+    }, [location.state, selectedSupplement, navigate, handleEditRating, ratingRefs]);
 
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
@@ -1292,10 +1368,11 @@ function SearchableSupplementList() {
                         <List>
                         {!selectedReview ? (
                             getSortedRatings(selectedSupplement.ratings)
-                                .filter(rating => rating.comment)
                                 .map((rating) => (
                                     <SupplementRatingItem 
-                                        key={rating.id} 
+                                        key={rating.id}
+                                        id={`rating-${rating.id}`}
+                                        ref={(el) => (ratingRefs.current[rating.id] = el)}
                                         rating={rating} 
                                         user={user}
                                         handleEditRating={(r) => {
@@ -1376,7 +1453,6 @@ function SearchableSupplementList() {
                             </Typography>
                         </Divider>
 
-                        {/* "Intended Purpose" Autocomplete moved here */}
                         <Autocomplete
                             multiple
                             id="rating-conditions-autocomplete"
@@ -1454,33 +1530,53 @@ function SearchableSupplementList() {
                                 type="number"
                                 value={ratingDosage}
                                 onChange={(e) => setRatingDosage(e.target.value)}
-                                sx={{ width: '150px' }}
+                                sx={{ width: '120px' }}
                                 placeholder="e.g., 500"
+                                InputProps={{ inputProps: { min: 0 } }}
                             />
-                            <Typography sx={{ ml: 1 }}>
-                                {selectedSupplement?.dosage_unit || 'mg'}
-                            </Typography>
+                            <Select
+                                value={ratingDialogDosageUnit}
+                                onChange={(e) => setRatingDialogDosageUnit(e.target.value)}
+                                sx={{ width: '100px' }}
+                                displayEmpty
+                            >
+                                <MenuItem value="mg">mg</MenuItem>
+                                <MenuItem value="g">g</MenuItem>
+                                <MenuItem value="mcg">mcg</MenuItem>
+                                <MenuItem value="ml">ml</MenuItem>
+                                <MenuItem value="IU">IU</MenuItem>
+                                <MenuItem value="µg">µg</MenuItem>
+                                <MenuItem value="tsp">tsp</MenuItem>
+                                <MenuItem value="tbsp">tbsp</MenuItem>
+                                <MenuItem value="drops">drops</MenuItem>
+                                <MenuItem value="capsule">capsule(s)</MenuItem>
+                                <MenuItem value="tablet">tablet(s)</MenuItem>
+                                <MenuItem value="piece">piece(s)</MenuItem>
+                                <MenuItem value="oz">oz</MenuItem>
+                                <MenuItem value="fl oz">fl oz</MenuItem>
+                                <MenuItem value="cc">cc</MenuItem>
+                                <MenuItem value="other">other</MenuItem>
+                            </Select>
                             <TextField
-                                label="Frequency"
+                                label="Times"
                                 type="number"
                                 value={ratingDosageFrequency}
                                 onChange={(e) => setRatingDosageFrequency(e.target.value)}
-                                sx={{ width: '100px' }}
+                                sx={{ width: '80px' }}
                                 placeholder="e.g., 2"
+                                InputProps={{ inputProps: { min: 1 } }}
                             />
                             <Select
                                 value={ratingFrequencyUnit}
                                 onChange={(e) => setRatingFrequencyUnit(e.target.value)}
-                                sx={{ width: '150px' }}
+                                sx={{ width: '130px' }}
                                 displayEmpty
                             >
-                                <MenuItem value="">
-                                    <em>Select unit</em>
-                                </MenuItem>
                                 <MenuItem value="day">Per Day</MenuItem>
                                 <MenuItem value="week">Per Week</MenuItem>
                                 <MenuItem value="month">Per Month</MenuItem>
                                 <MenuItem value="year">Per Year</MenuItem>
+                                <MenuItem value="other">Other</MenuItem>
                             </Select>
                         </Box>
 

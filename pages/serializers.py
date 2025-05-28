@@ -232,6 +232,7 @@ class RatingSerializer(serializers.ModelSerializer):
         conditions_data = validated_data.pop('conditions', [])
         benefits_data = validated_data.pop('benefits', [])
         side_effects_data = validated_data.pop('side_effects', [])
+        # Image is handled by default ModelSerializer create if present in validated_data
         rating = Rating.objects.create(**validated_data)
         rating.conditions.set(conditions_data)
         rating.benefits.set(benefits_data)
@@ -239,32 +240,67 @@ class RatingSerializer(serializers.ModelSerializer):
         return rating
 
     def update(self, instance, validated_data):
+        # M2M fields pop first, handle them after instance save if needed or as per DRF standard M2M update
         conditions_data = validated_data.pop('conditions', None)
         benefits_data = validated_data.pop('benefits', None)
         side_effects_data = validated_data.pop('side_effects', None)
+        
+        # Handle image separately due to potential clear action or new upload
+        # Sentinel 'UNCHANGED' means the image field was not sent by frontend or no action needed
+        image_payload = validated_data.pop('image', 'UNCHANGED') 
 
-        # Update scalar fields
-        instance.score = validated_data.get('score', instance.score)
-        instance.comment = validated_data.get('comment', instance.comment)
-        instance.dosage = validated_data.get('dosage', instance.dosage)
-        instance.dosage_frequency = validated_data.get('dosage_frequency', instance.dosage_frequency)
-        instance.frequency_unit = validated_data.get('frequency_unit', instance.frequency_unit)
-        instance.brands = validated_data.get('brands', instance.brands)
-        instance.is_edited = True # Mark as edited
-        # Handle image separately if it's part of validated_data
-        if 'image' in validated_data:
-            instance.image = validated_data.get('image', instance.image)
+        # Log the content of validated_data before the loop
+        logger.warning(f"RatingSerializer update - validated_data before loop for instance {instance.id}: {validated_data}")
 
+        # Iterate over the remaining validated_data for direct field updates
+        # This covers score, comment, dosage, dosage_frequency, frequency_unit, brands
+        for attr, value in validated_data.items():
+            if attr == 'comment':
+                logger.warning(f"Attempting to set instance.comment for instance {instance.id}. Current pre-set instance value: '{instance.comment}', New value from validated_data: '{value}'")
+            elif attr == 'brands':
+                logger.warning(f"Attempting to set instance.brands for instance {instance.id}. Current pre-set instance value: '{instance.brands}', New value from validated_data: '{value}'")
+            setattr(instance, attr, value)
+        
+        # If dosage is being set to an empty string or None, ensure frequency and unit are also cleared
+        # The model fields for frequency/unit should have null=True, blank=True
+        if validated_data.get('dosage') == '' or validated_data.get('dosage') is None:
+            if 'dosage' in validated_data: # ensure it was explicitly sent as empty/None
+                instance.dosage_frequency = None
+                instance.frequency_unit = None
+        
+        instance.is_edited = True
+
+        # Handle image update action
+        if image_payload != 'UNCHANGED':
+            if image_payload is None or image_payload == '': # Explicitly clearing the image
+                if instance.image:
+                    try:
+                        instance.image.delete(save=False) # save=False as instance.save() is called later
+                    except Exception as e:
+                        logger.error(f"Error deleting existing image for rating {instance.id}: {e}")
+                instance.image = None # Set field to None
+            else: # New image uploaded (image_payload is a File object)
+                if instance.image: # If there's an old image, delete it first
+                    try:
+                        instance.image.delete(save=False)
+                    except Exception as e:
+                        logger.error(f"Error deleting old image for rating {instance.id} before update: {e}")
+                instance.image = image_payload # Assign new image file
+        
+        # Save the instance before handling M2M
         instance.save()
 
-        # Update M2M fields
+        # Update M2M fields if data was provided for them
         if conditions_data is not None:
             instance.conditions.set(conditions_data)
         if benefits_data is not None:
             instance.benefits.set(benefits_data)
         if side_effects_data is not None:
             instance.side_effects.set(side_effects_data)
-            
+        
+        # Re-save if M2M relations were updated (though .set() handles this for existing instances)
+        # For clarity or if a signal receiver depends on final state after M2M:
+        # instance.save() 
         return instance
 
     def get_has_upvoted(self, obj):
@@ -302,6 +338,7 @@ class PublicRatingSerializer(RatingSerializer):
         model = Rating
         fields = [
             'id', 
+            'supplement',
             'supplement_name',
             'score', 
             'comment', 

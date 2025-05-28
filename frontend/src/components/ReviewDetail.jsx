@@ -370,14 +370,16 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                         (edited)
                                     </Typography>
                                 )}
-                                <Typography variant="body2" color="text.secondary">
-                                    Purpose: {localRating.condition_names.join(', ')}
-                                </Typography>
-                                {(localRating.dosage || localRating.dosage_frequency) && (
+                                {localRating.condition_names && localRating.condition_names.length > 0 && (
+                                    <Typography variant="body2" color="text.secondary">
+                                        Intended Purpose: {localRating.condition_names.join(', ')}
+                                    </Typography>
+                                )}
+                                {localRating.dosage && (
                                     <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        Dosage: {localRating.dosage?.replace(/\s+/g, '')}
-                                        {localRating.dosage_frequency && localRating.frequency_unit && 
-                                            ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}`}
+                                        Dosage: {localRating.dosage.replace(/\s+/g, '')}
+                                        {(localRating.dosage_frequency && localRating.frequency_unit) ? 
+                                            ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}` : ''}
                                     </Typography>
                                 )}
                                 {localRating.brands && (

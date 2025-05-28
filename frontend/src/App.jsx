@@ -36,6 +36,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Navigate to="/supplements" replace />} />
                 <Route path="/supplements" element={<SearchableSupplementList />} />
+                <Route path="/supplements/:id" element={<SearchableSupplementList />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />
