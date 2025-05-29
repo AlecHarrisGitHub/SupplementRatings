@@ -146,6 +146,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [newComment, setNewComment] = useState('');
     const { isAuthenticated, user: currentUser } = useAuth();
     const [selectedComment, setSelectedComment] = useState(null);
+    const [commentThread, setCommentThread] = useState([]);
     const [localRating, setLocalRating] = useState(rating);
     const [newImage, setNewImage] = useState(null);
     const [modalOpen, setModalOpen] = useState(false);
@@ -247,10 +248,8 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         try {
             const formData = new FormData();
             
-            // Only append rating ID if we're commenting on a rating
-            if (!selectedComment) {
-                formData.append('rating', rating.id);
-            }
+            // Always append rating ID. If selectedComment exists, it's a reply to a comment within this rating.
+            formData.append('rating', rating.id); 
             
             // Only append parent_comment if we're replying to a comment
             if (selectedComment) {
@@ -272,48 +271,161 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             
             // Update the UI
             if (selectedComment) {
-                const updatedReplies = [...selectedComment.replies, response];
+                // Add to the replies of the currently selected comment
+                const newReply = { ...response, replies: [] }; // Ensure new reply has an empty replies array
+
+                // Update the commentThread
+                setCommentThread(prevThread => {
+                    const updatedThread = prevThread.map(commentInThread => {
+                        if (commentInThread.id === selectedComment.id) {
+                            return {
+                                ...commentInThread,
+                                replies: [...(commentInThread.replies || []), newReply]
+                            };
+                        }
+                        return commentInThread;
+                    });
+                    return updatedThread;
+                });
+                
+                // Update selectedComment's replies
                 setSelectedComment(prev => ({
                     ...prev,
-                    replies: updatedReplies
+                    replies: [...(prev.replies || []), newReply]
                 }));
+
+                // Also update the localRating's comment structure if the parent is a top-level comment
+                const updateRepliesRecursively = (comments, parentId, newReplyData) => {
+                    return comments.map(comment => {
+                        if (comment.id === parentId) {
+                            return { ...comment, replies: [...(comment.replies || []), newReplyData] };
+                        }
+                        if (comment.replies && comment.replies.length > 0) {
+                            return { ...comment, replies: updateRepliesRecursively(comment.replies, parentId, newReplyData) };
+                        }
+                        return comment;
+                    });
+                };
+                setLocalRating(prevRating => ({
+                    ...prevRating,
+                    comments: updateRepliesRecursively(prevRating.comments, selectedComment.id, newReply)
+                }));
+
             } else {
-                rating.comments = [...rating.comments, response];
+                // This is a direct comment to the rating
+                const newTopLevelComment = { ...response, replies: [] };
+                rating.comments = [...rating.comments, newTopLevelComment];
+                setLocalRating(prev => ({...prev, comments: [...prev.comments, newTopLevelComment]}));
             }
             
-            onCommentAdded();
+            onCommentAdded(response); // Pass the new comment data
         } catch (error) {
             console.error('Error adding comment:', error);
             toast.error('Failed to add comment');
         }
     };
 
+    const findCommentById = (comments, commentId) => {
+        for (const comment of comments) {
+            if (comment.id === commentId) {
+                return comment;
+            }
+            if (comment.replies && comment.replies.length > 0) {
+                const foundInReply = findCommentById(comment.replies, commentId);
+                if (foundInReply) {
+                    return foundInReply;
+                }
+            }
+        }
+        return null;
+    };
+    
+    const buildCommentThread = (clickedCommentId) => {
+        const thread = [];
+        let currentComment = findCommentById(localRating.comments, clickedCommentId);
+        
+        while (currentComment) {
+            thread.unshift(currentComment); // Add to the beginning of the array
+            if (currentComment.parent_comment) {
+                currentComment = findCommentById(localRating.comments, currentComment.parent_comment);
+            } else {
+                // This comment is a direct reply to the rating, or the rating itself if we consider it the root
+                break; 
+            }
+        }
+        return thread;
+    };
+
     const handleCommentClick = (commentData) => {
-        // Always get the latest version of the comment from the rating's comments
-        const updatedComment = rating.comments.find(c => c.id === commentData.id);
-        if (updatedComment) {
-            setSelectedComment({
-                ...updatedComment,
-                upvotes: commentData.upvotes,
-                has_upvoted: commentData.has_upvoted,
-                replies: (updatedComment.replies || []).map(reply => ({
-                    ...reply,
-                    upvotes: reply.upvotes || 0,
-                    has_upvoted: reply.has_upvoted || false
-                }))
-            });
-        } else {
-            // If we can't find the comment in rating.comments (shouldn't happen), use the original
+        const fullClickedComment = findCommentById(localRating.comments, commentData.id);
+        if (!fullClickedComment) {
+            console.error("Clicked comment not found in localRating structure");
+            // Fallback or error handling
             setSelectedComment({
                 ...commentData,
-                upvotes: commentData.upvotes || 0,
-                has_upvoted: commentData.has_upvoted || false,
                 replies: (commentData.replies || []).map(reply => ({
                     ...reply,
                     upvotes: reply.upvotes || 0,
-                    has_upvoted: reply.has_upvoted || false
+                    has_upvoted: reply.has_upvoted || false,
+                    replies: reply.replies || [] // ensure replies have replies
                 }))
             });
+            setCommentThread([]); // Clear or set to a default state
+            return;
+        }
+
+        setSelectedComment({
+            ...fullClickedComment,
+            replies: (fullClickedComment.replies || []).map(reply => ({
+                ...reply,
+                upvotes: reply.upvotes || 0,
+                has_upvoted: reply.has_upvoted || false,
+                replies: reply.replies || []
+            }))
+        });
+        
+        // Build the thread from the original rating up to the clicked comment
+        const thread = [];
+        let currentId = fullClickedComment.id;
+        let tempComment = fullClickedComment;
+
+        // Trace back to the top-level comment or the rating
+        const traceToTop = (commentId, commentsList) => {
+            const path = [];
+            function findPath(currentId, currentComments) {
+                for (const c of currentComments) {
+                    if (c.id === currentId) {
+                        path.unshift(c);
+                        return true; // Found the target
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        if (findPath(currentId, c.replies)) {
+                            path.unshift(c); // Add parent to path
+                            return true;
+                        }
+                    }
+                }
+                return false; // Not found in this branch
+            }
+            findPath(commentId, commentsList);
+            return path;
+        };
+        
+        setCommentThread(traceToTop(fullClickedComment.id, localRating.comments));
+    };
+
+    const handleBackClick = () => {
+        if (commentThread.length > 1) {
+            // If in a nested reply view, go up one level
+            const parentOfSelected = commentThread[commentThread.length - 2];
+            handleCommentClick(parentOfSelected); // This will rebuild the thread up to the parent
+        } else if (selectedComment) {
+            // If viewing a top-level comment's replies, go back to the main review
+            setSelectedComment(null);
+            setCommentThread([]);
+        } else {
+            // If viewing the main review, call the original onBack
+            onBack();
         }
     };
 
@@ -334,128 +446,155 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     return (
         <Box>
             <Button 
-                onClick={isShowingCommentDetail ? () => setSelectedComment(null) : onBack} 
+                onClick={handleBackClick} 
                 sx={{ mb: 2 }}
             >
-                {isShowingCommentDetail ? 'Back to Review' : 'Back to Reviews'}
+                {commentThread.length > 0 ? 'Back' : (isShowingCommentDetail ? 'Back to Review' : 'Back to Reviews')}
             </Button>
 
             <Paper elevation={3} sx={{ p: {xs: 2, md: 3}, mb: 3 }}>
-                {!isShowingCommentDetail ? (
-                    <Box sx={{ mb: 3 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                            <Avatar 
-                                src={localRating.user.profile_image_url || defaultProfileImage} 
-                                alt={localRating.user.username}
-                                sx={{ width: 56, height: 56 }}
-                            />
-                            <Box sx={{ flexGrow: 1 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                    <Typography variant="h6">
-                                        {localRating.user.username}
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <IconButton onClick={handleUpvoteRating} color={localRating.has_upvoted ? "primary" : "default"} disabled={!isAuthenticated || localRating.user.id === currentUser?.id}>
-                                            <ThumbUpIcon />
-                                            {localRating.upvotes}
-                                        </IconButton>
-                                        {currentUser && currentUser.id === localRating.user.id && (
-                                            <Button size="small" onClick={() => onEditRating && onEditRating(localRating)}>Edit</Button>
-                                        )}
-                                        <MuiRating value={localRating.score} readOnly />
-                                    </Box>
-                                </Box>
-                                {localRating.is_edited && (
-                                    <Typography variant="caption" color="text.secondary" gutterBottom>
-                                        (edited)
-                                    </Typography>
-                                )}
-                                {localRating.condition_names && localRating.condition_names.length > 0 && (
-                                    <Typography variant="body2" color="text.secondary">
-                                        Intended Purpose: {localRating.condition_names.join(', ')}
-                                    </Typography>
-                                )}
-                                {localRating.dosage && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        Dosage: {localRating.dosage.replace(/\s+/g, '')}
-                                        {(localRating.dosage_frequency && localRating.frequency_unit) ? 
-                                            ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}` : ''}
-                                    </Typography>
-                                )}
-                                {localRating.brands && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                        Brands Used: {localRating.brands}
-                                    </Typography>
-                                )}
-                            </Box>
-                        </Box>
-                        {localRating.comment && (
-                            <Typography variant="body1" paragraph sx={{whiteSpace: 'pre-wrap'}}>{localRating.comment}</Typography>
-                        )}
-                        {localRating.image_url && (
-                            <Box sx={{ mt: 2, cursor: 'pointer' }} onClick={(e) => handleImageClickInModal(e, localRating.image_url)}>
-                                <img src={localRating.image_url} alt="Rating attachment" style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '4px' }}/>
-                            </Box>
-                        )}
-                    </Box>
-                ) : (
-                    <Box sx={{ mb: 3 }}> 
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1 }}>
-                            <Avatar src={selectedComment.user.profile_image_url || defaultProfileImage} alt={selectedComment.user.username} sx={{ width: 40, height: 40, mt: 0.5 }}/>
-                            <Box sx={{ flexGrow: 1 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Typography variant="subtitle1" fontWeight="bold">
-                                        {selectedComment.user.username}
-                                        {selectedComment.is_edited && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>(edited)</Typography>}
-                                    </Typography>
-                                    <IconButton onClick={() => handleUpvoteComment(selectedComment)} color={selectedComment.has_upvoted ? "primary" : "default"} disabled={!isAuthenticated || selectedComment.user.id === currentUser?.id}>
-                                        <ThumbUpIcon fontSize="small"/>
-                                        {selectedComment.upvotes}
+                {/* Render the original review details unconditionally at the top */}
+                <Box sx={{ mb: 3 }}>
+                    {/* Review User Info and Content */}
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                        <Avatar 
+                            src={localRating.user.profile_image_url || defaultProfileImage} 
+                            alt={localRating.user.username}
+                            sx={{ width: 56, height: 56 }}
+                        />
+                        <Box sx={{ flexGrow: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                <Typography variant="h6">
+                                    {localRating.user.username}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <IconButton onClick={handleUpvoteRating} color={localRating.has_upvoted ? "primary" : "default"} disabled={!isAuthenticated || localRating.user.id === currentUser?.id}>
+                                        <ThumbUpIcon />
+                                        {localRating.upvotes}
                                     </IconButton>
+                                    {currentUser && currentUser.id === localRating.user.id && (
+                                        <Button size="small" onClick={() => onEditRating && onEditRating(localRating)}>Edit</Button>
+                                    )}
+                                    <MuiRating value={localRating.score} readOnly />
                                 </Box>
-                                <Typography variant="body1" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{selectedComment.content}</Typography>
-                                {selectedComment.image_url && (
-                                    <Box sx={{ mt: 1, cursor: 'pointer' }} onClick={(e) => handleImageClickInModal(e, selectedComment.image_url)}>
-                                        <img src={selectedComment.image_url} alt="Comment attachment" style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px' }}/>
-                                    </Box>
-                                )}
                             </Box>
+                            {localRating.is_edited && (
+                                <Typography variant="caption" color="text.secondary" gutterBottom>
+                                    (edited)
+                                </Typography>
+                            )}
+                            {localRating.condition_names && localRating.condition_names.length > 0 && (
+                                <Typography variant="body2" color="text.secondary">
+                                    Intended Purpose: {localRating.condition_names.join(', ')}
+                                </Typography>
+                            )}
+                            {localRating.dosage && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Dosage: {localRating.dosage.replace(/\s+/g, '')}
+                                    {(localRating.dosage_frequency && localRating.frequency_unit) ? 
+                                        ` ${localRating.dosage_frequency}x / ${localRating.frequency_unit}` : ''}
+                                </Typography>
+                            )}
+                            {localRating.brands && (
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Brands Used: {localRating.brands}
+                                </Typography>
+                            )}
                         </Box>
                     </Box>
-                )}
+                    {localRating.comment && (
+                        <Typography variant="body1" paragraph sx={{whiteSpace: 'pre-wrap'}}>{localRating.comment}</Typography>
+                    )}
+                    {localRating.image_url && (
+                        <Box sx={{ mt: 2, cursor: 'pointer' }} onClick={(e) => handleImageClickInModal(e, localRating.image_url)}>
+                            <img src={localRating.image_url} alt="Rating attachment" style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '4px' }}/>
+                        </Box>
+                    )}
+                </Box>
+                
 
-                {isAuthenticated && (
-                    <form onSubmit={handleSubmitComment} style={{ marginTop: isShowingCommentDetail ? '16px' : '0px' }}>
+                {/* Render the comment thread if a comment is selected */}
+                {selectedComment && commentThread.length > 0 && commentThread.map((commentInThread, index) => (
+                    <Box key={commentInThread.id} sx={{ mb: 2, ml: index * 2, borderLeft: index > 0 ? '2px solid #eee' : 'none', pl: index > 0 ? 2 : 0 }}>
+                        <CommentBox
+                            comment={commentInThread}
+                            onCommentClick={handleCommentClick} 
+                            isNested={true} // Consistently use isNested for thread items for styling (e.g., avatar size)
+                            onEdit={updateComment}
+                            currentUser={currentUser}
+                            onUpvote={() => handleUpvoteComment(commentInThread)}
+                        />
+                         {/* Divider for all but the last item in the thread */}
+                        {index < commentThread.length - 1 && <hr style={{margin: '16px 0', border: 'none', borderTop: '1px dashed #ccc'}} />}
+                    </Box>
+                ))}
+
+
+                {/* Reply form - shows if a comment is selected (i.e., we are replying) */}
+                {isAuthenticated && selectedComment && (
+                    <form 
+                        onSubmit={handleSubmitComment} 
+                        style={{ 
+                            marginTop: '16px', 
+                            marginLeft: selectedComment ? ((commentThread.length * 2) + (commentThread.length > 0 ? 2 : 0)) : 0 
+                        }}
+                    >
                         <Typography variant="subtitle1" sx={{ mb: 1}}>
-                            {isShowingCommentDetail ? 'Reply to comment' : 'Leave a comment'}
+                            Reply to {selectedComment.user.username}
                         </Typography>
-                        <TextField fullWidth multiline rows={3} variant="outlined" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write your comment..." sx={{ mb: 1 }}/>
+                        <TextField fullWidth multiline rows={3} variant="outlined" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write your reply..." sx={{ mb: 1 }}/>
                         <ImageUpload onFileSelect={setNewImage} selectedFile={newImage} />
                         <Button type="submit" variant="contained" sx={{ mt: 1 }} disabled={!newComment.trim() && !newImage}>
-                            {isShowingCommentDetail ? 'Post Reply' : 'Post Comment'}
+                            Post Reply
                         </Button>
                     </form>
                 )}
-
-                <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
-                    {isShowingCommentDetail ? 'Replies' : 'Comments'}
-                </Typography>
-                <List>
-                    {(currentItem.comments || currentItem.replies || []).map((commentItem) => (
-                        <CommentBox 
-                            key={commentItem.id} 
-                            comment={commentItem}
-                            onCommentClick={handleCommentClick}
-                            isNested={isShowingCommentDetail}
-                            onEdit={updateComment}
-                            currentUser={currentUser}
-                            onUpvote={() => handleUpvoteComment(commentItem)}
-                        />
-                    ))}
-                    {((currentItem.comments || currentItem.replies || []).length === 0) && (
-                        <Typography>No {isShowingCommentDetail ? 'replies' : 'comments'} yet.</Typography>
+                
+                {/* Display "Comments" or "Replies" section header and list, with indentation if replying */}
+                <Box sx={{ ml: selectedComment ? ((commentThread.length * 2) + (commentThread.length > 0 ? 2 : 0)) : 0 }}>
+                    {(!selectedComment || (selectedComment && (selectedComment.replies || []).length > 0) ) && (
+                         <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>
+                            {selectedComment ? 'Replies to this comment' : 'Comments on this review'}
+                        </Typography>
                     )}
-                </List>
+
+                    <List>
+                        {/* Render direct replies to the selectedComment, or top-level comments for the rating */}
+                        {selectedComment ? (
+                            (selectedComment.replies || []).map((reply) => (
+                                <CommentBox 
+                                    key={reply.id} 
+                                    comment={reply}
+                                    onCommentClick={handleCommentClick} 
+                                    isNested={true} 
+                                    onEdit={updateComment}
+                                    currentUser={currentUser}
+                                    onUpvote={() => handleUpvoteComment(reply)}
+                                />
+                            ))
+                        ) : (
+                            (localRating.comments || []).map((commentItem) => (
+                                <CommentBox 
+                                    key={commentItem.id} 
+                                    comment={commentItem}
+                                    onCommentClick={handleCommentClick} 
+                                    isNested={false} 
+                                    onEdit={updateComment}
+                                    currentUser={currentUser}
+                                    onUpvote={() => handleUpvoteComment(commentItem)}
+                                />
+                            ))
+                        )}
+                        
+                        {/* Message if no comments or replies */}
+                        {selectedComment && (!selectedComment.replies || selectedComment.replies.length === 0) && (
+                            <Typography>No replies to this comment yet.</Typography>
+                        )}
+                        {!selectedComment && (!localRating.comments || localRating.comments.length === 0) && (
+                            <Typography>No comments on this review yet.</Typography>
+                        )}
+                    </List>
+                </Box>
             </Paper>
 
             {selectedImageForModal && (
