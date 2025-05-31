@@ -128,7 +128,7 @@ function CommentBox({
 
     return (
         <ListItem 
-            // onClick={() => onCommentClick(comment)} // Allow click only if not editing, or manage click area more carefully
+            onClick={() => onCommentClick(comment)}
             sx={{
                 mb: 2,
                 flexDirection: 'column',
@@ -137,14 +137,17 @@ function CommentBox({
                 borderRadius: 1,
                 boxShadow: 1,
                 p: 2,
-                // ml: isNested ? 3 : 0, // No indentation for main thread items
-                // cursor: 'pointer', // Make specific elements clickable
+                ml: isNested ? 3 : 0, 
+                cursor: 'pointer', 
+                '&:hover': {
+                    bgcolor: 'action.hover'
+                }
             }}
         >
             {/* Top Section: User Info, Upvotes, Stars */}
             <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 {/* Left Part: Avatar and Username */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }} onClick={() => onCommentClick(comment)}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none' }}>
                         <Avatar 
                             src={comment.user.profile_image_url || defaultProfileImage} 
