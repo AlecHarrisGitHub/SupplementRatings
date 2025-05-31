@@ -54,8 +54,8 @@ const transformRatingToThreadItem = (ratingData, isEditedByParent) => {
         dosage_frequency: ratingData.dosage_frequency,
         frequency_unit: ratingData.frequency_unit,
         brands: ratingData.brands,
-        benefits_text: ratingData.benefits_text,
-        side_effects_text: ratingData.side_effects_text,
+        benefit_names: ratingData.benefit_names,
+        side_effect_names: ratingData.side_effect_names,
         // replies and parent_comment are not applicable here or handled differently
         replies: ratingData.comments || [], // For a review item, its 'replies' are its top-level comments
         parent_comment: null, 
@@ -189,6 +189,16 @@ function CommentBox({
                             Intended Purpose: {comment.condition_names.join(', ')}
                         </Typography>
                     )}
+                    {comment.benefit_names && comment.benefit_names.length > 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
+                            Benefits For: {comment.benefit_names.join(', ')}
+                        </Typography>
+                    )}
+                    {comment.side_effect_names && comment.side_effect_names.length > 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
+                            Side Effects: {comment.side_effect_names.join(', ')}
+                        </Typography>
+                    )}
                     {comment.dosage && (
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                             Dosage: {comment.dosage.replace(/\s+/g, '')}
@@ -199,16 +209,6 @@ function CommentBox({
                     {comment.brands && (
                         <Typography variant="body2" color="text.secondary">
                             Brands Used: {comment.brands}
-                        </Typography>
-                    )}
-                    {comment.benefits_text && (
-                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
-                            Benefits Experienced: {comment.benefits_text}
-                        </Typography>
-                    )}
-                    {comment.side_effects_text && (
-                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
-                            Side Effects Experienced: {comment.side_effects_text}
                         </Typography>
                     )}
                 </Box>
@@ -591,6 +591,8 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         return <Typography>Loading review details...</Typography>; // Or some other placeholder
     }
 
+    console.log('Current localRating in ReviewDetail:', localRating); // <-- ADD THIS LOG
+
     return (
         <Box>
             <Button 
@@ -603,37 +605,42 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             {/* Comment Thread Paper - Always visible if localRating exists */}
             {localRating && localRating.user && (
                 <Paper elevation={1} sx={{ p: {xs: 1, md: 2}, mb: 3, border: '1px solid #e0e0e0' }}>
-                    {commentThread.map((item, index) => (
-                        <React.Fragment key={item.id}>
-                            <CommentBox
-                                comment={item}
-                                onCommentClick={handleCommentClick}
-                                isNested={false} // All items in thread are not visually nested
-                                onEdit={item.isReviewThreadItem ? (editedText) => {
-                                    // This is a simplified edit path for the review's main comment text
-                                    // directly via CommentBox. onEditRating prop on ReviewDetail is for 
-                                    // more complex edits (e.g. score, conditions via modal)
-                                    const updatedLocalRating = { 
-                                        ...localRating, 
-                                        comment: editedText, 
-                                        is_edited: true 
-                                    };
-                                    setLocalRating(updatedLocalRating);
-                                    // Propagate to parent if necessary
-                                    if(onEditRating) onEditRating(updatedLocalRating, true); // Indicate it's a text-only update
-                                    
-                                    // Update in thread
-                                     setCommentThread(prev => prev.map(ct => ct.id === item.id ? {...ct, content: editedText, is_edited: true} : ct));
+                    {commentThread.map((item, index) => {
+                        if (item.isReviewThreadItem) { // <-- ADD CONDITIONAL LOG
+                            console.log('Review Item passed to CommentBox:', item);
+                        }
+                        return (
+                            <React.Fragment key={item.id}>
+                                <CommentBox
+                                    comment={item}
+                                    onCommentClick={handleCommentClick}
+                                    isNested={false} // All items in thread are not visually nested
+                                    onEdit={item.isReviewThreadItem ? (editedText) => {
+                                        // This is a simplified edit path for the review's main comment text
+                                        // directly via CommentBox. onEditRating prop on ReviewDetail is for 
+                                        // more complex edits (e.g. score, conditions via modal)
+                                        const updatedLocalRating = { 
+                                            ...localRating, 
+                                            comment: editedText, 
+                                            is_edited: true 
+                                        };
+                                        setLocalRating(updatedLocalRating);
+                                        // Propagate to parent if necessary
+                                        if(onEditRating) onEditRating(updatedLocalRating, true); // Indicate it's a text-only update
+                                        
+                                        // Update in thread
+                                         setCommentThread(prev => prev.map(ct => ct.id === item.id ? {...ct, content: editedText, is_edited: true} : ct));
 
-                                } : updateComment} 
-                                currentUser={currentUser}
-                                onUpvote={() => item.isReviewThreadItem ? handleUpvoteRating() : handleUpvoteComment(item)}
-                                isReviewThreadItem={item.isReviewThreadItem}
-                                onEditRating={item.isReviewThreadItem ? () => onEditRating(localRating) : undefined}
-                            />
-                            {index < commentThread.length - 1 && <hr style={{margin: '16px 0', border: 'none', borderTop: '1px dashed #ccc'}} />}
-                        </React.Fragment>
-                    ))}
+                                    } : updateComment} 
+                                    currentUser={currentUser}
+                                    onUpvote={() => item.isReviewThreadItem ? handleUpvoteRating() : handleUpvoteComment(item)}
+                                    isReviewThreadItem={item.isReviewThreadItem}
+                                    onEditRating={item.isReviewThreadItem ? () => onEditRating(localRating) : undefined}
+                                />
+                                {index < commentThread.length - 1 && <hr style={{margin: '16px 0', border: 'none', borderTop: '1px dashed #ccc'}} />}
+                            </React.Fragment>
+                        );
+                    })}
                 </Paper>
             )}
 
