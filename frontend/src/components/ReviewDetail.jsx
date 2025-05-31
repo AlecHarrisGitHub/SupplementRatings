@@ -71,7 +71,6 @@ function CommentBox({
     onEditRating // New prop for when editing the review item
 }) {
     const [isEditing, setIsEditing] = useState(false);
-    // Use comment.content directly if not null/undefined, otherwise empty string
     const [editedContent, setEditedContent] = useState(comment && comment.content !== null && comment.content !== undefined ? comment.content : '');
 
     useEffect(() => {
@@ -127,7 +126,7 @@ function CommentBox({
 
     return (
         <ListItem 
-            onClick={() => onCommentClick(comment)}
+            // onClick={() => onCommentClick(comment)} // Allow click only if not editing, or manage click area more carefully
             sx={{
                 mb: 2,
                 flexDirection: 'column',
@@ -136,104 +135,121 @@ function CommentBox({
                 borderRadius: 1,
                 boxShadow: 1,
                 p: 2,
-                ml: isNested ? 3 : 0,
-                cursor: 'pointer',
-                '&:hover': {
-                    bgcolor: 'action.hover'
-                }
+                // ml: isNested ? 3 : 0, // No indentation for main thread items
+                // cursor: 'pointer', // Make specific elements clickable
             }}
         >
-            <Box sx={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 1.5, mb: 1 }}>
-                <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none' }}>
-                    <Avatar 
-                        src={comment.user.profile_image_url || defaultProfileImage} 
-                        alt={comment.user.username}
-                        sx={{ width: 40, height: 40, mt: 0.5, cursor: 'pointer' }} // Reverted to standard size
-                    />
-                </RouterLink>
-                <Box sx={{ flexGrow: 1 }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            <Typography variant="subtitle2" fontWeight="bold" sx={{ cursor: 'pointer', "&:hover": { textDecoration: 'underline'} }}>
-                                {comment.user.username}
-                            </Typography>
-                        </RouterLink>
-                        <IconButton 
-                            onClick={handleUpvoteClick}
-                            color={comment.has_upvoted ? "primary" : "default"}
-                            size="small"
-                            disabled={!currentUser || (comment.user && currentUser.id === comment.user.id)}
-                        >
-                            <ThumbUpIcon fontSize="small" />
-                            <Typography variant="caption" sx={{ ml: 0.5 }}>{comment.upvotes}</Typography>
-                        </IconButton>
-                    </Box>
-
-                    {isReviewThreadItem && (
-                        <Box sx={{my:1}}>
-                            <MuiRating value={comment.score || 0} readOnly size="small" sx={{verticalAlign: 'middle'}} />
-                            {comment.condition_names && comment.condition_names.length > 0 && (
-                                <Typography variant="caption" color="text.secondary" sx={{ml:1, display:'block'}}>
-                                    Purpose: {comment.condition_names.join(', ')}
-                                </Typography>
-                            )}
-                            {comment.dosage && (
-                                <Typography variant="caption" color="text.secondary" sx={{ display:'block'}}>
-                                    Dosage: {comment.dosage.replace(/\s+/g, '')}
-                                    {(comment.dosage_frequency && comment.frequency_unit) ? 
-                                        ` ${comment.dosage_frequency}x / ${comment.frequency_unit}` : ''}
-                                </Typography>
-                            )}
-                            {comment.brands && (
-                                <Typography variant="caption" color="text.secondary" sx={{ display:'block'}}>
-                                    Brands: {comment.brands}
-                                </Typography>
-                            )}
-                        </Box>
-                    )}
-
-                    {!isEditing ? (
-                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
-                    ) : (
-                        <TextField
-                            fullWidth
-                            multiline
-                            variant="outlined"
-                            size="small"
-                            value={editedContent}
-                            onChange={(e) => setEditedContent(e.target.value)}
-                            sx={{ mt: 1 }}
+            {/* Top Section: User Info, Upvotes, Stars */}
+            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                {/* Left Part: Avatar and Username */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, cursor: 'pointer' }} onClick={() => onCommentClick(comment)}>
+                    <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none' }}>
+                        <Avatar 
+                            src={comment.user.profile_image_url || defaultProfileImage} 
+                            alt={comment.user.username}
+                            sx={{ width: 40, height: 40 }}
                         />
-                    )}
-                    {comment.image_url && !isEditing && (
-                        <Box sx={{ mt: 1 }}>
-                            <img 
-                                src={comment.image_url} 
-                                alt="Comment attachment" 
-                                style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', cursor: 'pointer' }}
-                            />
-                        </Box>
-                    )}
-                    <Box sx={{ mt: 1, display: 'flex', gap: 1}}>
-                        {isEditing ? (
-                            <>
-                                <Button size="small" onClick={handleEditSubmit} variant="contained">Save</Button>
-                                <Button size="small" onClick={() => setIsEditing(false)}>Cancel</Button>
-                            </>
-                        ) : (
-                            <>
-                                {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
-                                    <Button size="small" onClick={initiateEdit} sx={{mr:1}}>Edit</Button>
-                                )}
-                            </>
-                        )}
-                    </Box>
-                    <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end', mt: 0.5 }}>
-                        <Typography variant="caption" color="text.secondary">
-                            {formatDate(comment.created_at)}
+                    </RouterLink>
+                    <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <Typography variant="subtitle2" fontWeight="bold" sx={{"&:hover": { textDecoration: 'underline'}}}>
+                            {comment.user.username}
                         </Typography>
-                    </Box>
+                    </RouterLink>
                 </Box>
+
+                {/* Right Part: Upvotes and Stars */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <IconButton 
+                        onClick={handleUpvoteClick}
+                        color={comment.has_upvoted ? "primary" : "default"}
+                        size="small"
+                        disabled={!currentUser || (comment.user && currentUser.id === comment.user.id)}
+                    >
+                        <ThumbUpIcon fontSize="small" />
+                        <Typography variant="caption" sx={{ ml: 0.5 }}>{comment.upvotes}</Typography>
+                    </IconButton>
+                    {isReviewThreadItem && (
+                        <MuiRating value={comment.score || 0} readOnly size="small" />
+                    )}
+                </Box>
+            </Box>
+
+            {/* Review-Specific Details (only for review item) */}
+            {isReviewThreadItem && (
+                <Box sx={{width: '100%', mb: 1}}>
+                    {comment.condition_names && comment.condition_names.length > 0 && (
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
+                            Intended Purpose: {comment.condition_names.join(', ')}
+                        </Typography>
+                    )}
+                    {comment.dosage && (
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                            Dosage: {comment.dosage.replace(/\s+/g, '')}
+                            {(comment.dosage_frequency && comment.frequency_unit) ? 
+                                ` ${comment.dosage_frequency}x / ${comment.frequency_unit}` : ''}
+                        </Typography>
+                    )}
+                    {comment.brands && (
+                        <Typography variant="body2" color="text.secondary">
+                            Brands Used: {comment.brands}
+                        </Typography>
+                    )}
+                </Box>
+            )}
+
+            {/* Content Section: Text and Image */}
+            <Box sx={{ width: '100%', mb: 1}}>
+                {!isEditing ? (
+                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
+                ) : (
+                    <TextField
+                        fullWidth
+                        multiline
+                        variant="outlined"
+                        size="small"
+                        value={editedContent}
+                        onChange={(e) => setEditedContent(e.target.value)}
+                        sx={{ mt: 1 }}
+                    />
+                )}
+                {comment.image_url && !isEditing && (
+                    <Box sx={{ mt: 1 }}>
+                        <img 
+                            src={comment.image_url} 
+                            alt="Comment attachment" 
+                            style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', cursor: 'pointer' }}
+                            // Add onClick for modal if needed here, or ensure parent handles it
+                        />
+                    </Box>
+                )}
+            </Box>
+
+            {/* Bottom Section: Edit Button and Date */}
+            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                <Box>
+                    {isEditing ? (
+                        <>
+                            <Button size="small" onClick={handleEditSubmit} variant="contained" sx={{mr:1}}>Save</Button>
+                            <Button size="small" onClick={() => setIsEditing(false)}>Cancel</Button>
+                        </>
+                    ) : (
+                        <>
+                            {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
+                                <Button size="small" onClick={initiateEdit} sx={{mr:1}}>
+                                    {isReviewThreadItem ? 'Edit Review Details' : 'Edit'}
+                                </Button>
+                            )}
+                        </>
+                    )}
+                     {comment.is_edited && !isEditing && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic'}}>
+                            (edited)
+                        </Typography>
+                    )}
+                </Box>
+                <Typography variant="caption" color="text.secondary">
+                    {formatDate(comment.created_at)}
+                </Typography>
             </Box>
         </ListItem>
     );
