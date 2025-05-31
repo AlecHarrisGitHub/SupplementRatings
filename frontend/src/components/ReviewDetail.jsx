@@ -32,48 +32,67 @@ const formatDate = (dateString) => {
 };
 
 // Helper to shape rating into a comment-like object for the thread
-const transformRatingToThreadItem = (ratingData) => {
-    if (!ratingData || !ratingData.user) { // Guard against incomplete rating data
+const transformRatingToThreadItem = (ratingData, isEditedByParent) => {
+    if (!ratingData || !ratingData.user) { 
         return null;
     }
     return {
-        id: `review-${ratingData.id}`, // Unique ID for key prop
+        id: `review-${ratingData.id}`, 
         user: ratingData.user,
-        content: ratingData.comment || '', // The main text of the review
+        content: ratingData.comment || '', 
         created_at: ratingData.created_at,
         upvotes: ratingData.upvotes || 0,
         has_upvoted: ratingData.has_upvoted || false,
-        image_url: ratingData.image_url, // Review's own image
-        
-        isReviewItem: true, // Custom flag
+        image_url: ratingData.image_url, 
+        is_edited: isEditedByParent !== undefined ? isEditedByParent : ratingData.is_edited, // Prefer parent's view of edited status
+
+        // Review specific details to be used by CommentBox
+        isReviewThreadItem: true, 
         score: ratingData.score,
         condition_names: ratingData.condition_names,
         dosage: ratingData.dosage,
         dosage_frequency: ratingData.dosage_frequency,
         frequency_unit: ratingData.frequency_unit,
         brands: ratingData.brands,
-        is_edited: ratingData.is_edited, // Include is_edited for review item
-
-        replies: [], // Represents that it doesn't have 'replies' in the same way comments do in this structure
-        parent_comment: null, // Root item
+        // replies and parent_comment are not applicable here or handled differently
+        replies: ratingData.comments || [], // For a review item, its 'replies' are its top-level comments
+        parent_comment: null, 
     };
 };
 
-function CommentBox({ comment, onCommentClick, isNested = false, onEdit, currentUser, onUpvote, isReviewItem = false, onEditReview }) {
+function CommentBox({ 
+    comment, 
+    onCommentClick, 
+    isNested = false, // Retaining for potential use in the separate reply list, but not for main thread
+    onEdit, 
+    currentUser, 
+    onUpvote,
+    isReviewThreadItem = false, // New prop
+    onEditRating // New prop for when editing the review item
+}) {
     const [isEditing, setIsEditing] = useState(false);
-    const [editedContent, setEditedContent] = useState(comment.content);
+    // Use comment.content directly if not null/undefined, otherwise empty string
+    const [editedContent, setEditedContent] = useState(comment && comment.content !== null && comment.content !== undefined ? comment.content : '');
+
+    useEffect(() => {
+        // Sync editedContent if comment content changes from outside
+        setEditedContent(comment && comment.content !== null && comment.content !== undefined ? comment.content : '');
+    }, [comment?.content]);
 
     const handleEditSubmit = async () => {
-        if (isReviewItem) {
-            // For reviews, onEditReview is expected to handle the full rating object
-            // This internal edit state is for comment content only.
-            // The main review edit button should be used.
-            setIsEditing(false); // Just close editor
+        if (isReviewThreadItem) {
+            // For review item, call onEditRating which handles the full rating object.
+            // The actual saving and content update for review is managed by ReviewDetail's onEditRating flow.
+            if (onEditRating) {
+                // We pass the editedContent to onEditRating if it's designed to take partial updates
+                // Or onEditRating just triggers a modal. For now, assume ReviewDetail handles content.
+                onEditRating(editedContent); // Pass content if needed, or onEditRating knows what to do
+            }
+            setIsEditing(false); // Close editor after initiating edit
         } else {
             try {
                 await onEdit(comment.id, editedContent);
-                comment.content = editedContent;
-                comment.is_edited = true;
+                // Optimistic update handled by parent or state
                 setIsEditing(false);
             } catch (error) {
                 toast.error('Failed to update comment');
@@ -83,13 +102,19 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
     
     const initiateEdit = (e) => {
         e.stopPropagation();
-        if (isReviewItem) {
-            // If it's a review item, trigger the main review edit flow if available
-            if (onEditReview) {
-                 onEditReview(); // This prop should be passed if review is editable via this box
-            }
-            // Do not set isEditing to true for review item here,
-            // as its edit mechanism is different.
+        if (isReviewThreadItem) {
+            if (onEditRating) {
+                onEditRating(); // Trigger the main review edit flow (e.g., open modal)
+                // Potentially set isEditing to true if CommentBox itself becomes the editor for review text
+                // For now, assume onEditRating handles the UI for editing the review's text
+            } 
+            // For now, do not set isEditing to true for review thread item directly here
+            // if the main edit button for the review is separate.
+            // If this CommentBox is meant to directly edit the review text, then setIsEditing(true) is needed.
+            // For consistency, let's allow review text editing here IF onEditRating is also for opening a modal.
+            // If onEditRating directly saves, this local edit state is fine.
+            setIsEditing(true); // Allow editing review's main comment text here
+
         } else {
             setIsEditing(true);
         }
@@ -123,7 +148,7 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                     <Avatar 
                         src={comment.user.profile_image_url || defaultProfileImage} 
                         alt={comment.user.username}
-                        sx={{ width: isNested ? 32 : 40, height: isNested ? 32 : 40, mt: 0.5, cursor: 'pointer' }}
+                        sx={{ width: 40, height: 40, mt: 0.5, cursor: 'pointer' }} // Reverted to standard size
                     />
                 </RouterLink>
                 <Box sx={{ flexGrow: 1 }}>
@@ -137,14 +162,38 @@ function CommentBox({ comment, onCommentClick, isNested = false, onEdit, current
                             onClick={handleUpvoteClick}
                             color={comment.has_upvoted ? "primary" : "default"}
                             size="small"
-                            disabled={!currentUser || comment.user.id === currentUser.id}
+                            disabled={!currentUser || (comment.user && currentUser.id === comment.user.id)}
                         >
                             <ThumbUpIcon fontSize="small" />
                             <Typography variant="caption" sx={{ ml: 0.5 }}>{comment.upvotes}</Typography>
                         </IconButton>
                     </Box>
+
+                    {isReviewThreadItem && (
+                        <Box sx={{my:1}}>
+                            <MuiRating value={comment.score || 0} readOnly size="small" sx={{verticalAlign: 'middle'}} />
+                            {comment.condition_names && comment.condition_names.length > 0 && (
+                                <Typography variant="caption" color="text.secondary" sx={{ml:1, display:'block'}}>
+                                    Purpose: {comment.condition_names.join(', ')}
+                                </Typography>
+                            )}
+                            {comment.dosage && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display:'block'}}>
+                                    Dosage: {comment.dosage.replace(/\s+/g, '')}
+                                    {(comment.dosage_frequency && comment.frequency_unit) ? 
+                                        ` ${comment.dosage_frequency}x / ${comment.frequency_unit}` : ''}
+                                </Typography>
+                            )}
+                            {comment.brands && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display:'block'}}>
+                                    Brands: {comment.brands}
+                                </Typography>
+                            )}
+                        </Box>
+                    )}
+
                     {!isEditing ? (
-                        <Typography variant="body2" sx={{ mt: 0.5 }}>{comment.content}</Typography>
+                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
                     ) : (
                         <TextField
                             fullWidth
@@ -212,16 +261,17 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
         try {
             const response = await upvoteRating(localRating.id);
-            const updatedRating = {
+            const updatedRatingData = {
                 ...localRating,
                 upvotes: response.upvotes_count,
                 has_upvoted: !localRating.has_upvoted
             };
-            setLocalRating(updatedRating);
+            setLocalRating(updatedRatingData);
             // Update the review item in the thread if it exists
             setCommentThread(prevThread => prevThread.map(item => 
-                item.isReviewItem && item.id === `review-${localRating.id}` ? transformRatingToThreadItem(updatedRating) : item
+                item.isReviewThreadItem ? transformRatingToThreadItem(updatedRatingData, item.is_edited) : item
             ));
+
         } catch (error) {
             toast.error('Failed to upvote rating');
         }
@@ -291,7 +341,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
             // Update comment in the commentThread
             setCommentThread(prevThread => prevThread.map(item => {
-                if (item.id === commentToUpvote.id && !item.isReviewItem) {
+                if (item.id === commentToUpvote.id) {
                     return { ...item, upvotes: response.upvotes, has_upvoted: !item.has_upvoted };
                 }
                 return item;
@@ -434,32 +484,26 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     };
 
     useEffect(() => {
-        if (localRating && localRating.user) {
-            const reviewItem = transformRatingToThreadItem(localRating);
-            if (reviewItem) {
-                 if (selectedComment) {
-                    // If a comment is selected, ensure the thread reflects it
-                    const pathToComment = traceToTop(selectedComment.id, localRating.comments);
-                    setCommentThread([reviewItem, ...pathToComment]);
-                } else {
-                    // Default: show only the review item in the thread
-                    setCommentThread([reviewItem]);
-                }
-            }
-        } else {
-            setCommentThread([]); // Clear thread if localRating is not available
+        const reviewItem = transformRatingToThreadItem(localRating, localRating.is_edited); // Pass current edited state
+        if (!reviewItem) {
+            setCommentThread([]);
+            return;
         }
-    }, [localRating, selectedComment]); // Rerun when localRating or selectedComment changes
+
+        if (selectedComment && localRating && localRating.comments) {
+            const pathToComment = traceToTop(selectedComment.id, localRating.comments);
+            setCommentThread([reviewItem, ...pathToComment]);
+        } else {
+            setCommentThread([reviewItem]); // Default: thread contains only the review item
+        }
+    }, [localRating, selectedComment]);
 
     const handleCommentClick = (commentData) => {
-        // Ensure commentData has an id. If it's the review item, do nothing or handle differently.
-        if (commentData.isReviewItem) {
-            // Clicking the review item in the thread could, for example, clear selectedComment
-            // For now, let's make it a no-op to prevent issues.
-            // Or, if it's the review item, maybe we set selectedComment to null
-             setSelectedComment(null);
-             const reviewItem = transformRatingToThreadItem(localRating);
-             if (reviewItem) setCommentThread([reviewItem]);
+        if (commentData.isReviewThreadItem) {
+            // Clicking the review item in the thread means we are focusing on the review itself
+            // So, clear any selected sub-comment to show top-level replies to the review.
+            setSelectedComment(null);
+            // useEffect will reconstruct thread with just reviewItem
             return;
         }
 
@@ -467,42 +511,35 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
         if (!fullClickedComment) {
             console.error("Clicked comment not found in localRating structure:", commentData.id);
-            // Fallback: just show the review
-            setSelectedComment(null);
-            const reviewItem = transformRatingToThreadItem(localRating);
-            if (reviewItem) setCommentThread([reviewItem]);
+            setSelectedComment(null); 
             return;
         }
         
-        setSelectedComment(fullClickedComment); // Set the actual selected comment object
-        
-        const reviewItem = transformRatingToThreadItem(localRating);
-        if(reviewItem){
-            const pathToComment = traceToTop(fullClickedComment.id, localRating.comments);
-            setCommentThread([reviewItem, ...pathToComment]);
-        }
+        setSelectedComment(fullClickedComment); 
+        // useEffect will build the thread: [reviewItem, ...pathToSelectedComment]
     };
 
     const handleBackClick = () => {
+        const reviewItem = commentThread.length > 0 && commentThread[0].isReviewThreadItem ? commentThread[0] : null;
+
         if (selectedComment) {
             const currentFullSelectedComment = findCommentById(localRating.comments, selectedComment.id);
             if (currentFullSelectedComment && currentFullSelectedComment.parent_comment) {
                 const parentObj = findCommentById(localRating.comments, currentFullSelectedComment.parent_comment);
                 if (parentObj) {
-                    handleCommentClick(parentObj); // This will set selectedComment to parent and rebuild thread
+                    setSelectedComment(parentObj); // Go to parent, useEffect updates thread
                 } else {
-                    // Parent not found, revert to review view
-                    setSelectedComment(null);
-                    // useEffect will handle resetting commentThread to just reviewItem
+                    setSelectedComment(null); // Parent not found, go to review + its top-level comments
                 }
             } else {
-                // No parent_comment means it's a top-level comment, or selectedComment is stale. Go to review view.
-                setSelectedComment(null);
-                // useEffect will handle resetting commentThread
+                // No parent_comment or selected comment is stale, so it's a top-level comment (or should be treated as such).
+                // Clicking back from a top-level comment shows the review and its top-level comments.
+                setSelectedComment(null); 
             }
         } else {
-            // No selectedComment, means we are viewing the review (or review + top level comments)
-            // and the thread only contains the review item. So, go fully back.
+            // No selectedComment. If thread has more than review, means we were viewing review + top-level comments.
+            // This state (selectedComment = null, thread has only review) is the base.
+            // So, 'Back' from here means go to the previous page/view entirely.
             onBack();
         }
     };
@@ -527,72 +564,52 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                 onClick={handleBackClick} 
                 sx={{ mb: 2 }}
             >
-                {/* Adjust "Back" button text based on state */}
-                {selectedComment ? 'Back to parent comment' : (commentThread.length > 1 ? 'Back to Review' : 'Back to Reviews')}
+                {selectedComment ? 'Back to parent' : 'Back to Reviews'}
             </Button>
 
-            <Paper elevation={3} sx={{ p: {xs: 2, md: 3}, mb: 3 }}>
-                {/* Render the comment thread */}
-                {commentThread.map((item, index) => (
-                    <React.Fragment key={item.id}>
-                        <Box sx={{ mb: 2 /* No more ml, borderLeft, pl for indentation */ }}>
-                            {item.isReviewItem && (
-                                <Box sx={{ mb: 2, pb: 2, borderBottom: commentThread.length > 1 ? '1px solid #eee' : 'none' }}>
-                                    {/* Review specific details */}
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                        <Typography variant="h6">
-                                            Review by {item.user.username} 
-                                            {item.is_edited && <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>(edited)</Typography>}
-                                        </Typography>
-                                        <MuiRating value={item.score} readOnly />
-                                    </Box>
-                                    {currentUser && currentUser.id === item.user.id && (
-                                        <Button size="small" onClick={() => onEditRating && onEditRating(localRating)} sx={{mb:1}}>Edit Review</Button>
-                                    )}
-                                    {item.condition_names && item.condition_names.length > 0 && (
-                                        <Typography variant="body2" color="text.secondary">
-                                            Intended Purpose: {item.condition_names.join(', ')}
-                                        </Typography>
-                                    )}
-                                    {item.dosage && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                            Dosage: {item.dosage.replace(/\\s+/g, '')}
-                                            {(item.dosage_frequency && item.frequency_unit) ? 
-                                                ` ${item.dosage_frequency}x / ${item.frequency_unit}` : ''}
-                                        </Typography>
-                                    )}
-                                    {item.brands && (
-                                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                            Brands Used: {item.brands}
-                                        </Typography>
-                                    )}
-                                    {/* The actual review comment text will be rendered by CommentBox below */}
-                                </Box>
-                            )}
+            {/* Comment Thread Paper - Always visible if localRating exists */}
+            {localRating && localRating.user && (
+                <Paper elevation={1} sx={{ p: {xs: 1, md: 2}, mb: 3, border: '1px solid #e0e0e0' }}>
+                    {commentThread.map((item, index) => (
+                        <React.Fragment key={item.id}>
                             <CommentBox
-                                comment={item} // For review item, 'content' is review's main comment.
+                                comment={item}
                                 onCommentClick={handleCommentClick}
-                                isNested={false} // All items in thread are not visually nested for uniform size
-                                onEdit={item.isReviewItem ? () => {} : updateComment} // Review edit handled above
-                                currentUser={currentUser}
-                                onUpvote={() => item.isReviewItem ? handleUpvoteRating() : handleUpvoteComment(item)}
-                                isReviewItem={item.isReviewItem} // Pass this to CommentBox if it needs to know
-                                onEditReview={item.isReviewItem ? () => onEditRating && onEditRating(localRating) : undefined}
-                            />
-                        </Box>
-                        {/* Divider for all items in the thread, including between review and first comment if thread > 1 */}
-                        {index < commentThread.length - 1 && <hr style={{margin: '16px 0', border: 'none', borderTop: '1px dashed #ccc'}} />}
-                    </React.Fragment>
-                ))}
+                                isNested={false} // All items in thread are not visually nested
+                                onEdit={item.isReviewThreadItem ? (editedText) => {
+                                    // This is a simplified edit path for the review's main comment text
+                                    // directly via CommentBox. onEditRating prop on ReviewDetail is for 
+                                    // more complex edits (e.g. score, conditions via modal)
+                                    const updatedLocalRating = { 
+                                        ...localRating, 
+                                        comment: editedText, 
+                                        is_edited: true 
+                                    };
+                                    setLocalRating(updatedLocalRating);
+                                    // Propagate to parent if necessary
+                                    if(onEditRating) onEditRating(updatedLocalRating, true); // Indicate it's a text-only update
+                                    
+                                    // Update in thread
+                                     setCommentThread(prev => prev.map(ct => ct.id === item.id ? {...ct, content: editedText, is_edited: true} : ct));
 
-                {/* Reply form - shows if a comment is selected (i.e., we are replying to an actual comment) */}
-                {isAuthenticated && selectedComment && !selectedComment.isReviewItem && (
+                                } : updateComment} 
+                                currentUser={currentUser}
+                                onUpvote={() => item.isReviewThreadItem ? handleUpvoteRating() : handleUpvoteComment(item)}
+                                isReviewThreadItem={item.isReviewThreadItem}
+                                onEditRating={item.isReviewThreadItem ? () => onEditRating(localRating) : undefined}
+                            />
+                            {index < commentThread.length - 1 && <hr style={{margin: '16px 0', border: 'none', borderTop: '1px dashed #ccc'}} />}
+                        </React.Fragment>
+                    ))}
+                </Paper>
+            )}
+
+            {/* Reply form - shows if a comment (not the review item) is selected */}
+            {isAuthenticated && selectedComment && !selectedComment.isReviewThreadItem && (
+                <Paper elevation={1} sx={{p:2, mb:3}}>
                     <form 
                         onSubmit={handleSubmitComment} 
-                        style={{ 
-                            marginTop: '24px', // Give more space after the thread
-                            // No specific marginLeft needed as items are not indented.
-                        }}
+                        style={{ marginTop: '0px' /* Adjusted from 24px, relies on Paper padding */ }}
                     >
                         <Typography variant="subtitle1" sx={{ mb: 1}}>
                             Reply to {selectedComment.user.username}
@@ -603,15 +620,15 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             Post Reply
                         </Button>
                     </form>
-                )}
-            </Paper>
+                </Paper>
+            )}
 
-            {/* Replies Section - MOVED OUTSIDE AND BELOW the main Paper */}
-            {/* This section shows direct replies to selectedComment, or top-level comments if !selectedComment */}
-            <Box sx={{ mt: 4, /* Increased margin from Paper */ }}>
-                { (selectedComment && (selectedComment.replies || []).length > 0) || (!selectedComment && (localRating?.comments || []).length > 0) ? (
+            {/* Replies / Top-Level Comments Section */}
+            <Box sx={{ mt: 2 }}>
+                { (selectedComment && (selectedComment.replies || []).length > 0) || 
+                  (!selectedComment && localRating && (localRating.comments || []).length > 0) ? (
                     <Typography variant="h6" sx={{ mb: 2 }}>
-                        {selectedComment ? `Replies to ${selectedComment.user.username}'s comment` : `Comments on this review`}
+                        {selectedComment ? `Replies to ${selectedComment.user.username}` : `Comments on this review`}
                     </Typography>
                 ) : (
                   <Typography sx={{mt:2}}>
@@ -645,7 +662,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             />
                         ))
                     )}
-                    {/* Specific "no replies/comments" messages handled by the Typography above the List now */}
                 </List>
             </Box>
             
