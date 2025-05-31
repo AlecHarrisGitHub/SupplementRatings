@@ -261,11 +261,6 @@ function CommentBox({
                             )}
                         </>
                     )}
-                     {comment.is_edited && !isEditing && !isReviewThreadItem && (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic'}}>
-                            (edited)
-                        </Typography>
-                    )}
                 </Box>
                 <Typography variant="caption" color="text.secondary">
                     {formatDate(comment.created_at)}
