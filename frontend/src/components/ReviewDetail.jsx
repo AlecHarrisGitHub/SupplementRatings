@@ -54,6 +54,8 @@ const transformRatingToThreadItem = (ratingData, isEditedByParent) => {
         dosage_frequency: ratingData.dosage_frequency,
         frequency_unit: ratingData.frequency_unit,
         brands: ratingData.brands,
+        benefits_text: ratingData.benefits_text,
+        side_effects_text: ratingData.side_effects_text,
         // replies and parent_comment are not applicable here or handled differently
         replies: ratingData.comments || [], // For a review item, its 'replies' are its top-level comments
         parent_comment: null, 
@@ -155,6 +157,11 @@ function CommentBox({
                             {comment.user.username}
                         </Typography>
                     </RouterLink>
+                    {comment.is_edited && (
+                        <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
+                            (edited)
+                        </Typography>
+                    )}
                 </Box>
 
                 {/* Right Part: Upvotes and Stars */}
@@ -192,6 +199,16 @@ function CommentBox({
                     {comment.brands && (
                         <Typography variant="body2" color="text.secondary">
                             Brands Used: {comment.brands}
+                        </Typography>
+                    )}
+                    {comment.benefits_text && (
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
+                            Benefits Experienced: {comment.benefits_text}
+                        </Typography>
+                    )}
+                    {comment.side_effects_text && (
+                        <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
+                            Side Effects Experienced: {comment.side_effects_text}
                         </Typography>
                     )}
                 </Box>
@@ -241,7 +258,7 @@ function CommentBox({
                             )}
                         </>
                     )}
-                     {comment.is_edited && !isEditing && (
+                     {comment.is_edited && !isEditing && !isReviewThreadItem && (
                         <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic'}}>
                             (edited)
                         </Typography>
