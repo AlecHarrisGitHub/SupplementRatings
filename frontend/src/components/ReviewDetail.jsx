@@ -13,6 +13,7 @@ import {
     Avatar
 } from '@mui/material';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import { addComment, updateComment, upvoteRating, upvoteComment } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -125,6 +126,8 @@ function CommentBox({
         e.stopPropagation();
         onUpvote(comment);
     };
+
+    const replyCount = (comment.replies && Array.isArray(comment.replies)) ? comment.replies.length : 0;
 
     return (
         <ListItem 
@@ -246,16 +249,24 @@ function CommentBox({
 
             {/* Bottom Section: Edit Button and Date */}
             <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
-                <Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {!isEditing && replyCount > 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 0.5 }}> {/* Adjusted margin for closer spacing with potential edit button via gap */}
+                            <ChatBubbleOutlineIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
+                            <Typography variant="caption" color="text.secondary">
+                                {replyCount}
+                            </Typography>
+                        </Box>
+                    )}
                     {isEditing ? (
                         <>
-                            <Button size="small" onClick={handleEditSubmit} variant="contained" sx={{mr:1}}>Save</Button>
+                            <Button size="small" onClick={handleEditSubmit} variant="contained">Save</Button>
                             <Button size="small" onClick={() => setIsEditing(false)}>Cancel</Button>
                         </>
                     ) : (
                         <>
                             {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
-                                <Button size="small" onClick={initiateEdit} sx={{mr:1}}>
+                                <Button size="small" onClick={initiateEdit}>
                                     {isReviewThreadItem ? 'Edit Review Details' : 'Edit'}
                                 </Button>
                             )}
