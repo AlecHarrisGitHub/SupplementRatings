@@ -114,11 +114,14 @@ class CommentSerializer(serializers.ModelSerializer):
     replies = serializers.SerializerMethodField()
     is_edited = serializers.BooleanField(read_only=True)
     has_upvoted = serializers.SerializerMethodField()
+    supplement_id = serializers.SerializerMethodField()
+    supplement_name = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ['id', 'user', 'rating', 'parent_comment', 'content', 
-                 'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image']
+                 'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image',
+                 'supplement_id', 'supplement_name']
         read_only_fields = ['user', 'is_edited', 'upvotes', 'has_upvoted']
 
     def get_replies(self, obj):
@@ -136,6 +139,20 @@ class CommentSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return UserUpvote.objects.filter(user=request.user, comment=obj).exists()
         return False
+
+    def get_supplement_id(self, obj):
+        if obj.rating:
+            return obj.rating.supplement_id
+        if obj.parent_comment and obj.parent_comment.rating:
+            return obj.parent_comment.rating.supplement_id
+        return None
+
+    def get_supplement_name(self, obj):
+        if obj.rating and obj.rating.supplement:
+            return obj.rating.supplement.name
+        if obj.parent_comment and obj.parent_comment.rating and obj.parent_comment.rating.supplement:
+            return obj.parent_comment.rating.supplement.name
+        return None
 
 
 class RatingSerializer(serializers.ModelSerializer):
@@ -396,9 +413,10 @@ class PublicProfileUserSerializer(serializers.ModelSerializer):
         return default_image_path
 
 class PublicProfileSerializer(serializers.ModelSerializer):
-    user = PublicProfileUserSerializer(source='*') # Pass the whole User object to PublicProfileUserSerializer
+    user = PublicProfileUserSerializer(source='*') 
     ratings = PublicRatingSerializer(many=True, read_only=True)
+    comments = CommentSerializer(source='comment_set', many=True, read_only=True)
 
     class Meta:
         model = User # The public profile is for a User
-        fields = ['user', 'ratings']
+        fields = ['user', 'ratings', 'comments']

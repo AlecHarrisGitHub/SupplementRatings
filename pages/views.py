@@ -978,16 +978,19 @@ class PublicProfileRetrieveView(APIView):
     def get(self, request, username, *args, **kwargs):
         try:
             # Pre-fetch related data for efficiency
-            user_with_ratings = User.objects.prefetch_related(
+            user_profile_owner = User.objects.prefetch_related(
+                'profile', # For BasicUserSerializer (profile_image_url)
                 'ratings__supplement', 
                 'ratings__conditions', 
                 'ratings__benefits',
                 'ratings__side_effects',
-                'ratings__comments', # If comments are part of PublicRatingSerializer or needed indirectly
-                'profile' # Ensure profile is fetched for profile_image_url
-            ).get(username=username, is_active=True) # Only show active users
+                # Prefetch comments made by this user, and for each comment, its rating, and that rating's supplement
+                'comment_set__rating__supplement', # comment_set is the default reverse accessor
+                'comment_set__user', # User who made the comment (the profile owner)
+                'comment_set__parent_comment' # For replies, if needed by CommentSerializer
+            ).get(username__iexact=username, is_active=True) # Use iexact for case-insensitive username lookup
             
-            serializer = PublicProfileSerializer(user_with_ratings, context={'request': request})
+            serializer = PublicProfileSerializer(user_profile_owner, context={'request': request})
             return Response(serializer.data)
         except User.DoesNotExist:
             return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)

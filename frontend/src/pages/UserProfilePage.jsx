@@ -11,7 +11,8 @@ import {
     ListItem, 
     ListItemText,
     Rating as MuiRating, // Renamed to avoid conflict with model field
-    Divider
+    Divider,
+    Link
 } from '@mui/material';
 import { getUserPublicProfile } from '../services/api'; // We will create this API call
 import { toast } from 'react-toastify';
@@ -151,6 +152,42 @@ function UserProfilePage() {
                 ) : (
                     <Typography>This user has not submitted any ratings yet.</Typography>
                 )}
+
+                <Divider sx={{ my: 3 }} />
+
+                <Typography variant="h5" component="h2" gutterBottom>
+                    Comments by {profile.user.username}
+                </Typography>
+                {profile.comments && profile.comments.length > 0 ? (
+                    <List>
+                        {profile.comments.map((comment) => (
+                            <Paper key={comment.id} elevation={1} sx={{ mb: 2, p: 2, "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}>
+                                <ListItemText
+                                    primary={
+                                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
+                                            {comment.content}
+                                        </Typography>
+                                    }
+                                    secondaryTypographyProps={{ component: 'div' }}
+                                    secondary={
+                                        <Box sx={{ mt: 1 }}>
+                                            <Typography variant="caption" color="text.secondary" display="block">
+                                                Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} sx={{ textDecoration: 'none', "&:hover": { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
+                                                {comment.parent_comment && " (in reply to another comment)"}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}>
+                                                {formatDate(comment.created_at)} {comment.is_edited && "(edited)"}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            </Paper>
+                        ))}
+                    </List>
+                ) : (
+                    <Typography>This user has not submitted any comments yet.</Typography>
+                )}
+
             </Paper>
         </Container>
     );
