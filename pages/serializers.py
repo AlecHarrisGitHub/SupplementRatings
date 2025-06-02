@@ -60,7 +60,7 @@ class BasicUserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions']
+        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions', 'is_staff']
 
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
