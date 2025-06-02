@@ -13,7 +13,7 @@ import {
     Avatar
 } from '@mui/material';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { addComment, updateComment, upvoteRating, upvoteComment } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
@@ -251,8 +251,8 @@ function CommentBox({
             <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {!isEditing && replyCount > 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 0.5 }}> {/* Adjusted margin for closer spacing with potential edit button via gap */}
-                            <ChatBubbleOutlineIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
+                        <Box sx={{ display: 'flex', alignItems: 'center', mr: 0.5 }}> 
+                            <ForumOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
                             <Typography variant="caption" color="text.secondary">
                                 {replyCount}
                             </Typography>

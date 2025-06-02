@@ -7,6 +7,7 @@ from django.conf import settings
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
+from django.db.models import Count
 
 logger = logging.getLogger(__name__)
 
@@ -156,6 +157,7 @@ class RatingSerializer(serializers.ModelSerializer):
     supplement = serializers.PrimaryKeyRelatedField(queryset=Supplement.objects.all())
     supplement_display = serializers.StringRelatedField(source='supplement', read_only=True)
     image_url = serializers.SerializerMethodField()
+    comments_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Rating
@@ -166,7 +168,8 @@ class RatingSerializer(serializers.ModelSerializer):
             'frequency_unit', 'brands', 'created_at', 'comments', 'is_edited', 
             'upvotes', 'has_upvoted', 
             'image',
-            'image_url'
+            'image_url',
+            'comments_count'
         ]
         read_only_fields = ['user', 'upvotes', 'has_upvoted']
         extra_kwargs = {
@@ -320,7 +323,20 @@ class SupplementSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'category', 'dosage_unit', 'ratings', 'avg_rating', 'rating_count']
 
     def get_ratings(self, obj):
-        ratings_queryset = obj.ratings.all()
+        # obj here is a Supplement instance
+        # Annotate comments_count onto the ratings queryset
+        ratings_queryset = obj.ratings.all().annotate(comments_count=Count('comments'))
+        
+        request = self.context.get('request')
+        # Placeholder for potential future filtering of ratings based on request params
+        # For example, if you want to filter ratings by certain conditions when listing them under a supplement:
+        # if request:
+        #     conditions_param = request.query_params.get('supplement_ratings_conditions', None)
+        #     if conditions_param:
+        #         condition_names = [name.strip() for name in conditions_param.split(',') if name.strip()]
+        #         if condition_names:
+        #             ratings_queryset = ratings_queryset.filter(conditions__name__in=condition_names).distinct()
+
         return RatingSerializer(ratings_queryset, many=True, context=self.context).data
 
 

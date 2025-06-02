@@ -35,6 +35,7 @@ import debounce from 'lodash/debounce';
 import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ImageUpload from './ImageUpload';
 import StarIcon from '@mui/icons-material/Star';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 
 const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
 
@@ -336,6 +337,17 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                             {rating.upvotes}
                         </Typography>
                     </IconButton>
+                    {typeof rating.comments_count === 'number' && rating.comments_count >= 0 && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', ml: 1 }} onClick={(e) => {
+                            e.stopPropagation(); 
+                            handleReviewClick(rating); 
+                        }}>
+                            <ForumOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.25 }} />
+                            <Typography variant="caption" color="text.secondary">
+                                {rating.comments_count}
+                            </Typography>
+                        </Box>
+                    )}
                     {user && user.id === rating.user.id && (
                         <Button 
                             size="small" 
