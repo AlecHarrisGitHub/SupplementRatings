@@ -298,24 +298,26 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
             sx={{ 
                 p: 2, 
                 mb: 2,
-                cursor: 'pointer', // Make the whole item clickable
+                cursor: 'pointer',
                 '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)' // Optional: visual feedback on hover
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
                 }
             }}
-            onClick={() => handleReviewClick(rating)} // Handle click on the whole item
+            onClick={() => handleReviewClick(rating)}
         >
+            {/* Top Section: User Info (Left) & Upvotes/Edit/Stars (Right) */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                {/* Left Part: Avatar and Username */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none' }}>
+                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none' }} onClick={(e) => e.stopPropagation()}>
                         <Avatar 
                             src={rating.user.profile_image_url || defaultProfileImage} 
                             alt={rating.user.username}
-                            sx={{ width: 40, height: 40, cursor: 'pointer' }}
+                            sx={{ width: 40, height: 40 }}
                         />
                     </RouterLink>
-                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <Typography variant="subtitle1" fontWeight="bold" sx={{ cursor: 'pointer', "&:hover": { textDecoration: 'underline'} }}>
+                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }} onClick={(e) => e.stopPropagation()}>
+                        <Typography variant="subtitle1" fontWeight="bold" sx={{"&:hover": { textDecoration: 'underline'}}}>
                             {rating.user.username}
                         </Typography>
                     </RouterLink>
@@ -325,6 +327,7 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                         </Typography>
                     )}
                 </Box>
+                {/* Right Part: Upvotes, Comment Count (removed from here), Edit Button, Stars */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <IconButton 
                         onClick={(e) => handleUpvoteRating(e, rating)}
@@ -337,17 +340,7 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                             {rating.upvotes}
                         </Typography>
                     </IconButton>
-                    {typeof rating.comments_count === 'number' && rating.comments_count >= 0 && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', ml: 1 }} onClick={(e) => {
-                            e.stopPropagation(); 
-                            handleReviewClick(rating); 
-                        }}>
-                            <ForumOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.25 }} />
-                            <Typography variant="caption" color="text.secondary">
-                                {rating.comments_count}
-                            </Typography>
-                        </Box>
-                    )}
+                    {/* Comment count was previously here, now moved to bottom-left */}
                     {user && user.id === rating.user.id && (
                         <Button 
                             size="small" 
@@ -362,6 +355,8 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                     <Rating value={rating.score} readOnly />
                 </Box>
             </Box>
+
+            {/* Middle Section: Rating Details (Conditions, Benefits, etc.) */}
             {rating.condition_names && rating.condition_names.length > 0 && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Intended Purpose: {rating.condition_names.join(', ')}
@@ -377,7 +372,6 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                     Side Effects: {rating.side_effect_names.join(', ')}
                 </Typography>
             )}
-            {/* Stricter condition for Dosage display */}
             {rating.dosage && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                     Dosage: {rating.dosage.replace(/\s+/g, '')}
@@ -391,7 +385,7 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                 </Typography>
             )}
             {rating.comment && 
-                <Typography variant="body2" color="text.secondary" sx={{mb: rating.image_url ? 1 : 0}}>
+                <Typography variant="body2" color="text.secondary" sx={{mb: rating.image_url ? 1 : 0, whiteSpace: 'pre-wrap'}}>
                     {rating.comment}
                 </Typography>
             }
@@ -405,13 +399,36 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                             maxWidth: '300px',
                             maxHeight: '300px',
                             borderRadius: '4px',
-                            cursor: 'pointer' // Assuming you might add a modal click later
+                            cursor: 'pointer'
                         }}
-                        // onClick={() => handleImageClick(rating.image_url)} // If you have an image modal
+                        onClick={(e) => { 
+                            e.stopPropagation(); 
+                            // Implement image modal click if needed, e.g., handleImageClick(rating.image_url)
+                        }}
                     />
                 </Box>
             )}
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+
+            {/* Bottom Section: Comment Count (Left) & Date (Right) */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+                {/* Left Part: Comment Count */}
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {typeof rating.comments_count === 'number' && rating.comments_count >= 0 && (
+                        <Box 
+                            sx={{ display: 'flex', alignItems: 'center', cursor: 'pointer', mr: 1 }} 
+                            onClick={(e) => {
+                                e.stopPropagation(); // Prevent triggering main card click
+                                handleReviewClick(rating); // Navigate to review detail
+                            }}
+                        >
+                            <ForumOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.25 }} />
+                            <Typography variant="caption" color="text.secondary">
+                                {rating.comments_count}
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
+                {/* Right Part: Date */}
                 <Typography variant="caption" color="text.secondary">
                     {formatDate(rating.created_at)}
                 </Typography>

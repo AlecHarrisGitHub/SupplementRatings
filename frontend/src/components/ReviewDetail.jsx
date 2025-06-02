@@ -250,7 +250,7 @@ function CommentBox({
             {/* Bottom Section: Edit Button and Date */}
             <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {!isEditing && replyCount > 0 && (
+                    {!isEditing && typeof replyCount === 'number' && replyCount >= 0 && (
                         <Box sx={{ display: 'flex', alignItems: 'center', mr: 0.5 }}> 
                             <ForumOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 0.5 }} />
                             <Typography variant="caption" color="text.secondary">
