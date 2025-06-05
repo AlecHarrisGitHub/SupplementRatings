@@ -595,14 +595,18 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     };
 
     const handleCommentClick = (commentData) => {
+        // If the clicked item is the review at the top of the thread,
+        // reset the view to just the review and its top-level comments.
         if (commentData.isReviewThreadItem) {
-            // Clicking the review item in the thread means we are focusing on the review itself
-            // So, clear any selected sub-comment to show top-level replies to the review.
             setReplyToComment(null);
-            // useEffect will reconstruct thread with just reviewItem
+            const reviewItem = transformRatingToThreadItem(currentRating);
+            if (reviewItem) {
+                setThread([reviewItem]);
+            }
             return;
         }
 
+        // For any other comment, find its full data and trace its path to build the new thread.
         const fullClickedComment = findCommentById(currentRating.comments, commentData.id);
 
         if (!fullClickedComment) {
