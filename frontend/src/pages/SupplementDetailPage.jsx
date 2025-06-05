@@ -36,6 +36,21 @@ function SupplementDetailPage() {
                             setError(`No ratings found for this supplement, so cannot display the requested review details for rating ID ${ratingId}.`);
                         }
                     }
+                } else if (commentId && supplementData.ratings) {
+                    // Defensive code: if we have a commentId but no ratingId, find the rating that contains this comment
+                    let containingRating = null;
+                    for (const r of supplementData.ratings) {
+                        if (r.comments?.some(c => String(c.id) === String(commentId))) {
+                            containingRating = r;
+                            break;
+                        }
+                    }
+                    if (containingRating) {
+                        setSelectedRating(containingRating);
+                    } else {
+                        // Fallback if comment not found in any rating
+                        setSelectedRating(supplementData.ratings?.[0] || null);
+                    }
                 } else if (supplementData.ratings?.length > 0) {
                     // If no specific ratingId is provided, default to the first rating
                     setSelectedRating(supplementData.ratings[0]);
@@ -55,7 +70,7 @@ function SupplementDetailPage() {
         if (supplementId) {
             fetchSupplementDetails();
         }
-    }, [supplementId, ratingId]); // Re-fetch if supplementId or ratingId from state changes
+    }, [supplementId, ratingId, commentId]); // Re-fetch if supplementId or ratingId from state changes
 
     // This effect ensures ReviewDetail gets the commentId from the current location state
     // when selectedRating is determined.

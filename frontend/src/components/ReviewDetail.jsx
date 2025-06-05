@@ -311,25 +311,25 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         console.log('[ReviewDetail DeepLinkEffect] Target Comment ID:', targetCommentId, 'Target Rating ID:', locationRatingId);
 
         if (rating && targetCommentId && String(rating.id) === String(locationRatingId)) {
-            console.log('[ReviewDetail DeepLinkEffect] Rating ID matches. Attempting to find comment.');
-            console.log('[ReviewDetail DeepLinkEffect] Comments on current rating:', rating.comments);
-            const targetComment = findCommentById(rating.comments || [], targetCommentId);
-            if (targetComment) {
-                console.log('[ReviewDetail DeepLinkEffect] Target comment FOUND:', targetComment);
-                setReplyToComment(targetComment);
+            console.log('[ReviewDetail DeepLinkEffect] Rating ID matches. Attempting to find comment thread.');
+            const pathToComment = traceToTop(targetCommentId, rating.comments || []);
+            if (pathToComment.length > 0) {
+                console.log('[ReviewDetail DeepLinkEffect] Path to comment found:', pathToComment);
+                setThread([initialThreadItem, ...pathToComment]);
+                setReplyToComment(pathToComment[pathToComment.length - 1]);
             } else {
                 console.warn(`[ReviewDetail DeepLinkEffect] Deep link target commentId ${targetCommentId} not found in rating ${rating.id}`);
                 setReplyToComment(null);
-                setActiveCommentThread(null);
-                setIsReplying(false);
+                // Ensure thread is reset if path not found
+                if (initialThreadItem) {
+                    setThread([initialThreadItem]);
+                }
             }
         } else {
-            if (rating && targetCommentId) {
-                console.log('[ReviewDetail DeepLinkEffect] Rating ID mismatch or missing data. Rating.id:', rating?.id, 'Expected ratingId:', locationRatingId);
-            }
             setReplyToComment(null);
-            setActiveCommentThread(null);
-            setIsReplying(false);
+            if (initialThreadItem) {
+                setThread([initialThreadItem]);
+            }
         }
     }, [rating, location.state]);
 
@@ -401,11 +401,11 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             has_upvoted: !c.has_upvoted
                         };
                     }
-                    if (c.replies) {
-                        return {
-                            ...c,
-                            replies: updateComments(c.replies)
-                        };
+                    if (c.replies && c.replies.length > 0) {
+                        const newReplies = updateComments(c.replies);
+                        if (newReplies !== c.replies) {
+                            return { ...c, replies: newReplies };
+                        }
                     }
                     return c;
                 });
@@ -500,7 +500,10 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                             return { ...comment, replies: [...(comment.replies || []), newReplyData] };
                         }
                         if (comment.replies && comment.replies.length > 0) {
-                            return { ...comment, replies: updateRepliesRecursivelyInComments(comment.replies, parentId, newReplyData) };
+                            const newReplies = updateRepliesRecursivelyInComments(comment.replies, parentId, newReplyData);
+                            if (newReplies !== comment.replies) {
+                                return { ...comment, replies: newReplies };
+                            }
                         }
                         return comment;
                     });
@@ -552,55 +555,44 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
 
     const findCommentById = (comments, commentId) => {
         for (const comment of comments) {
-            if (comment.id === commentId) {
-                return { ...comment, replies: comment.replies || [] }; // Ensure replies array exists
+            if (String(comment.id) === String(commentId)) {
+                return comment; // Return direct reference
             }
             if (comment.replies && comment.replies.length > 0) {
                 const foundInReply = findCommentById(comment.replies, commentId);
                 if (foundInReply) {
-                    return { ...foundInReply, replies: foundInReply.replies || [] };
+                    return foundInReply; // Return direct reference
                 }
             }
         }
         return null;
     };
     
-    // Builds array of comment objects from top-level to the targetCommentId
     const traceToTop = (targetCommentId, allComments) => {
-        const path = [];
-        function findPath(currentId, comments) {
-            for (const c of comments) {
-                if (c.id === currentId) {
-                    path.unshift({ ...c, replies: c.replies || [] });
-                    return true; 
-                }
-                if (c.replies && c.replies.length > 0) {
-                    if (findPath(currentId, c.replies)) {
-                        path.unshift({ ...c, replies: c.replies || [] }); 
-                        return true;
-                    }
+        const commentMap = new Map();
+        const buildMap = (comments) => {
+            for (const comment of comments) {
+                commentMap.set(String(comment.id), comment);
+                if (comment.replies) {
+                    buildMap(comment.replies);
                 }
             }
-            return false;
+        };
+        buildMap(allComments);
+
+        const path = [];
+        let currentComment = commentMap.get(String(targetCommentId));
+
+        while (currentComment) {
+            path.unshift(currentComment);
+            if (currentComment.parent_comment) {
+                currentComment = commentMap.get(String(currentComment.parent_comment));
+            } else {
+                currentComment = null;
+            }
         }
-        findPath(targetCommentId, allComments);
         return path;
     };
-
-    useEffect(() => {
-        const reviewItem = transformRatingToThreadItem(currentRating, currentRating.is_edited); // Pass current edited state
-        if (!reviewItem) {
-            setThread([]);
-            return;
-        }
-
-        if (replyToComment && currentRating && currentRating.comments) {
-            const pathToComment = traceToTop(replyToComment.id, currentRating.comments);
-            setThread([reviewItem, ...pathToComment]);
-        } else {
-            setThread([reviewItem]); // Default: thread contains only the review item
-        }
-    }, [currentRating, replyToComment]);
 
     const handleCommentClick = (commentData) => {
         if (commentData.isReviewThreadItem) {
@@ -619,8 +611,12 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             return;
         }
         
-        setReplyToComment(fullClickedComment); 
-        // useEffect will build the thread: [reviewItem, ...pathToSelectedComment]
+        setReplyToComment(fullClickedComment);
+        const newThreadPath = traceToTop(fullClickedComment.id, currentRating.comments);
+        const reviewItem = transformRatingToThreadItem(currentRating);
+        if(reviewItem) {
+            setThread([reviewItem, ...newThreadPath]);
+        }
     };
 
     const handleBackClick = () => {
@@ -631,14 +627,23 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             if (currentFullSelectedComment && currentFullSelectedComment.parent_comment) {
                 const parentObj = findCommentById(currentRating.comments, currentFullSelectedComment.parent_comment);
                 if (parentObj) {
-                    setReplyToComment(parentObj); // Go to parent, useEffect updates thread
+                    setReplyToComment(parentObj);
+                    const newThreadPath = traceToTop(parentObj.id, currentRating.comments);
+                    const reviewItem = transformRatingToThreadItem(currentRating);
+                    if (reviewItem) {
+                        setThread([reviewItem, ...newThreadPath]);
+                    }
                 } else {
                     setReplyToComment(null); // Parent not found, go to review + its top-level comments
+                    const reviewItem = transformRatingToThreadItem(currentRating);
+                    if(reviewItem) setThread([reviewItem]);
                 }
             } else {
                 // No parent_comment or selected comment is stale, so it's a top-level comment (or should be treated as such).
                 // Clicking back from a top-level comment shows the review and its top-level comments.
                 setReplyToComment(null); 
+                const reviewItem = transformRatingToThreadItem(currentRating);
+                if(reviewItem) setThread([reviewItem]);
             }
         } else {
             // No selectedComment. If thread has more than review, means we were viewing review + top-level comments.

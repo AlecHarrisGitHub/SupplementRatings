@@ -114,12 +114,13 @@ class CommentSerializer(serializers.ModelSerializer):
     has_upvoted = serializers.SerializerMethodField()
     supplement_id = serializers.SerializerMethodField()
     supplement_name = serializers.SerializerMethodField()
+    rating_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
         fields = ['id', 'user', 'rating', 'parent_comment', 'content', 
                  'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image',
-                 'supplement_id', 'supplement_name']
+                 'supplement_id', 'supplement_name', 'rating_id']
         read_only_fields = ['is_edited', 'upvotes', 'has_upvoted']
 
     def get_replies(self, obj):
@@ -139,17 +140,27 @@ class CommentSerializer(serializers.ModelSerializer):
         return False
 
     def get_supplement_id(self, obj):
-        if obj.rating:
-            return obj.rating.supplement_id
-        if obj.parent_comment and obj.parent_comment.rating:
-            return obj.parent_comment.rating.supplement_id
+        comment = obj
+        while comment:
+            if comment.rating:
+                return comment.rating.supplement_id
+            comment = comment.parent_comment
         return None
 
     def get_supplement_name(self, obj):
-        if obj.rating and obj.rating.supplement:
-            return obj.rating.supplement.name
-        if obj.parent_comment and obj.parent_comment.rating and obj.parent_comment.rating.supplement:
-            return obj.parent_comment.rating.supplement.name
+        comment = obj
+        while comment:
+            if comment.rating and comment.rating.supplement:
+                return comment.rating.supplement.name
+            comment = comment.parent_comment
+        return None
+
+    def get_rating_id(self, obj):
+        comment = obj
+        while comment:
+            if comment.rating:
+                return comment.rating.id
+            comment = comment.parent_comment
         return None
 
 class ProfileSerializer(serializers.ModelSerializer):
