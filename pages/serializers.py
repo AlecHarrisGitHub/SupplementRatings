@@ -16,6 +16,26 @@ class ConditionSerializer(serializers.ModelSerializer):
         model = Condition
         fields = ['id', 'name']
 
+class PublicProfileUserSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+    # Explicitly NOT including chronic_conditions here
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'profile_image_url']
+
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.profile.image.url)
+            return obj.profile.image.url
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return default_image_path
+
 class RegisterUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -53,8 +73,42 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             logger.error(f"Error in RegisterUserSerializer create method: {str(e)}", exc_info=True)
             raise
 
+class BasicUserSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+    chronic_conditions = serializers.SerializerMethodField()
+    comments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions', 'is_staff', 'comments']
+
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        # obj is User instance, so access profile via obj.profile
+        if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
+            if request:
+                return request.build_absolute_uri(obj.profile.image.url)
+            return obj.profile.image.url
+        
+        # Fallback to default image URL
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return default_image_path
+
+    def get_chronic_conditions(self, obj):
+        if hasattr(obj, 'profile') and hasattr(obj.profile, 'chronic_conditions'):
+            conditions = obj.profile.chronic_conditions.all()
+            return ConditionSerializer(conditions, many=True, context=self.context).data
+        return []
+
+    def get_comments(self, obj):
+        comments_queryset = obj.comment_set.all()
+        return CommentSerializer(comments_queryset, many=True, context=self.context).data
+
 class CommentSerializer(serializers.ModelSerializer):
-    user = 'BasicUserSerializer'
+    user = PublicProfileUserSerializer(read_only=True)
     replies = serializers.SerializerMethodField()
     is_edited = serializers.BooleanField(read_only=True)
     has_upvoted = serializers.SerializerMethodField()
@@ -66,7 +120,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'rating', 'parent_comment', 'content', 
                  'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image',
                  'supplement_id', 'supplement_name']
-        read_only_fields = ['user', 'is_edited', 'upvotes', 'has_upvoted']
+        read_only_fields = ['is_edited', 'upvotes', 'has_upvoted']
 
     def get_replies(self, obj):
         replies_queryset = Comment.objects.filter(parent_comment=obj)
@@ -98,37 +152,6 @@ class CommentSerializer(serializers.ModelSerializer):
             return obj.parent_comment.rating.supplement.name
         return None
 
-class BasicUserSerializer(serializers.ModelSerializer):
-    profile_image_url = serializers.SerializerMethodField()
-    chronic_conditions = serializers.SerializerMethodField()
-    comments = CommentSerializer(source='comment_set', many=True, read_only=True)
-
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions', 'is_staff', 'comments']
-
-    def get_profile_image_url(self, obj):
-        request = self.context.get('request')
-        # obj is User instance, so access profile via obj.profile
-        if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.profile.image.url)
-            return obj.profile.image.url
-        
-        # Fallback to default image URL
-        media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        default_image_path = f"{media_url}profile_pics/default.jpg"
-        if request:
-            return request.build_absolute_uri(default_image_path)
-        return default_image_path
-
-    def get_chronic_conditions(self, obj):
-        if hasattr(obj, 'profile') and hasattr(obj.profile, 'chronic_conditions'):
-            conditions = obj.profile.chronic_conditions.all()
-            return ConditionSerializer(conditions, many=True, context=self.context).data
-        return []
-
-
 class ProfileSerializer(serializers.ModelSerializer):
     user = BasicUserSerializer(read_only=True)
     image_url = serializers.SerializerMethodField()
@@ -155,7 +178,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 
 class RatingSerializer(serializers.ModelSerializer):
-    user = BasicUserSerializer(read_only=True)
+    user = PublicProfileUserSerializer(read_only=True)
     condition_names = serializers.SerializerMethodField()
     benefit_names = serializers.SerializerMethodField()
     side_effect_names = serializers.SerializerMethodField()
@@ -390,26 +413,6 @@ class PublicRatingSerializer(RatingSerializer):
             return obj.supplement.name
         return None # Or some default like "Unknown Supplement"
 
-
-class PublicProfileUserSerializer(serializers.ModelSerializer):
-    profile_image_url = serializers.SerializerMethodField()
-    # Explicitly NOT including chronic_conditions here
-
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'profile_image_url']
-
-    def get_profile_image_url(self, obj):
-        request = self.context.get('request')
-        if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.profile.image.url)
-            return obj.profile.image.url
-        media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        default_image_path = f"{media_url}profile_pics/default.jpg"
-        if request:
-            return request.build_absolute_uri(default_image_path)
-        return default_image_path
 
 class PublicProfileSerializer(serializers.ModelSerializer):
     user = PublicProfileUserSerializer(source='*') 
