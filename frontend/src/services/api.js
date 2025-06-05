@@ -354,17 +354,32 @@ export const updateComment = async (commentId, content, image = null) => {
         const formData = new FormData();
         formData.append('content', content);
         if (image) {
+            // If image is a file (new upload)
             formData.append('image', image);
+        } else if (image === null || image === '') {
+            // If explicitly setting image to null/empty (to remove it), 
+            // depending on backend, might need to send empty or specific value
+            // For now, not appending image means it won't be changed unless backend handles absence as deletion.
+            // If backend expects explicit null for clearing, that needs to be handled.
         }
-        
-        const response = await API.put(`comments/${commentId}/`, formData, {
+        // If image is an existing URL and not changed, don't send it.
+
+        const response = await API.patch(`comments/${commentId}/`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
         });
         return response.data;
     } catch (error) {
-        console.error('Error updating comment:', error);
+        throw error;
+    }
+};
+
+export const deleteComment = async (commentId) => {
+    try {
+        const response = await API.delete(`comments/${commentId}/`);
+        return response.data; // Or handle 204 No Content appropriately
+    } catch (error) {
         throw error;
     }
 };

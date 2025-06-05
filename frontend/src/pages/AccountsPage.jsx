@@ -21,11 +21,13 @@ import {
     DialogActions,
     DialogContent,
     DialogContentText,
-    DialogTitle
+    DialogTitle,
+    Divider,
+    Link
 } from '@mui/material';
 import { format } from 'date-fns';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI, deleteMyRating } from '../services/api';
+import { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI, deleteMyRating, updateComment as updateCommentAPI, deleteComment as deleteCommentAPI } from '../services/api';
 import { styled } from '@mui/material/styles';
 import { toast } from 'react-toastify';
 
@@ -58,6 +60,12 @@ function AccountsPage() {
 
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [ratingToDelete, setRatingToDelete] = useState(null);
+
+    // State for comment editing and deletion
+    const [editingComment, setEditingComment] = useState(null);
+    const [editedCommentContent, setEditedCommentContent] = useState('');
+    const [commentToDelete, setCommentToDelete] = useState(null);
+    const [showDeleteCommentDialog, setShowDeleteCommentDialog] = useState(false);
 
     const fetchRatings = async (url) => {
         if (!user) {
@@ -214,6 +222,63 @@ function AccountsPage() {
     const handleCloseDeleteDialog = () => {
         setOpenDeleteDialog(false);
         setRatingToDelete(null);
+    };
+
+    // Helper to format date (MM/DD/YYYY)
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const day = date.getDate().toString().padStart(2, '0');
+        const year = date.getFullYear();
+        return `${month}/${day}/${year}`;
+    };
+
+    // Comment Edit/Delete Handlers
+    const handleEditComment = (comment) => {
+        setEditingComment(comment);
+        setEditedCommentContent(comment.content);
+    };
+
+    const handleSaveEditedComment = async () => {
+        if (!editingComment) return;
+        try {
+            const updatedComment = await updateCommentAPI(editingComment.id, editedCommentContent);
+            // Update user context
+            const updatedComments = user.comments.map(c => c.id === editingComment.id ? updatedComment : c);
+            updateUser({ ...user, comments: updatedComments });
+            setEditingComment(null);
+            toast.success("Comment updated successfully!");
+        } catch (err) {
+            console.error("Error updating comment:", err);
+            toast.error(err.message || "Failed to update comment.");
+        }
+    };
+
+    const handleCancelEditComment = () => {
+        setEditingComment(null);
+        setEditedCommentContent('');
+    };
+
+    const confirmDeleteComment = (commentId) => {
+        setCommentToDelete(commentId);
+        setShowDeleteCommentDialog(true);
+    };
+
+    const handleDeleteComment = async () => {
+        if (!commentToDelete) return;
+        try {
+            await deleteCommentAPI(commentToDelete);
+            const updatedComments = user.comments.filter(c => c.id !== commentToDelete);
+            updateUser({ ...user, comments: updatedComments });
+            toast.success("Comment deleted successfully!");
+        } catch (err) {
+            console.error("Error deleting comment:", err);
+            toast.error(err.message || "Failed to delete comment.");
+        } finally {
+            setShowDeleteCommentDialog(false);
+            setCommentToDelete(null);
+        }
     };
 
     if (loadingRatings && ratings.length === 0 && loadingAllConditions) {
@@ -393,7 +458,61 @@ function AccountsPage() {
                 )}
             </Paper>
 
-            {/* Delete Confirmation Dialog */}
+            {/* My Comments Section */}
+            <Paper elevation={3} sx={{ p: { xs: 2, md: 4 }, mt: 3 }}>
+                <Typography variant="h5" component="h2" sx={{ mb: 2, borderBottom: '1px solid #ddd', pb: 1 }}>
+                    My Comments
+                </Typography>
+                {user && user.comments && user.comments.length > 0 ? (
+                    <List>
+                        {user.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((comment) => (
+                            <Paper key={comment.id} elevation={1} sx={{ mb: 2, p: 2 }}>
+                                {editingComment && editingComment.id === comment.id ? (
+                                    <Box>
+                                        <MuiTextField
+                                            fullWidth
+                                            multiline
+                                            variant="outlined"
+                                            size="small"
+                                            value={editedCommentContent}
+                                            onChange={(e) => setEditedCommentContent(e.target.value)}
+                                            sx={{ mb: 1 }}
+                                        />
+                                        <Button size="small" onClick={handleSaveEditedComment} variant="contained" sx={{ mr: 1}}>Save</Button>
+                                        <Button size="small" onClick={handleCancelEditComment}>Cancel</Button>
+                                    </Box>
+                                ) : (
+                                    <ListItemText
+                                        primary={<Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>}
+                                        secondaryTypographyProps={{ component: 'div' }}
+                                        secondary={
+                                            <Box sx={{ mt: 1 }}>
+                                                <Typography variant="caption" color="text.secondary" display="block">
+                                                    Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} state={{ commentId: comment.id, ratingId: comment.rating }} sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
+                                                    {comment.parent_comment && " (in reply to another comment)"}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}>
+                                                    {formatDate(comment.created_at)} {comment.is_edited && "(edited)"}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                )}
+                                {(!editingComment || editingComment.id !== comment.id) && (
+                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
+                                        <Button size="small" onClick={() => handleEditComment(comment)} sx={{ mr: 1 }}>Edit</Button>
+                                        <Button size="small" color="error" onClick={() => confirmDeleteComment(comment.id)}>Delete</Button>
+                                    </Box>
+                                )}
+                            </Paper>
+                        ))}
+                    </List>
+                ) : (
+                    <Typography sx={{ textAlign: 'center', mt: 3 }}>You have not made any comments yet.</Typography>
+                )}
+            </Paper>
+
+            {/* Delete Rating Confirmation Dialog */}
             <Dialog
                 open={openDeleteDialog}
                 onClose={handleCloseDeleteDialog}
@@ -409,6 +528,27 @@ function AccountsPage() {
                 <DialogActions>
                     <Button onClick={handleCloseDeleteDialog}>Cancel</Button>
                     <Button onClick={handleDeleteRating} color="error" autoFocus>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Delete Comment Confirmation Dialog */}
+            <Dialog
+                open={showDeleteCommentDialog}
+                onClose={() => setShowDeleteCommentDialog(false)}
+                aria-labelledby="delete-comment-dialog-title"
+                aria-describedby="delete-comment-dialog-description"
+            >
+                <DialogTitle id="delete-comment-dialog-title">{"Confirm Comment Deletion"}</DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="delete-comment-dialog-description">
+                        Are you sure you want to delete this comment? This action cannot be undone.
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setShowDeleteCommentDialog(false)}>Cancel</Button>
+                    <Button onClick={handleDeleteComment} color="error" autoFocus>
                         Delete
                     </Button>
                 </DialogActions>

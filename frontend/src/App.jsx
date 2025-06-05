@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import Logout from './pages/Logout';
 import Signup from './pages/Signup';
 import SearchableSupplementList from './components/SearchableSupplementList';
+import SupplementDetailPage from './pages/SupplementDetailPage';
 import UploadCSV from './components/UploadCSV';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -36,7 +37,7 @@ function App() {
             <Routes>
                 <Route path="/" element={<Navigate to="/supplements" replace />} />
                 <Route path="/supplements" element={<SearchableSupplementList />} />
-                <Route path="/supplements/:id" element={<SearchableSupplementList />} />
+                <Route path="/supplements/:id" element={<SupplementDetailPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />

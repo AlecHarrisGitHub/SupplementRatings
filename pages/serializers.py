@@ -53,14 +53,59 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             logger.error(f"Error in RegisterUserSerializer create method: {str(e)}", exc_info=True)
             raise
 
+class CommentSerializer(serializers.ModelSerializer):
+    user = 'BasicUserSerializer'
+    replies = serializers.SerializerMethodField()
+    is_edited = serializers.BooleanField(read_only=True)
+    has_upvoted = serializers.SerializerMethodField()
+    supplement_id = serializers.SerializerMethodField()
+    supplement_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'user', 'rating', 'parent_comment', 'content', 
+                 'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image',
+                 'supplement_id', 'supplement_name']
+        read_only_fields = ['user', 'is_edited', 'upvotes', 'has_upvoted']
+
+    def get_replies(self, obj):
+        replies_queryset = Comment.objects.filter(parent_comment=obj)
+        return CommentSerializer(replies_queryset, many=True, context=self.context).data
+
+    def update(self, instance, validated_data):
+        instance.is_edited = True
+        instance.content = validated_data.get('content', instance.content)
+        instance.save()
+        return instance
+
+    def get_has_upvoted(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return UserUpvote.objects.filter(user=request.user, comment=obj).exists()
+        return False
+
+    def get_supplement_id(self, obj):
+        if obj.rating:
+            return obj.rating.supplement_id
+        if obj.parent_comment and obj.parent_comment.rating:
+            return obj.parent_comment.rating.supplement_id
+        return None
+
+    def get_supplement_name(self, obj):
+        if obj.rating and obj.rating.supplement:
+            return obj.rating.supplement.name
+        if obj.parent_comment and obj.parent_comment.rating and obj.parent_comment.rating.supplement:
+            return obj.parent_comment.rating.supplement.name
+        return None
 
 class BasicUserSerializer(serializers.ModelSerializer):
     profile_image_url = serializers.SerializerMethodField()
     chronic_conditions = serializers.SerializerMethodField()
+    comments = CommentSerializer(source='comment_set', many=True, read_only=True)
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions', 'is_staff']
+        fields = ['id', 'username', 'profile_image_url', 'chronic_conditions', 'is_staff', 'comments']
 
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
@@ -107,52 +152,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         if request:
             return request.build_absolute_uri(default_image_path)
         return f"/media/profile_pics/default.jpg"
-
-
-class CommentSerializer(serializers.ModelSerializer):
-    user = BasicUserSerializer(read_only=True)
-    replies = serializers.SerializerMethodField()
-    is_edited = serializers.BooleanField(read_only=True)
-    has_upvoted = serializers.SerializerMethodField()
-    supplement_id = serializers.SerializerMethodField()
-    supplement_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Comment
-        fields = ['id', 'user', 'rating', 'parent_comment', 'content', 
-                 'created_at', 'replies', 'is_edited', 'upvotes', 'has_upvoted', 'image',
-                 'supplement_id', 'supplement_name']
-        read_only_fields = ['user', 'is_edited', 'upvotes', 'has_upvoted']
-
-    def get_replies(self, obj):
-        replies = Comment.objects.filter(parent_comment=obj)
-        return CommentSerializer(replies, many=True, context=self.context).data
-
-    def update(self, instance, validated_data):
-        instance.is_edited = True
-        instance.content = validated_data.get('content', instance.content)
-        instance.save()
-        return instance
-
-    def get_has_upvoted(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return UserUpvote.objects.filter(user=request.user, comment=obj).exists()
-        return False
-
-    def get_supplement_id(self, obj):
-        if obj.rating:
-            return obj.rating.supplement_id
-        if obj.parent_comment and obj.parent_comment.rating:
-            return obj.parent_comment.rating.supplement_id
-        return None
-
-    def get_supplement_name(self, obj):
-        if obj.rating and obj.rating.supplement:
-            return obj.rating.supplement.name
-        if obj.parent_comment and obj.parent_comment.rating and obj.parent_comment.rating.supplement:
-            return obj.parent_comment.rating.supplement.name
-        return None
 
 
 class RatingSerializer(serializers.ModelSerializer):

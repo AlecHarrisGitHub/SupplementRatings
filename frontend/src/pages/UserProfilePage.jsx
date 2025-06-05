@@ -172,7 +172,7 @@ function UserProfilePage() {
                                     secondary={
                                         <Box sx={{ mt: 1 }}>
                                             <Typography variant="caption" color="text.secondary" display="block">
-                                                Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} sx={{ textDecoration: 'none', "&:hover": { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
+                                                Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} state={{ commentId: comment.id, ratingId: comment.rating }} sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
                                                 {comment.parent_comment && " (in reply to another comment)"}
                                             </Typography>
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}>

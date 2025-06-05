@@ -710,7 +710,11 @@ def test_auth(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_user_details(request):
-    user = request.user
+    user = User.objects.prefetch_related(
+        'profile__chronic_conditions',
+        'comment_set__rating__supplement', # Prefetch supplement through rating
+        'comment_set__parent_comment'    # Prefetch parent comment for replies
+    ).get(pk=request.user.pk)
     serializer = BasicUserSerializer(user, context={'request': request})
     return Response(serializer.data)
 
