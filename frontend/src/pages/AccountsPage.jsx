@@ -404,8 +404,13 @@ function AccountsPage() {
                 {ratings.length > 0 && (
                     <List>
                         {ratings.map((rating) => (
-                            <Paper key={rating.id} elevation={1} sx={{ mb: 2, p: 2 }}>
-                                <Typography variant="subtitle1" component={RouterLink} to={`/supplements/${rating.supplement}`} state={{ ratingId: rating.id }} sx={{ textDecoration: 'none', color: 'primary.main', "&:hover": { textDecoration: 'underline'}}}>
+                            <Paper 
+                                key={rating.id} 
+                                elevation={1} 
+                                sx={{ mb: 2, p: 2, cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' } }}
+                                onClick={() => navigate(`/supplements/${rating.supplement}`, { state: { ratingId: rating.id } })}
+                            >
+                                <Typography variant="subtitle1" sx={{fontWeight: 'bold', color: 'primary.main'}}>
                                     {rating.supplement_display || 'Supplement Name Missing'} 
                                 </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, mt: 0.5 }}>
@@ -466,7 +471,16 @@ function AccountsPage() {
                 {user && user.comments && user.comments.length > 0 ? (
                     <List>
                         {user.comments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map((comment) => (
-                            <Paper key={comment.id} elevation={1} sx={{ mb: 2, p: 2 }}>
+                            <Paper 
+                                key={comment.id} 
+                                elevation={1} 
+                                sx={{ mb: 2, p: 2, cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' } }}
+                                onClick={() => {
+                                    if (!editingComment || editingComment.id !== comment.id) {
+                                        navigate(`/supplements/${comment.supplement_id}`, { state: { commentId: comment.id, ratingId: comment.rating_id } });
+                                    }
+                                }}
+                            >
                                 {editingComment && editingComment.id === comment.id ? (
                                     <Box>
                                         <MuiTextField
@@ -484,16 +498,8 @@ function AccountsPage() {
                                 ) : (
                                     <ListItemText
                                         primary={
-                                            <Typography variant="subtitle1">
-                                                Comment on: 
-                                                <Link 
-                                                    component={RouterLink} 
-                                                    to={`/supplements/${comment.supplement_id}`} 
-                                                    state={{ commentId: comment.id, ratingId: comment.rating_id }} 
-                                                    sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-                                                >
-                                                    {comment.supplement_name || 'View Supplement'}
-                                                </Link>
+                                            <Typography variant="subtitle1" sx={{fontWeight: 'bold'}}>
+                                                {comment.supplement_name || 'View Supplement'}
                                             </Typography>
                                         }
                                         secondaryTypographyProps={{ component: 'div' }}

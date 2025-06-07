@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link as RouterLink } from 'react-router-dom';
+import { useParams, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { 
     Box, 
     Typography, 
@@ -31,6 +31,7 @@ const formatDate = (dateString) => {
 
 function UserProfilePage() {
     const { username } = useParams();
+    const navigate = useNavigate();
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -106,10 +107,15 @@ function UserProfilePage() {
                 {profile.ratings && profile.ratings.length > 0 ? (
                     <List>
                         {profile.ratings.map((rating) => (
-                            <Paper key={rating.id} elevation={1} sx={{ mb: 2, p: 2, "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}>
+                            <Paper 
+                                key={rating.id} 
+                                elevation={1} 
+                                sx={{ mb: 2, p: 2, cursor: 'pointer', "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}
+                                onClick={() => navigate(`/supplements/${rating.supplement}`, { state: { ratingId: rating.id } })}
+                            >
                                 <ListItemText 
                                     primary={
-                                        <Typography variant="subtitle1" component={RouterLink} to={`/supplements/${rating.supplement}`} state={{ ratingId: rating.id }} sx={{ textDecoration: 'none', color: 'primary.main', "&:hover": { textDecoration: 'underline'}}}>
+                                        <Typography variant="subtitle1" sx={{fontWeight: 'bold', color: 'primary.main'}}>
                                             {rating.supplement_name || 'Supplement Name Missing'} 
                                         </Typography>
                                     }
@@ -161,11 +167,16 @@ function UserProfilePage() {
                 {profile.comments && profile.comments.length > 0 ? (
                     <List>
                         {profile.comments.map((comment) => (
-                            <Paper key={comment.id} elevation={1} sx={{ mb: 2, p: 2, "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}>
+                            <Paper 
+                                key={comment.id} 
+                                elevation={1} 
+                                sx={{ mb: 2, p: 2, cursor: 'pointer', "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}
+                                onClick={() => navigate(`/supplements/${comment.supplement_id}`, { state: { commentId: comment.id, ratingId: comment.rating_id } })}
+                            >
                                 <ListItemText
                                     primary={
-                                        <Typography variant="subtitle1">
-                                            Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} state={{ commentId: comment.id, ratingId: comment.rating_id }} sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                                            {comment.supplement_name || 'View Supplement'}
                                         </Typography>
                                     }
                                     secondaryTypographyProps={{ component: 'div' }}

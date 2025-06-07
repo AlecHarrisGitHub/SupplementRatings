@@ -736,10 +736,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                         onSubmit={handleSubmitComment} 
                         style={{ marginTop: '0px' /* Adjusted from 24px, relies on Paper padding */ }}
                     >
-                        <Typography variant="subtitle1" sx={{ mb: 1}}>
-                            {replyToComment ? `Reply to ${replyToComment.user.username}` : 'Add a comment to this review'}
-                        </Typography>
-                        <TextField fullWidth multiline rows={3} variant="outlined" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write your reply..." sx={{ mb: 1 }}/>
+                        <TextField fullWidth multiline rows={3} variant="outlined" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write a comment..." sx={{ mb: 1 }}/>
                         <ImageUpload 
                             onFileSelect={setNewCommentImage} 
                             selectedFile={newCommentImage} 
