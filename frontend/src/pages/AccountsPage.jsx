@@ -483,25 +483,31 @@ function AccountsPage() {
                                     </Box>
                                 ) : (
                                     <ListItemText
-                                        primary={<Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>}
+                                        primary={
+                                            <Typography variant="subtitle1">
+                                                Comment on: 
+                                                <Link 
+                                                    component={RouterLink} 
+                                                    to={`/supplements/${comment.supplement_id}`} 
+                                                    state={{ commentId: comment.id, ratingId: comment.rating_id }} 
+                                                    sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+                                                >
+                                                    {comment.supplement_name || 'View Supplement'}
+                                                </Link>
+                                            </Typography>
+                                        }
                                         secondaryTypographyProps={{ component: 'div' }}
                                         secondary={
-                                            <Box sx={{ mt: 1 }}>
-                                                <Typography variant="caption" color="text.secondary" display="block">
-                                                    Comment on: 
-                                                    <Link 
-                                                        component={RouterLink} 
-                                                        to={`/supplements/${comment.supplement_id}`} 
-                                                        state={{ commentId: comment.id, ratingId: comment.rating_id }} 
-                                                        sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
-                                                    >
-                                                        {comment.supplement_name || 'View Supplement'}
-                                                    </Link>
-                                                    {comment.parent_comment && " (in reply to another comment)"}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}>
-                                                    {formatDate(comment.created_at)}
-                                                </Typography>
+                                            <Box>
+                                                <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
+                                                <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {comment.parent_comment && " (in reply to another comment)"}
+                                                    </Typography>
+                                                    <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'right' }}>
+                                                        {formatDate(comment.created_at)}
+                                                    </Typography>
+                                                </Box>
                                             </Box>
                                         }
                                     />

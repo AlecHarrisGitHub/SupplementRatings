@@ -164,20 +164,24 @@ function UserProfilePage() {
                             <Paper key={comment.id} elevation={1} sx={{ mb: 2, p: 2, "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}>
                                 <ListItemText
                                     primary={
-                                        <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap' }}>
-                                            {comment.content}
+                                        <Typography variant="subtitle1">
+                                            Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} state={{ commentId: comment.id, ratingId: comment.rating_id }} sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
                                         </Typography>
                                     }
                                     secondaryTypographyProps={{ component: 'div' }}
                                     secondary={
-                                        <Box sx={{ mt: 1 }}>
-                                            <Typography variant="caption" color="text.secondary" display="block">
-                                                Comment on: <Link component={RouterLink} to={`/supplements/${comment.supplement_id}`} state={{ commentId: comment.id, ratingId: comment.rating_id }} sx={{ textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}>{comment.supplement_name || 'View Supplement'}</Link>
-                                                {comment.parent_comment && " (in reply to another comment)"}
+                                        <Box>
+                                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
+                                                {comment.content}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 0.5 }}>
-                                                {formatDate(comment.created_at)} {comment.is_edited && "(edited)"}
-                                            </Typography>
+                                            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {comment.parent_comment && " (in reply to another comment)"}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {formatDate(comment.created_at)} {comment.is_edited && "(edited)"}
+                                                </Typography>
+                                            </Box>
                                         </Box>
                                     }
                                 />

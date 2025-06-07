@@ -173,6 +173,9 @@ function CommentBox({
 
                 {/* Right Part: Upvotes and Stars */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    {isReviewThreadItem && currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && !isEditing && (
+                         <Button size="small" onClick={initiateEdit} sx={{mr: 1}}>Edit</Button>
+                    )}
                     <IconButton 
                         onClick={handleUpvoteClick}
                         color={comment.has_upvoted ? "primary" : "default"}
@@ -266,9 +269,9 @@ function CommentBox({
                         </>
                     ) : (
                         <>
-                            {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && (
+                            {currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && !isReviewThreadItem && (
                                 <Button size="small" onClick={initiateEdit}>
-                                    {isReviewThreadItem ? 'Edit Review Details' : 'Edit'}
+                                    Edit
                                 </Button>
                             )}
                         </>
@@ -294,6 +297,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [activeCommentThread, setActiveCommentThread] = useState(null); // ID of the comment being replied to, to show its thread
     const [isImageModalOpen, setImageModalOpen] = useState(false);
     const [modalImageUrl, setModalImageUrl] = useState('');
+    const [newCommentImage, setNewCommentImage] = useState(null); // State for the new comment's image
     const commentInputRef = useRef(null);
     const location = useLocation(); // Added useLocation hook
 
@@ -476,15 +480,16 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             
             formData.append('content', newComment.trim());
             
-            // Only append image if one is selected
-            if (replyToComment && replyToComment.image_url) {
-                formData.append('image', replyToComment.image_url);
+            // Handle image for new comments (top-level or replies)
+            if (newCommentImage) {
+                formData.append('image', newCommentImage);
             }
 
             const response = await addComment(formData);
             
             // Reset form
             setNewComment('');
+            setNewCommentImage(null); // Reset image state
             if (replyToComment) {
                 setReplyToComment(null);
             }
@@ -725,22 +730,21 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             )}
 
             {/* Reply form - shows if a comment (not the review item) is selected */}
-            {currentUser && replyToComment && !replyToComment.isReviewThreadItem && (
+            {currentUser && (
                 <Paper elevation={1} sx={{p:2, mb:3}}>
                     <form 
                         onSubmit={handleSubmitComment} 
                         style={{ marginTop: '0px' /* Adjusted from 24px, relies on Paper padding */ }}
                     >
                         <Typography variant="subtitle1" sx={{ mb: 1}}>
-                            Reply to {replyToComment.user.username}
+                            {replyToComment ? `Reply to ${replyToComment.user.username}` : 'Add a comment to this review'}
                         </Typography>
                         <TextField fullWidth multiline rows={3} variant="outlined" value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Write your reply..." sx={{ mb: 1 }}/>
-                        <ImageUpload onFileSelect={(file) => {
-                            if (replyToComment) {
-                                setReplyToComment({ ...replyToComment, image_url: file });
-                            }
-                        }} selectedFile={replyToComment && replyToComment.image_url} />
-                        <Button type="submit" variant="contained" sx={{ mt: 1 }} disabled={!newComment.trim() && !replyToComment.image_url}>
+                        <ImageUpload 
+                            onFileSelect={setNewCommentImage} 
+                            selectedFile={newCommentImage} 
+                        />
+                        <Button type="submit" variant="contained" sx={{ mt: 1 }} disabled={!newComment.trim() && !newCommentImage}>
                             Post Reply
                         </Button>
                     </form>
