@@ -723,86 +723,93 @@ def get_user_details(request):
 @authentication_classes([])
 @throttle_classes([RegisterRateThrottle])
 def register_user(request):
-    serializer = RegisterUserSerializer(data=request.data)
-    if serializer.is_valid():
-        try:
-            user = serializer.save() # User is created, is_active=False
+    if request.method == 'POST':
+        serializer = RegisterUserSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                # The transaction ensures that user creation and token creation are atomic.
+                # If anything fails here, the transaction is rolled back.
+                with transaction.atomic():
+                    user = serializer.save()
+                    user.is_active = False  # Deactivate account until email verification
+                    user.save()
+                    token = EmailVerificationToken.objects.create(user=user)
 
-            # Create and save the custom EmailVerificationToken
-            email_verification_token = EmailVerificationToken.objects.create(user=user)
-
-            email_subject = 'Activate Your Account'
-            # The link will now use the token from your EmailVerificationToken model
-            token_for_link = email_verification_token.token 
-
-            is_development = settings.DEBUG
-            
-            if is_development:
-                # Ensure your frontend route for verify-email expects a single token (UUID)
-                verification_link = f"http://localhost:5173/verify-email/{token_for_link}/"
-            else:
-                verification_link = f"https://supplementratings.com/verify-email/{token_for_link}/"
-
-            html_message = render_to_string('email_verification.html', {
-                'user': user,
-                'verification_link': verification_link
-            })
-            plain_message = strip_tags(html_message)
-            
-            send_mail(
-                email_subject,
-                plain_message,
-                settings.EMAIL_HOST_USER,
-                [user.email],
-                html_message=html_message,
-                fail_silently=False,
-            )
-            return Response({'message': 'User created. Please check your email to verify your account.'}, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            logger.error(f"Error during user registration (post-validation): {str(e)}", exc_info=True)
-            if 'user' in locals() and user.pk:
+                # Email sending is outside the transaction. If it fails, the user is still created.
                 try:
-                    user.delete()
-                except Exception as del_e:
-                    logger.error(f"Failed to delete user {user.username} after registration error: {str(del_e)}", exc_info=True)
-            return Response({'error': 'An unexpected error occurred during registration processing.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    else:
-        logger.warning(f"User registration failed validation: {serializer.errors}")
+                    mail_subject = 'Activate your account.'
+                    
+                    if settings.DEBUG:
+                        verification_url = f"http://localhost:5173/verify-email/{token.token}"
+                    else:
+                        verification_url = f"https://supplementratings.com/verify-email/{token.token}"
+                        
+                    message = render_to_string('email_verification.html', {
+                        'user': user,
+                        'verification_url': verification_url
+                    })
+                    send_mail(mail_subject, strip_tags(message), settings.DEFAULT_FROM_EMAIL, [user.email], html_message=message)
+                    
+                    # Email sent successfully
+                    return Response({
+                        "message": "Registration successful. Please check your email to verify your account.",
+                        "user": serializer.data
+                    }, status=status.HTTP_201_CREATED)
+
+                except Exception as e:
+                    # Email sending failed. Log the error but inform the user.
+                    logger.error(f"Critical: User '{user.username}' created, but verification email failed to send: {e}")
+                    return Response({
+                        "message": "Registration was successful, but we couldn't send a verification email. Please try logging in and requesting a new verification email from your account page.",
+                        "user": serializer.data
+                    }, status=status.HTTP_201_CREATED) # Still return 201 so frontend shows success
+
+            except IntegrityError:
+                return Response({'error': 'A user with that username or email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                logger.error(f"Error during the user and token creation transaction: {e}")
+                return Response({'error': f'An unexpected error occurred during registration: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def verify_email(request, token):
-    success_redirect_url = f"{settings.FRONTEND_DEV_URLS[0]}/login?verified=true"
-    failure_base_url = f"{settings.FRONTEND_DEV_URLS[0]}/verification-failed"
-
     try:
         verification = EmailVerificationToken.objects.get(token=token)
         
         if not verification.is_valid():
             return Response(
-                {'error': 'Verification link has expired', 'redirect_url': f"{failure_base_url}?error=expired"},
+                {'error': 'This verification link has expired. Please request a new one.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         user = verification.user
+        if user.is_active:
+            # If user is already active, just inform them.
+            verification.delete() # Clean up the used token.
+            return Response(
+                {'message': 'This account has already been verified. You can log in.'},
+                status=status.HTTP_200_OK
+            )
+
         user.is_active = True
         user.save()
         verification.delete()
         
         return Response(
-            {'message': 'Email verified successfully', 'redirect_url': success_redirect_url},
+            {'message': 'Email verified successfully. You can now log in.'},
             status=status.HTTP_200_OK
         )
     except EmailVerificationToken.DoesNotExist:
         return Response(
-            {'error': 'Invalid verification token', 'redirect_url': f"{failure_base_url}?error=invalid"},
+            {'error': 'This verification link is invalid or has already been used. Please double-check the link or request a new one.'},
             status=status.HTTP_400_BAD_REQUEST
         )
     except Exception as e:
         logger.error(f"Error in verify_email: {str(e)}", exc_info=True)
         return Response(
-            {'error': 'An server error occurred during email verification.', 'redirect_url': f"{failure_base_url}?error=server"},
+            {'error': 'A server error occurred during email verification. Please try again later.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
