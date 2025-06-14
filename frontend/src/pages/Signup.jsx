@@ -12,10 +12,12 @@ function Signup() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       await registerUser({ username, email, password });
       toast.success('Registration successful! Please check your email to verify your account.');
@@ -44,10 +46,12 @@ function Signup() {
       // No need for error.response?.data?.error as error.data is the source now and error.message covers general cases.
 
       toast.error(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
+  const handleClickShowPassword = () => setShowPassword(!showPassword);
 
   const handleMouseDownPassword = (event) => {
     event.preventDefault();
@@ -69,6 +73,7 @@ function Signup() {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
+              disabled={loading}
             />
             <TextField
               fullWidth
@@ -79,6 +84,7 @@ function Signup() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              disabled={loading}
             />
             <TextField
               fullWidth
@@ -89,6 +95,7 @@ function Signup() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              disabled={loading}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
@@ -97,6 +104,7 @@ function Signup() {
                       onClick={handleClickShowPassword}
                       onMouseDown={handleMouseDownPassword}
                       edge="end"
+                      disabled={loading}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -111,8 +119,9 @@ function Signup() {
               color="primary"
               size="large"
               sx={{ mt: 3, mb: 2 }}
+              disabled={loading}
             >
-              Sign Up
+              {loading ? 'Creating Account...' : 'Sign Up'}
             </Button>
           </form>
         </Paper>
