@@ -13,7 +13,9 @@ from .serializers import (
     RegisterUserSerializer,
     BasicUserSerializer,
     ProfileSerializer,
-    PublicProfileSerializer
+    PublicProfileSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer
 )
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -36,8 +38,8 @@ from decouple import config
 from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from .forms import ProfileUpdateForm
 from django.shortcuts import render, redirect
@@ -1008,4 +1010,75 @@ class PublicProfileRetrieveView(APIView):
         except Exception as e:
             logger.error(f"Error retrieving public profile for {username}: {str(e)}", exc_info=True)
             return Response({'error': 'An unexpected error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            try:
+                user = User.objects.get(email__iexact=email, is_active=True)
+                
+                # Generate token and URL
+                token = default_token_generator.make_token(user)
+                uid = urlsafe_base64_encode(force_bytes(user.pk))
+                
+                # Construct the reset URL for the frontend
+                # IMPORTANT: Adjust the domain/path as needed for your frontend app
+                reset_url = f"{settings.FRONTEND_URL}/reset-password-confirm/{uid}/{token}/"
+                
+                # Email content
+                subject = "Password Reset Requested"
+                html_message = render_to_string('password_reset_email.html', {
+                    'user': user,
+                    'reset_url': reset_url,
+                })
+                plain_message = strip_tags(html_message)
+
+                send_mail(
+                    subject,
+                    plain_message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    html_message=html_message
+                )
+
+                return Response({"message": "If an account with that email exists, a password reset link has been sent."}, status=status.HTTP_200_OK)
+
+            except User.DoesNotExist:
+                # Still return a success message to avoid user enumeration
+                return Response({"message": "If an account with that email exists, a password reset link has been sent."}, status=status.HTTP_200_OK)
+            except Exception as e:
+                logger.error(f"Password reset email sending failed for {email}: {e}")
+                # Generic error for the client
+                return Response({"error": "An error occurred while trying to send the password reset email."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            uidb64 = serializer.validated_data['uidb64']
+            token = serializer.validated_data['token']
+            password = serializer.validated_data['password']
+
+            try:
+                uid = force_str(urlsafe_base64_decode(uidb64))
+                user = User.objects.get(pk=uid)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                user = None
+
+            if user is not None and default_token_generator.check_token(user, token):
+                user.set_password(password)
+                user.save()
+                return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "The reset link is invalid or has expired."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -40,6 +40,8 @@ FRONTEND_DEV_URLS = [
 
 FRONTEND_PROD_URL = 'https://supplementratings.com'
 
+FRONTEND_URL = FRONTEND_PROD_URL if not DEBUG else FRONTEND_DEV_URLS[0]
+
 # Development and Production CORS/Host settings
 if DEBUG:
     ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
@@ -235,22 +237,28 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email Configuration
-if DEBUG:
-    # In development, print emails to the console.
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    DEFAULT_FROM_EMAIL = 'webmaster@localhost'
-else:
-    # In production, use your configured SMTP server from your .env file.
-    # These settings are loaded directly from your environment variables.
-    EMAIL_BACKEND = config('EMAIL_BACKEND')
-    EMAIL_HOST = config('EMAIL_HOST')
-    EMAIL_PORT = config('EMAIL_PORT', cast=int)
-    EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
-    EMAIL_USE_SSL = config('EMAIL_USE_SSL', cast=bool)
-    EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') # CRITICAL: This MUST be set in your environment.
-    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=config('EMAIL_HOST_USER'))
+# Email Configuration - Using production settings for all environments
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = config('EMAIL_HOST', default='smtp.namebrightmail.com')
+EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587)
+APP_EMAIL_USE_SSL = config('APP_EMAIL_USE_SSL', cast=bool, default=False)
+APP_EMAIL_USE_TLS = config('APP_EMAIL_USE_TLS', cast=bool, default=True)
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER # Ensure from email matches authenticated user
+
+# Renaming EMAIL_USE_SSL and EMAIL_USE_TLS to avoid conflicts with shell environment variables
+EMAIL_USE_SSL = APP_EMAIL_USE_SSL
+EMAIL_USE_TLS = APP_EMAIL_USE_TLS
+
+print("--- DJANGO EMAIL SETTINGS DEBUG ---")
+print(f"EMAIL_BACKEND: {EMAIL_BACKEND}")
+print(f"EMAIL_HOST: {EMAIL_HOST}")
+print(f"EMAIL_PORT: {EMAIL_PORT}")
+print(f"EMAIL_USE_SSL (from APP_EMAIL_USE_SSL): {EMAIL_USE_SSL}")
+print(f"EMAIL_USE_TLS (from APP_EMAIL_USE_TLS): {EMAIL_USE_TLS}")
+print(f"EMAIL_HOST_USER: {EMAIL_HOST_USER}")
+print("--- END DJANGO EMAIL SETTINGS DEBUG ---")
 
 
 # Determine if running in production

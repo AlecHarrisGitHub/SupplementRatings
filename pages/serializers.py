@@ -66,7 +66,6 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             )
             user.first_name = validated_data.get('first_name', '')
             user.last_name = validated_data.get('last_name', '')
-            user.is_active = False  # Set user to inactive until email verification
             user.save()
             return user
         except Exception as e:
@@ -433,3 +432,17 @@ class PublicProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User # The public profile is for a User
         fields = ['user', 'ratings', 'comments']
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    class Meta:
+        fields = ['email']
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+
+    class Meta:
+        fields = ['uidb64', 'token', 'password']

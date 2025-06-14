@@ -349,6 +349,24 @@ export const verifyEmail = async (token) => {
     }
 };
 
+export const requestPasswordReset = async (emailData) => {
+    try {
+        const response = await API.post('password-reset/', emailData);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const confirmPasswordReset = async (data) => {
+    try {
+        const response = await API.post('password-reset/confirm/', data);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
 export const updateComment = async (commentId, content, image = null) => {
     try {
         const formData = new FormData();

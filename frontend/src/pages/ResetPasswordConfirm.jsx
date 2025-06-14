@@ -1,66 +1,52 @@
-// frontend/src/pages/Login.jsx
-
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { loginUser } from '../services/api';
-import { toast } from 'react-toastify';
-import { 
-  Container, 
-  Paper, 
-  TextField, 
-  Button, 
-  Typography, 
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  Container,
+  Paper,
+  TextField,
+  Button,
+  Typography,
   Box,
-  Grid
 } from '@mui/material';
+import { toast } from 'react-toastify';
+import { confirmPasswordReset } from '../services/api';
 
-function Login() {
-  const [username, setUsername] = useState('');
+function ResetPasswordConfirm() {
   const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { uidb64, token } = useParams();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (password !== password2) {
+      toast.error('Passwords do not match.');
+      return;
+    }
     setLoading(true);
     try {
-      const response = await loginUser({ username, password });
-      if (response.access) {
-        login(response.access);
-        toast.success('Logged in successfully!');
-        navigate("/supplements");
-      }
+      const response = await confirmPasswordReset({ uidb64, token, password });
+      toast.success(response.message);
+      navigate('/login');
     } catch (error) {
-      toast.error(error.message || 'Invalid username or password');
+      toast.error(error.message || 'An error occurred.');
     } finally {
       setLoading(false);
     }
   };
-
 
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8, mb: 4 }}>
         <Paper elevation={3} sx={{ p: 4 }}>
           <Typography variant="h4" component="h1" gutterBottom align="center">
-            Login
+            Reset Password
           </Typography>
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Username"
-              variant="outlined"
-              margin="normal"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              disabled={loading}
-            />
-            <TextField
-              fullWidth
-              label="Password"
+              label="New Password"
               type="password"
               variant="outlined"
               margin="normal"
@@ -69,13 +55,17 @@ function Login() {
               required
               disabled={loading}
             />
-            <Grid container justifyContent="flex-end">
-                <Grid item>
-                    <Link to="/forgot-password" variant="body2">
-                        Forgot password?
-                    </Link>
-                </Grid>
-            </Grid>
+            <TextField
+              fullWidth
+              label="Confirm New Password"
+              type="password"
+              variant="outlined"
+              margin="normal"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              required
+              disabled={loading}
+            />
             <Button
               type="submit"
               fullWidth
@@ -85,7 +75,7 @@ function Login() {
               sx={{ mt: 3, mb: 2 }}
               disabled={loading}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Resetting...' : 'Reset Password'}
             </Button>
           </form>
         </Paper>
@@ -94,4 +84,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default ResetPasswordConfirm; 
