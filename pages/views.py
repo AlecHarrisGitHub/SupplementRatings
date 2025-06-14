@@ -1026,8 +1026,10 @@ class PasswordResetRequestView(APIView):
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 
                 # Construct the reset URL for the frontend
-                # IMPORTANT: Adjust the domain/path as needed for your frontend app
-                reset_url = f"{settings.FRONTEND_URL}/reset-password-confirm/{uid}/{token}/"
+                if settings.DEBUG:
+                    reset_url = f"http://localhost:5173/reset-password-confirm/{uid}/{token}/"
+                else:
+                    reset_url = f"https://supplementratings.com/reset-password-confirm/{uid}/{token}/"
                 
                 # Email content
                 subject = "Password Reset Requested"
