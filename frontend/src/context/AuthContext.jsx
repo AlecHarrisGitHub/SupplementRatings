@@ -2,6 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { getCurrentUserDetails } from '../services/api'; // Import getCurrentUserDetails
+import { sessionManager } from '../services/api'; // Import session manager
 
 const AuthContext = createContext(null);
 
@@ -38,17 +39,21 @@ export const AuthProvider = ({ children }) => {
         const parsedUser = JSON.parse(storedUser);
         if (parsedUser) { // Ensure parsedUser is not null/undefined
           setUser(parsedUser);
+          // Start session monitoring for existing authenticated user
+          sessionManager.startSessionMonitoring();
         } else {
           // Handle case where storedUser is "null" or invalid JSON string that parses to null
           localStorage.removeItem('user');
           localStorage.removeItem('token');
           localStorage.removeItem('isAdmin');
+          localStorage.removeItem('refreshToken');
         }
       } catch (e) {
         console.error("Error parsing stored user from localStorage", e);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('isAdmin');
+        localStorage.removeItem('refreshToken');
       }
     }
   }, []);
@@ -82,6 +87,9 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(true);
     setIsAdmin(adminStatus);
 
+    // Start session monitoring
+    sessionManager.startSessionMonitoring();
+
     // Now, try to fetch full user details from API
     try {
       fetchedUserDetails = await getCurrentUserDetails();
@@ -107,7 +115,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = () => {
+    // Stop session monitoring
+    sessionManager.stopSessionMonitoring();
+    
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('user');
     setIsAuthenticated(false);

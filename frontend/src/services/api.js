@@ -9,6 +9,214 @@ const API = axios.create({
     baseURL: API_BASE_URL,
 });
 
+// Session management and auto-save functionality
+class SessionManager {
+    constructor() {
+        this.refreshTimeout = null;
+        this.warningTimeout = null;
+        this.autoSaveInterval = null;
+        this.isRefreshing = false;
+        this.failedRefreshAttempts = 0;
+        this.maxRefreshAttempts = 3;
+    }
+
+    // Start session monitoring
+    startSessionMonitoring() {
+        this.scheduleTokenRefresh();
+        this.scheduleWarning();
+    }
+
+    // Stop session monitoring
+    stopSessionMonitoring() {
+        if (this.refreshTimeout) {
+            clearTimeout(this.refreshTimeout);
+            this.refreshTimeout = null;
+        }
+        if (this.warningTimeout) {
+            clearTimeout(this.warningTimeout);
+            this.warningTimeout = null;
+        }
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
+        }
+    }
+
+    // Schedule token refresh (refresh 5 minutes before expiration)
+    scheduleTokenRefresh() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expirationTime = payload.exp * 1000; // Convert to milliseconds
+            const currentTime = Date.now();
+            const timeUntilExpiration = expirationTime - currentTime;
+            const timeUntilRefresh = Math.max(timeUntilExpiration - (5 * 60 * 1000), 60000); // 5 minutes before or 1 minute minimum
+
+            this.refreshTimeout = setTimeout(() => {
+                this.refreshToken();
+            }, timeUntilRefresh);
+        } catch (error) {
+            console.error('Error parsing token for refresh scheduling:', error);
+        }
+    }
+
+    // Schedule warning notification
+    scheduleWarning() {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const expirationTime = payload.exp * 1000;
+            const currentTime = Date.now();
+            const timeUntilExpiration = expirationTime - currentTime;
+            const timeUntilWarning = Math.max(timeUntilExpiration - (2 * 60 * 1000), 30000); // 2 minutes before or 30 seconds minimum
+
+            this.warningTimeout = setTimeout(() => {
+                this.showSessionWarning();
+            }, timeUntilWarning);
+        } catch (error) {
+            console.error('Error parsing token for warning scheduling:', error);
+        }
+    }
+
+    // Refresh token
+    async refreshToken() {
+        if (this.isRefreshing) return;
+
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+            this.handleSessionExpired();
+            return;
+        }
+
+        this.isRefreshing = true;
+
+        try {
+            const response = await axios.post(`${API_BASE_URL}token/refresh/`, {
+                refresh: refreshToken
+            });
+
+            const { access } = response.data;
+            localStorage.setItem('token', access);
+            this.failedRefreshAttempts = 0;
+
+            // Reschedule monitoring with new token
+            this.scheduleTokenRefresh();
+            this.scheduleWarning();
+
+            console.log('Token refreshed successfully');
+        } catch (error) {
+            console.error('Token refresh failed:', error);
+            this.failedRefreshAttempts++;
+            
+            if (this.failedRefreshAttempts >= this.maxRefreshAttempts) {
+                this.handleSessionExpired();
+            } else {
+                // Retry after 30 seconds
+                setTimeout(() => {
+                    this.refreshToken();
+                }, 30000);
+            }
+        } finally {
+            this.isRefreshing = false;
+        }
+    }
+
+    // Show session warning
+    showSessionWarning() {
+        // Import toast dynamically to avoid circular dependencies
+        import('react-hot-toast').then(({ toast }) => {
+            toast.error(
+                'Your session will expire soon. Please save your work and refresh the page if needed.',
+                { duration: 10000 }
+            );
+        });
+    }
+
+    // Handle session expired
+    handleSessionExpired() {
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('user');
+        
+        // Import toast dynamically
+        import('react-hot-toast').then(({ toast }) => {
+            toast.error('Your session has expired. Please log in again.');
+        });
+
+        // Redirect to login
+        window.location.href = '/login';
+    }
+
+    // Start auto-save for form data
+    startAutoSave(formData, saveFunction, intervalMs = 30000) { // Auto-save every 30 seconds
+        this.stopAutoSave();
+        
+        this.autoSaveInterval = setInterval(async () => {
+            try {
+                await saveFunction(formData);
+                console.log('Auto-save completed');
+            } catch (error) {
+                console.error('Auto-save failed:', error);
+            }
+        }, intervalMs);
+    }
+
+    // Stop auto-save
+    stopAutoSave() {
+        if (this.autoSaveInterval) {
+            clearInterval(this.autoSaveInterval);
+            this.autoSaveInterval = null;
+        }
+    }
+
+    // Save form data to localStorage as backup
+    saveFormDataToStorage(formKey, formData) {
+        try {
+            const dataToSave = {
+                data: formData,
+                timestamp: Date.now(),
+                url: window.location.pathname
+            };
+            localStorage.setItem(`form_backup_${formKey}`, JSON.stringify(dataToSave));
+        } catch (error) {
+            console.error('Error saving form data to storage:', error);
+        }
+    }
+
+    // Load form data from localStorage
+    loadFormDataFromStorage(formKey) {
+        try {
+            const savedData = localStorage.getItem(`form_backup_${formKey}`);
+            if (savedData) {
+                const parsed = JSON.parse(savedData);
+                const isRecent = Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000; // 24 hours
+                if (isRecent) {
+                    return parsed.data;
+                } else {
+                    // Clean up old data
+                    localStorage.removeItem(`form_backup_${formKey}`);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading form data from storage:', error);
+        }
+        return null;
+    }
+
+    // Clear form data from localStorage
+    clearFormDataFromStorage(formKey) {
+        localStorage.removeItem(`form_backup_${formKey}`);
+    }
+}
+
+// Create global session manager instance
+export const sessionManager = new SessionManager();
+
 // Add a request interceptor to include the auth token and CSRF token
 API.interceptors.request.use((config) => {
     // Add auth token if it exists
@@ -29,15 +237,30 @@ API.interceptors.response.use(
     (response) => response,
     (error) => {
         const requestUrl = error.config.url;
-        const authEndpoints = ['token/obtain/', 'register/'];
+        const authEndpoints = ['token/obtain/', 'register/', 'token/refresh/'];
 
         if (
             error.response?.status === 401 &&
             !authEndpoints.some((endpoint) => requestUrl.includes(endpoint))
         ) {
-            localStorage.removeItem('token');
-            localStorage.removeItem('isAdmin');
-            window.location.href = '/login';
+            // Try to refresh token first
+            if (!sessionManager.isRefreshing) {
+                sessionManager.refreshToken().then(() => {
+                    // Retry the original request
+                    const originalRequest = error.config;
+                    const token = localStorage.getItem('token');
+                    if (token) {
+                        originalRequest.headers.Authorization = `Bearer ${token}`;
+                        return API(originalRequest);
+                    }
+                }).catch(() => {
+                    // Refresh failed, logout user
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('isAdmin');
+                    window.location.href = '/login';
+                });
+            }
+            
             // It's important to return a promise that will not resolve
             // to prevent further processing by the caller if a redirect is happening.
             return new Promise(() => {}); 
@@ -311,6 +534,15 @@ export const deleteSupplement = async (supplementId, transferToSupplementId = nu
 export const loginUser = async (credentials) => {
     try {
         const response = await API.post('token/obtain/', credentials);
+        
+        // Store refresh token for automatic token refresh
+        if (response.data.refresh) {
+            localStorage.setItem('refreshToken', response.data.refresh);
+        }
+        
+        // Start session monitoring
+        sessionManager.startSessionMonitoring();
+        
         return response.data;
     } catch (error) {
         console.error('Login error:', error);
@@ -320,8 +552,19 @@ export const loginUser = async (credentials) => {
 
 export const logoutUser = async () => {
     try {
+        // Stop session monitoring
+        sessionManager.stopSessionMonitoring();
+        
+        // Clear all tokens and user data
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('isAdmin');
+        localStorage.removeItem('user');
+        
+        // Clear any form backups
+        sessionManager.clearFormDataFromStorage('rating_form');
+        sessionManager.clearFormDataFromStorage('comment_form');
+        
         return true;
     } catch (error) {
         console.error('Logout error:', error);

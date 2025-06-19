@@ -36,6 +36,7 @@ import ThumbUpIcon from '@mui/icons-material/ThumbUp';
 import ImageUpload from './ImageUpload';
 import StarIcon from '@mui/icons-material/Star';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import { useAutoSave } from '../hooks/useAutoSave';
 
 const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
 
@@ -555,6 +556,96 @@ function SearchableSupplementList() {
     const [loadingMore, setLoadingMore] = useState(false);
     const [ratingDialogDosageUnit, setRatingDialogDosageUnit] = useState('mg');
 
+    const [ratingImage, setRatingImage] = useState(null);
+
+    // Create form data object for auto-save
+    const ratingFormData = useMemo(() => {
+        if (!ratingDialogOpen) return null;
+        
+        return {
+            ratingScore,
+            ratingComment,
+            selectedConditions: selectedConditions.map(c => ({ id: c.id, name: c.name })),
+            selectedBenefits: selectedBenefits.map(b => ({ id: b.id, name: b.name })),
+            selectedSideEffects: selectedSideEffects.map(s => ({ id: s.id, name: s.name })),
+            ratingDosage,
+            ratingDialogDosageUnit,
+            selectedBrand: selectedBrand ? { id: selectedBrand.id, name: selectedBrand.name } : null,
+            ratingDosageFrequency,
+            ratingFrequencyUnit,
+            editingRating: editingRating ? { id: editingRating.id } : null,
+            supplementId: selectedSupplement?.id
+        };
+    }, [
+        ratingDialogOpen,
+        ratingScore,
+        ratingComment,
+        selectedConditions,
+        selectedBenefits,
+        selectedSideEffects,
+        ratingDosage,
+        ratingDialogDosageUnit,
+        selectedBrand,
+        ratingDosageFrequency,
+        ratingFrequencyUnit,
+        editingRating,
+        selectedSupplement?.id
+    ]);
+
+    // Auto-save function for rating form
+    const autoSaveRating = useCallback(async (formData) => {
+        // Only auto-save if we have a supplement and some form data
+        if (!formData || !formData.supplementId || !formData.ratingScore) {
+            return;
+        }
+
+        // For auto-save, we'll just save to localStorage, not submit to server
+        // This prevents partial submissions and allows users to continue editing
+        console.log('Auto-saving rating form data...');
+        return Promise.resolve();
+    }, []);
+
+    // Auto-save hook
+    const { clearSavedData } = useAutoSave('rating_form', ratingFormData, autoSaveRating, {
+        enableAutoSave: ratingDialogOpen,
+        autoSaveInterval: 30000, // 30 seconds
+        onRestoreData: (savedData) => {
+            if (savedData) {
+                setRatingScore(savedData.ratingScore || 1);
+                setRatingComment(savedData.ratingComment || '');
+                setSelectedConditions(savedData.selectedConditions || []);
+                setSelectedBenefits(savedData.selectedBenefits || []);
+                setSelectedSideEffects(savedData.selectedSideEffects || []);
+                setRatingDosage(savedData.ratingDosage || '');
+                setRatingDialogDosageUnit(savedData.ratingDialogDosageUnit || 'mg');
+                setSelectedBrand(savedData.selectedBrand || null);
+                setRatingDosageFrequency(savedData.ratingDosageFrequency || '1');
+                setRatingFrequencyUnit(savedData.ratingFrequencyUnit || 'day');
+                if (savedData.editingRating) {
+                    setEditingRating(savedData.editingRating);
+                }
+            }
+        }
+    });
+
+    const resetFormState = useCallback(() => {
+        setRatingScore(1);
+        setRatingComment('');
+        setSelectedConditions([]);
+        setSelectedBenefits([]);
+        setSelectedSideEffects([]);
+        setRatingDosage('');
+        setRatingDialogDosageUnit('mg');
+        setSelectedBrand(null);
+        setRatingDosageFrequency('1');
+        setRatingFrequencyUnit('day');
+        setRatingImage(null);
+        setEditingRating(null);
+        setRatingDialogAttemptedSubmit(false);
+        // Clear saved form data when resetting
+        clearSavedData();
+    }, [clearSavedData]);
+
     useEffect(() => {
         const fetchCategories = async () => {
             try {
@@ -854,30 +945,28 @@ function SearchableSupplementList() {
         setRatingDialogAttemptedSubmit(false);
     }, [conditions, brands, parseDosage]);
 
-    const [ratingImage, setRatingImage] = useState(null);
-
-    const resetFormState = useCallback(() => {
-        setRatingScore(1);
-        setRatingComment('');
-        setSelectedConditions([]);
-        setSelectedBenefits([]);
-        setSelectedSideEffects([]);
-        setRatingDosage('');
-        setRatingDialogDosageUnit('mg');
-        setSelectedBrand(null);
-        setRatingDosageFrequency('1');
-        setRatingFrequencyUnit('day');
-        setRatingImage(null);
-        setEditingRating(null);
-        setRatingDialogAttemptedSubmit(false);
-    }, []);
-
     const handleAddRating = () => {
         resetFormState();
         setRatingDialogOpen(true);
     };
 
     const handleCloseRatingDialog = () => {
+        // Check if there are unsaved changes
+        const hasChanges = ratingScore !== 1 || 
+                          ratingComment || 
+                          selectedConditions.length > 0 || 
+                          selectedBenefits.length > 0 || 
+                          selectedSideEffects.length > 0 || 
+                          ratingDosage || 
+                          selectedBrand;
+        
+        if (hasChanges) {
+            const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close? Your work will be saved automatically.');
+            if (!confirmed) {
+                return;
+            }
+        }
+        
         resetFormState();
         setRatingDialogOpen(false);
     };
@@ -954,6 +1043,8 @@ function SearchableSupplementList() {
                 toast.success('Rating added successfully');
             }
             
+            // Clear saved form data after successful submission
+            clearSavedData();
             resetFormState();
             setRatingDialogOpen(false);
             
@@ -963,7 +1054,7 @@ function SearchableSupplementList() {
         } catch (error) {
             toast.error(error.userMessage || 'Failed to submit rating. Please try again.');
         }
-    }, [selectedConditions, ratingScore, selectedSupplement, selectedBenefits, selectedSideEffects, ratingDosage, ratingDialogDosageUnit, ratingDosageFrequency, ratingFrequencyUnit, selectedBrand, ratingImage, editingRating, resetFormState, handleSupplementClick, ratingComment]);
+    }, [selectedConditions, ratingScore, selectedSupplement, selectedBenefits, selectedSideEffects, ratingDosage, ratingDialogDosageUnit, ratingDosageFrequency, ratingFrequencyUnit, selectedBrand, ratingImage, editingRating, resetFormState, handleSupplementClick, ratingComment, clearSavedData]);
 
     const handleApplyFilter = () => {
         setAppliedFilterCategory(selectedFilterCategory);

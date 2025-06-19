@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
@@ -19,8 +19,53 @@ import AccountsPage from './pages/AccountsPage';
 import UserProfilePage from './pages/UserProfilePage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPasswordConfirm from './pages/ResetPasswordConfirm';
+import SessionWarning from './components/SessionWarning';
+import { useAuth } from './context/AuthContext';
+import { sessionManager } from './services/api';
 
 function App() {
+    const { isAuthenticated } = useAuth();
+    const [sessionWarningOpen, setSessionWarningOpen] = useState(false);
+    const [sessionTimeRemaining, setSessionTimeRemaining] = useState(120); // 2 minutes
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        // Override the session manager's warning function to show our custom dialog
+        const originalShowWarning = sessionManager.showSessionWarning;
+        sessionManager.showSessionWarning = () => {
+            setSessionWarningOpen(true);
+        };
+
+        // Override the session manager's expired function
+        const originalHandleExpired = sessionManager.handleSessionExpired;
+        sessionManager.handleSessionExpired = () => {
+            setSessionWarningOpen(false);
+            originalHandleExpired();
+        };
+
+        return () => {
+            // Restore original functions
+            sessionManager.showSessionWarning = originalShowWarning;
+            sessionManager.handleSessionExpired = originalHandleExpired;
+        };
+    }, [isAuthenticated]);
+
+    const handleExtendSession = async () => {
+        try {
+            await sessionManager.refreshToken();
+            setSessionWarningOpen(false);
+        } catch (error) {
+            console.error('Failed to extend session:', error);
+            // If refresh fails, the session manager will handle logout
+        }
+    };
+
+    const handleLogoutNow = () => {
+        setSessionWarningOpen(false);
+        sessionManager.handleSessionExpired();
+    };
+
     return (
         <div>
             <Navbar />
@@ -36,6 +81,12 @@ function App() {
                 pauseOnHover
             />
             <Toaster position="top-center" />
+            <SessionWarning
+                open={sessionWarningOpen}
+                onExtend={handleExtendSession}
+                onLogout={handleLogoutNow}
+                timeRemaining={sessionTimeRemaining}
+            />
             <Routes>
                 <Route path="/" element={<Navigate to="/supplements" replace />} />
                 <Route path="/supplements" element={<SearchableSupplementList />} />
