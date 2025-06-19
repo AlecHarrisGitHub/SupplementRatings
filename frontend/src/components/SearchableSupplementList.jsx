@@ -306,9 +306,22 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
             onClick={() => handleReviewClick(rating)}
         >
             {/* Top Section: User Info (Left) & Upvotes/Edit/Stars (Right) */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+            <Box sx={{ 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                justifyContent: { xs: 'flex-start', sm: 'space-between' },
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                mb: 1,
+                gap: { xs: 1, sm: 0 }
+            }}>
                 {/* Left Part: Avatar and Username */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1.5,
+                    maxWidth: '100%',
+                    flexWrap: 'wrap'
+                }}>
                     <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none' }} onClick={(e) => e.stopPropagation()}>
                         <Avatar 
                             src={rating.user.profile_image_url || defaultProfileImage} 
@@ -316,19 +329,36 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
                             sx={{ width: 40, height: 40 }}
                         />
                     </RouterLink>
-                    <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }} onClick={(e) => e.stopPropagation()}>
-                        <Typography variant="subtitle1" fontWeight="bold" sx={{"&:hover": { textDecoration: 'underline'}}}>
-                            {rating.user.username}
-                        </Typography>
-                    </RouterLink>
-                    {rating.is_edited && (
-                        <Typography component="span" variant="caption" color="text.secondary">
-                            {" (edited)"}
-                        </Typography>
-                    )}
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        flexWrap: 'wrap'
+                    }}>
+                        <RouterLink to={`/profile/${rating.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }} onClick={(e) => e.stopPropagation()}>
+                            <Typography variant="subtitle1" fontWeight="bold" sx={{
+                                "&:hover": { textDecoration: 'underline'},
+                                wordBreak: 'break-word'
+                            }}>
+                                {rating.user.username}
+                            </Typography>
+                        </RouterLink>
+                        {rating.is_edited && (
+                            <Typography component="span" variant="caption" color="text.secondary">
+                                {" (edited)"}
+                            </Typography>
+                        )}
+                    </Box>
                 </Box>
                 {/* Right Part: Upvotes, Comment Count (removed from here), Edit Button, Stars */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    flexWrap: 'wrap',
+                    maxWidth: '100%',
+                    alignSelf: { xs: 'flex-start', sm: 'center' }
+                }}>
                     <IconButton 
                         onClick={(e) => handleUpvoteRating(e, rating)}
                         color={rating.has_upvoted ? "primary" : "default"}
@@ -357,50 +387,67 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
             </Box>
 
             {/* Middle Section: Rating Details (Conditions, Benefits, etc.) */}
-            {rating.condition_names && rating.condition_names.length > 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Intended Purpose: {rating.condition_names.join(', ')}
-                </Typography>
-            )}
-            {rating.benefit_names && rating.benefit_names.length > 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Benefits For: {rating.benefit_names.join(', ')}
-                </Typography>
-            )}
-            {rating.side_effect_names && rating.side_effect_names.length > 0 && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Side Effects: {rating.side_effect_names.join(', ')}
-                </Typography>
-            )}
-            {rating.dosage && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Dosage: {rating.dosage.replace(/\s+/g, '')}
-                    {(rating.dosage_frequency && rating.frequency_unit) ? 
-                        ` ${rating.dosage_frequency}x / ${rating.frequency_unit}` : ''}
-                </Typography>
-            )}
-            {rating.brands && (
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    Brands Used: {rating.brands}
-                </Typography>
-            )}
-            {rating.comment && 
-                <Typography variant="body2" color="text.secondary" sx={{mb: rating.image_url ? 1 : 0, whiteSpace: 'pre-wrap'}}>
-                    {rating.comment}
-                </Typography>
-            }
+            <Box sx={{
+                width: '100%',
+                mb: 1,
+                overflowX: 'hidden',
+                wordWrap: 'break-word'
+            }}>
+                {rating.condition_names && rating.condition_names.length > 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Intended Purpose: {rating.condition_names.join(', ')}
+                    </Typography>
+                )}
+                {rating.benefit_names && rating.benefit_names.length > 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Benefits For: {rating.benefit_names.join(', ')}
+                    </Typography>
+                )}
+                {rating.side_effect_names && rating.side_effect_names.length > 0 && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Side Effects: {rating.side_effect_names.join(', ')}
+                    </Typography>
+                )}
+                {rating.dosage && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Dosage: {rating.dosage.replace(/\s+/g, '')}
+                        {(rating.dosage_frequency && rating.frequency_unit) ? 
+                            ` ${rating.dosage_frequency}x / ${rating.frequency_unit}` : ''}
+                    </Typography>
+                )}
+                {rating.brands && (
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Brands Used: {rating.brands}
+                    </Typography>
+                )}
+                {rating.comment && 
+                    <Typography variant="body2" color="text.secondary" sx={{
+                        mb: rating.image_url ? 1 : 0,
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word'
+                    }}>
+                        {rating.comment}
+                    </Typography>
+                }
+            </Box>
+
             {rating.image_url && (
-                <Box sx={{ mt: rating.comment ? 1 : 0, mb: 1 }}>
+                <Box sx={{ 
+                    mt: rating.comment ? 1 : 0, 
+                    mb: 1,
+                    maxWidth: '100%',
+                    '& img': {
+                        maxWidth: '100%',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                    }
+                }}>
                     <img 
                         src={rating.image_url}
                         alt="Rating attachment"
                         loading="lazy"
-                        style={{ 
-                            maxWidth: '300px',
-                            maxHeight: '300px',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
                         onClick={(e) => { 
                             e.stopPropagation(); 
                             // Implement image modal click if needed, e.g., handleImageClick(rating.image_url)
@@ -410,7 +457,14 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
             )}
 
             {/* Bottom Section: Comment Count (Left) & Date (Right) */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 1 }}>
+            <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                mt: 1,
+                flexWrap: 'wrap',
+                gap: 1
+            }}>
                 {/* Left Part: Comment Count */}
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     {typeof rating.comments_count === 'number' && rating.comments_count >= 0 && (

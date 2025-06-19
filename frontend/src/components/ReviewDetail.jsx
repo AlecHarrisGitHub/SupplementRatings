@@ -149,9 +149,23 @@ function CommentBox({
             }}
         >
             {/* Top Section: User Info, Upvotes, Stars */}
-            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+            <Box sx={{ 
+                width: '100%', 
+                display: 'flex', 
+                flexDirection: { xs: 'column', sm: 'row' },
+                justifyContent: { xs: 'flex-start', sm: 'space-between' },
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                mb: 1,
+                gap: { xs: 1, sm: 0 }
+            }}>
                 {/* Left Part: Avatar and Username */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1.5,
+                    maxWidth: '100%', // Ensure container doesn't overflow
+                    flexWrap: 'wrap' // Allow wrapping if needed
+                }}>
                     <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none' }}>
                         <Avatar 
                             src={comment.user.profile_image_url || defaultProfileImage} 
@@ -159,20 +173,37 @@ function CommentBox({
                             sx={{ width: 40, height: 40 }}
                         />
                     </RouterLink>
-                    <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <Typography variant="subtitle2" fontWeight="bold" sx={{"&:hover": { textDecoration: 'underline'}}}>
-                            {comment.user.username}
-                        </Typography>
-                    </RouterLink>
-                    {comment.is_edited && (
-                        <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5, fontStyle: 'italic' }}>
-                            (edited)
-                        </Typography>
-                    )}
+                    <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 0.5,
+                        flexWrap: 'wrap' // Allow username and edited status to wrap
+                    }}>
+                        <RouterLink to={`/profile/${comment.user.username}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <Typography variant="subtitle2" fontWeight="bold" sx={{
+                                "&:hover": { textDecoration: 'underline'},
+                                wordBreak: 'break-word' // Allow long usernames to break
+                            }}>
+                                {comment.user.username}
+                            </Typography>
+                        </RouterLink>
+                        {comment.is_edited && (
+                            <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                (edited)
+                            </Typography>
+                        )}
+                    </Box>
                 </Box>
 
-                {/* Right Part: Upvotes and Stars */}
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Right Part: Upvotes and Stars - On mobile, this appears below the user info */}
+                <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 1,
+                    alignSelf: { xs: 'flex-start', sm: 'center' },
+                    flexWrap: 'wrap', // Allow wrapping if needed
+                    maxWidth: '100%' // Ensure container doesn't overflow
+                }}>
                     {isReviewThreadItem && currentUser && (currentUser.id === comment.user.id || currentUser.username === comment.user.username) && !isEditing && (
                          <Button size="small" onClick={initiateEdit} sx={{mr: 1}}>Edit</Button>
                     )}
@@ -193,7 +224,12 @@ function CommentBox({
 
             {/* Review-Specific Details (only for review item) */}
             {isReviewThreadItem && (
-                <Box sx={{width: '100%', mb: 1}}>
+                <Box sx={{
+                    width: '100%', 
+                    mb: 1,
+                    overflowX: 'hidden', // Prevent horizontal scroll
+                    wordWrap: 'break-word' // Allow long text to wrap
+                }}>
                     {comment.condition_names && comment.condition_names.length > 0 && (
                         <Typography variant="body2" color="text.secondary" sx={{mb: 0.5}}>
                             Intended Purpose: {comment.condition_names.join(', ')}
@@ -225,9 +261,16 @@ function CommentBox({
             )}
 
             {/* Content Section: Text and Image */}
-            <Box sx={{ width: '100%', mb: 1}}>
+            <Box sx={{ 
+                width: '100%', 
+                mb: 1,
+                overflowX: 'hidden' // Prevent horizontal scroll
+            }}>
                 {!isEditing ? (
-                    <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{comment.content}</Typography>
+                    <Typography variant="body2" sx={{ 
+                        whiteSpace: 'pre-wrap',
+                        wordWrap: 'break-word' // Allow long text to wrap
+                    }}>{comment.content}</Typography>
                 ) : (
                     <TextField
                         fullWidth
@@ -240,12 +283,20 @@ function CommentBox({
                     />
                 )}
                 {comment.image_url && !isEditing && (
-                    <Box sx={{ mt: 1 }}>
+                    <Box sx={{ 
+                        mt: 1,
+                        maxWidth: '100%', // Ensure container doesn't overflow
+                        '& img': {
+                            maxWidth: '100%', // Make image responsive
+                            height: 'auto', // Maintain aspect ratio
+                            objectFit: 'contain',
+                            borderRadius: '4px',
+                            cursor: 'pointer'
+                        }
+                    }}>
                         <img 
                             src={comment.image_url} 
                             alt="Comment attachment" 
-                            style={{ maxWidth: '200px', maxHeight: '200px', borderRadius: '4px', cursor: 'pointer' }}
-                            // Add onClick for modal if needed here, or ensure parent handles it
                         />
                     </Box>
                 )}
