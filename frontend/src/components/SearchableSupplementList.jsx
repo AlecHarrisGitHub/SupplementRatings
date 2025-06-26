@@ -23,7 +23,8 @@ import {
     MenuItem,
     Divider,
     Avatar,
-    Chip
+    Chip,
+    InputAdornment
 } from '@mui/material';
 import { getSupplements, getSupplement, getConditions, getBrands, addRating, updateRating, upvoteRating, getCategories } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -558,6 +559,8 @@ function SearchableSupplementList() {
 
     const [ratingImage, setRatingImage] = useState(null);
 
+    const supplementDosageUnit = selectedSupplement?.dosage_unit;
+
     // Create form data object for auto-save
     const ratingFormData = useMemo(() => {
         if (!ratingDialogOpen) return null;
@@ -617,7 +620,7 @@ function SearchableSupplementList() {
                 setSelectedBenefits(savedData.selectedBenefits || []);
                 setSelectedSideEffects(savedData.selectedSideEffects || []);
                 setRatingDosage(savedData.ratingDosage || '');
-                setRatingDialogDosageUnit(savedData.ratingDialogDosageUnit || 'mg');
+                setRatingDialogDosageUnit(savedData.ratingDialogDosageUnit || supplementDosageUnit || 'mg');
                 setSelectedBrand(savedData.selectedBrand || null);
                 setRatingDosageFrequency(savedData.ratingDosageFrequency || '1');
                 setRatingFrequencyUnit(savedData.ratingFrequencyUnit || 'day');
@@ -635,7 +638,7 @@ function SearchableSupplementList() {
         setSelectedBenefits([]);
         setSelectedSideEffects([]);
         setRatingDosage('');
-        setRatingDialogDosageUnit('mg');
+        setRatingDialogDosageUnit(supplementDosageUnit || 'mg');
         setSelectedBrand(null);
         setRatingDosageFrequency('1');
         setRatingFrequencyUnit('day');
@@ -644,7 +647,7 @@ function SearchableSupplementList() {
         setRatingDialogAttemptedSubmit(false);
         // Clear saved form data when resetting
         clearSavedData();
-    }, [clearSavedData]);
+    }, [clearSavedData, supplementDosageUnit]);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -929,7 +932,7 @@ function SearchableSupplementList() {
         
         const parsedDosage = parseDosage(rating.dosage);
         setRatingDosage(parsedDosage.value);
-        setRatingDialogDosageUnit(parsedDosage.unit);
+        setRatingDialogDosageUnit(supplementDosageUnit || parsedDosage.unit);
         
         setRatingDosageFrequency(rating.dosage_frequency || '1');
         setRatingFrequencyUnit(rating.frequency_unit || 'day');
@@ -943,7 +946,7 @@ function SearchableSupplementList() {
         
         setRatingDialogOpen(true);
         setRatingDialogAttemptedSubmit(false);
-    }, [conditions, brands, parseDosage]);
+    }, [conditions, brands, parseDosage, supplementDosageUnit]);
 
     const handleAddRating = () => {
         resetFormState();
@@ -1699,59 +1702,82 @@ function SearchableSupplementList() {
                         />
 
                         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                            <TextField
-                                label="Dosage"
-                                type="number"
-                                value={ratingDosage}
-                                onChange={(e) => setRatingDosage(e.target.value)}
-                                sx={{ width: '120px' }}
-                                placeholder="e.g., 500"
-                                InputProps={{ inputProps: { min: 0 } }}
-                            />
-                            <Select
-                                value={ratingDialogDosageUnit}
-                                onChange={(e) => setRatingDialogDosageUnit(e.target.value)}
-                                sx={{ width: '100px' }}
-                                displayEmpty
-                            >
-                                <MenuItem value="mg">mg</MenuItem>
-                                <MenuItem value="g">g</MenuItem>
-                                <MenuItem value="mcg">mcg</MenuItem>
-                                <MenuItem value="ml">ml</MenuItem>
-                                <MenuItem value="IU">IU</MenuItem>
-                                <MenuItem value="µg">µg</MenuItem>
-                                <MenuItem value="tsp">tsp</MenuItem>
-                                <MenuItem value="tbsp">tbsp</MenuItem>
-                                <MenuItem value="drops">drops</MenuItem>
-                                <MenuItem value="capsule">capsule(s)</MenuItem>
-                                <MenuItem value="tablet">tablet(s)</MenuItem>
-                                <MenuItem value="piece">piece(s)</MenuItem>
-                                <MenuItem value="oz">oz</MenuItem>
-                                <MenuItem value="fl oz">fl oz</MenuItem>
-                                <MenuItem value="cc">cc</MenuItem>
-                                <MenuItem value="other">other</MenuItem>
-                            </Select>
+                            {supplementDosageUnit ? (
+                                <TextField
+                                    label="Dosage"
+                                    type="number"
+                                    variant="outlined"
+                                    value={ratingDosage}
+                                    onChange={(e) => setRatingDosage(e.target.value)}
+                                    sx={{ width: '256px' }}
+                                    placeholder="e.g., 500"
+                                    InputProps={{
+                                        inputProps: { min: 0 },
+                                        endAdornment: <InputAdornment position="end">{supplementDosageUnit}</InputAdornment>,
+                                    }}
+                                />
+                            ) : (
+                                <>
+                                    <TextField
+                                        label="Dosage"
+                                        type="number"
+                                        variant="outlined"
+                                        value={ratingDosage}
+                                        onChange={(e) => setRatingDosage(e.target.value)}
+                                        sx={{ width: '120px' }}
+                                        placeholder="e.g., 500"
+                                        InputProps={{ inputProps: { min: 0 } }}
+                                    />
+                                    <TextField
+                                        select
+                                        label="Unit"
+                                        value={ratingDialogDosageUnit}
+                                        onChange={(e) => setRatingDialogDosageUnit(e.target.value)}
+                                        sx={{ width: '120px' }}
+                                        variant="outlined"
+                                    >
+                                        <MenuItem value="mg">mg</MenuItem>
+                                        <MenuItem value="g">g</MenuItem>
+                                        <MenuItem value="mcg">mcg</MenuItem>
+                                        <MenuItem value="ml">ml</MenuItem>
+                                        <MenuItem value="IU">IU</MenuItem>
+                                        <MenuItem value="µg">µg</MenuItem>
+                                        <MenuItem value="tsp">tsp</MenuItem>
+                                        <MenuItem value="tbsp">tbsp</MenuItem>
+                                        <MenuItem value="drops">drops</MenuItem>
+                                        <MenuItem value="capsule">capsule(s)</MenuItem>
+                                        <MenuItem value="tablet">tablet(s)</MenuItem>
+                                        <MenuItem value="piece">piece(s)</MenuItem>
+                                        <MenuItem value="oz">oz</MenuItem>
+                                        <MenuItem value="fl oz">fl oz</MenuItem>
+                                        <MenuItem value="cc">cc</MenuItem>
+                                        <MenuItem value="other">other</MenuItem>
+                                    </TextField>
+                                </>
+                            )}
                             <TextField
                                 label="Times"
                                 type="number"
+                                variant="outlined"
                                 value={ratingDosageFrequency}
                                 onChange={(e) => setRatingDosageFrequency(e.target.value)}
-                                sx={{ width: '80px' }}
+                                sx={{ width: '90px' }}
                                 placeholder="e.g., 2"
                                 InputProps={{ inputProps: { min: 1 } }}
                             />
-                            <Select
+                            <TextField
+                                select
+                                label="Frequency"
                                 value={ratingFrequencyUnit}
                                 onChange={(e) => setRatingFrequencyUnit(e.target.value)}
                                 sx={{ width: '130px' }}
-                                displayEmpty
+                                variant="outlined"
                             >
                                 <MenuItem value="day">Per Day</MenuItem>
                                 <MenuItem value="week">Per Week</MenuItem>
                                 <MenuItem value="month">Per Month</MenuItem>
                                 <MenuItem value="year">Per Year</MenuItem>
-                                <MenuItem value="other">Other</MenuItem>
-                            </Select>
+                            </TextField>
                         </Box>
 
                         <Autocomplete
