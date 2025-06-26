@@ -16,7 +16,6 @@ function parseJwt(token) {
     }).join(''));
     return JSON.parse(jsonPayload);
   } catch (e) {
-    console.error("Error parsing JWT", e);
     return null;
   }
 }
@@ -49,7 +48,6 @@ export const AuthProvider = ({ children }) => {
           localStorage.removeItem('refreshToken');
         }
       } catch (e) {
-        console.error("Error parsing stored user from localStorage", e);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('isAdmin');
@@ -108,7 +106,6 @@ export const AuthProvider = ({ children }) => {
         setIsAdmin(adminStatus); // Ensure admin status is updated from API too
       }
     } catch (error) {
-      console.error("Failed to fetch full user details after login:", error);
       // User is still logged in with basic info from token if userToStore was set
       // No need to logout, but profile_image_url might be missing
     }

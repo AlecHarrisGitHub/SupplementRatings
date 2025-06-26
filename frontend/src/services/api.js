@@ -56,7 +56,7 @@ class SessionManager {
                 this.refreshToken();
             }, timeUntilRefresh);
         } catch (error) {
-            console.error('Error parsing token for refresh scheduling:', error);
+            
         }
     }
 
@@ -76,7 +76,7 @@ class SessionManager {
                 this.showSessionWarning();
             }, timeUntilWarning);
         } catch (error) {
-            console.error('Error parsing token for warning scheduling:', error);
+            
         }
     }
 
@@ -104,7 +104,7 @@ class SessionManager {
                 return access;
             })
             .catch((error) => {
-                console.error('Token refresh failed:', error);
+                
                 this.handleSessionExpired();
                 this.refreshTokenPromise = null;
                 return Promise.reject(error);
@@ -147,9 +147,9 @@ class SessionManager {
         this.autoSaveInterval = setInterval(async () => {
             try {
                 await saveFunction(formData);
-                console.log('Auto-save completed');
+                
             } catch (error) {
-                console.error('Auto-save failed:', error);
+                
             }
         }, intervalMs);
     }
@@ -172,7 +172,7 @@ class SessionManager {
             };
             localStorage.setItem(`form_backup_${formKey}`, JSON.stringify(dataToSave));
         } catch (error) {
-            console.error('Error saving form data to storage:', error);
+            
         }
     }
 
@@ -191,7 +191,7 @@ class SessionManager {
                 }
             }
         } catch (error) {
-            console.error('Error loading form data from storage:', error);
+            
         }
         return null;
     }
@@ -209,10 +209,10 @@ export const sessionManager = new SessionManager();
 API.interceptors.request.use((config) => {
     // Add auth token if it exists
     const token = localStorage.getItem('token');
-    // console.log("TOKEN BEING SENT:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
+    
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
-        // console.log("AUTHORIZATION HEADER:", config.headers.Authorization);
+        
     }
     
     return config;
@@ -353,7 +353,7 @@ export const getAllSupplements = async (params = {}) => {
         // Return the results array directly
         return response.data.results || []; 
     } catch (error) {
-        console.error('Error fetching all supplements:', error);
+        
         throw error;
     }
 };
@@ -428,7 +428,7 @@ export const getCommentsForRating = async (ratingId) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error fetching comments for rating:', error);
+        
         throw error;
     }
 };
@@ -440,7 +440,7 @@ export const getConditions = async (searchTerm) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error fetching conditions:', error);
+        
         throw error;
     }
 };
@@ -450,8 +450,7 @@ export const uploadConditionsCSV = async (file) => {
         const formData = new FormData();
         formData.append('file', file);
         
-        // Log the auth header for debugging
-        // console.log('Auth header:', API.defaults.headers.common['Authorization']);
+        
         
         const response = await API.post('upload-conditions-csv/', formData, {
             headers: {
@@ -460,7 +459,7 @@ export const uploadConditionsCSV = async (file) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error uploading conditions CSV:', error);
+        
         throw error;
     }
 };
@@ -477,7 +476,7 @@ export const uploadSupplementsCSV = async (file) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error uploading supplements CSV:', error);
+        
         throw error;
     }
 };
@@ -491,7 +490,7 @@ export const deleteSupplement = async (supplementId, transferToSupplementId = nu
         const response = await API.delete(url);
         return response.data;
     } catch (error) {
-        console.error('Error deleting supplement:', error.response?.data || error.message);
+        
         throw error.response?.data || error;
     }
 };
@@ -510,7 +509,7 @@ export const loginUser = async (credentials) => {
         
         return response.data;
     } catch (error) {
-        console.error('Login error:', error);
+        
         throw error;
     }
 };
@@ -532,7 +531,7 @@ export const logoutUser = async () => {
         
         return true;
     } catch (error) {
-        console.error('Logout error:', error);
+        
         throw error;
     }
 };
@@ -542,7 +541,7 @@ export const registerUser = async (userData) => {
         const response = await API.post('register/', userData);
         return response.data;
     } catch (error) {
-        console.error('Registration error:', error);
+        
         throw error;
     }
 };
@@ -552,7 +551,7 @@ export const verifyEmail = async (token) => {
         const response = await API.get(`verify-email/${token}/`);
         return response.data;
     } catch (error) {
-        console.error('Error verifying email:', error);
+        
         throw error;
     }
 };
@@ -640,7 +639,7 @@ export const uploadBrandsCSV = async (file) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error uploading brands CSV:', error);
+        
         throw error;
     }
 };
@@ -650,7 +649,7 @@ export const getBrands = async () => {
         const response = await API.get('/brands/');
         return response.data;
     } catch (error) {
-        console.error('Error fetching brands:', error);
+        
         throw error;
     }
 };
@@ -675,7 +674,7 @@ export const deleteBrand = async (brandId, options = {}) => {
         const response = await API.delete(url);
         return response.data;
     } catch (error) {
-        console.error('Error deleting brand:', error.response?.data || error.message);
+        
         throw error.response?.data || error;
     }
 };
@@ -685,7 +684,7 @@ export const upvoteRating = async (ratingId) => {
         const response = await API.post(`ratings/${ratingId}/upvote/`);
         return response.data;
     } catch (error) {
-        console.error('Error upvoting rating:', error);
+        
         throw error;
     }
 };
@@ -695,7 +694,7 @@ export const upvoteComment = async (commentId) => {
         const response = await API.post(`comments/${commentId}/upvote/`);
         return response.data;
     } catch (error) {
-        console.error('Error upvoting comment:', error);
+        
         throw error;
     }
 };
@@ -705,7 +704,7 @@ export const getCategories = async () => {
         const response = await API.get('supplements/categories/');
         return response.data;
     } catch (error) {
-        console.error('Error fetching categories:', error);
+        
         throw error;
     }
 };
@@ -717,7 +716,7 @@ export const getAllConditions = async () => {
         const response = await API.get('conditions/'); 
         return response.data; // Expects an array or {results: [...]} that DeleteConditionModal can use
     } catch (error) {
-        console.error('Error fetching all conditions:', error);
+        
         throw error;
     }
 };
@@ -742,7 +741,7 @@ export const deleteCondition = async (conditionId, options = {}) => {
         const response = await API.delete(url);
         return response.data;
     } catch (error) {
-        console.error('Error deleting condition:', error.response?.data || error.message);
+        
         throw error.response?.data || error;
     }
 };
@@ -753,7 +752,7 @@ export const deleteMyRating = async (ratingId) => {
         cache.clear(); // Clear cache as ratings data has changed
         return response.data; // Or handle 204 No Content
     } catch (error) {
-        console.error('Error deleting rating:', error);
+        
         throw error; // Rethrow or handle more gracefully
     }
 };
@@ -763,7 +762,7 @@ export const deleteRatingByAdmin = async (ratingId) => {
         const response = await API.delete(`/ratings/${ratingId}/`);
         return response.data; // Or simply return true/status if no specific data is returned
     } catch (error) {
-        console.error('Error deleting rating by admin:', error.response?.data || error.message);
+        
         throw error.response?.data || error;
     }
 };
@@ -773,7 +772,7 @@ export const deleteCommentByAdmin = async (commentId) => {
         const response = await API.delete(`/comments/${commentId}/`);
         return response.data; // Or true/status
     } catch (error) {
-        console.error('Error deleting comment by admin:', error.response?.data || error.message);
+        
         throw error.response?.data || error;
     }
 };
@@ -785,7 +784,7 @@ export const searchAllRatings = async (params = {}) => {
         const response = await API.get('ratings/', { params });
         return response.data;
     } catch (error) {
-        console.error('Error fetching all ratings for admin:', error);
+        
         throw error;
     }
 };
@@ -797,7 +796,7 @@ export const searchAllComments = async (params = {}) => {
         const response = await API.get('comments/', { params });
         return response.data;
     } catch (error) {
-        console.error('Error fetching all comments for admin:', error);
+        
         throw error;
     }
 };
@@ -812,8 +811,8 @@ export const updateProfileImage = async (imageData) => {
         });
         return response.data;
     } catch (error) {
-        console.error('Error updating profile image:', error);
-        throw error.response?.data || error;
+        
+        throw error;
     }
 };
 
@@ -822,7 +821,7 @@ export const getCurrentUserDetails = async () => {
         const response = await API.get('user/me/'); // Corrected endpoint
         return response.data;
     } catch (error) {
-        console.error('Error fetching current user details:', error);
+        
         throw error;
     }
 };
@@ -832,7 +831,7 @@ export const getUserChronicConditions = async () => {
         const response = await API.get('user/chronic-conditions/');
         return response.data; // Expects an array of condition objects
     } catch (error) {
-        console.error('Error fetching user chronic conditions:', error);
+        
         throw error;
     }
 };
@@ -842,7 +841,7 @@ export const updateUserChronicConditions = async (conditionIds) => {
         const response = await API.put('user/chronic-conditions/', { condition_ids: conditionIds });
         return response.data;
     } catch (error) {
-        console.error('Error updating chronic conditions:', error);
+        
         throw error;
     }
 };
@@ -852,7 +851,7 @@ export const getUserPublicProfile = async (username) => {
         const response = await API.get(`profiles/${username}/`); // Matches the new backend URL structure
         return response.data;
     } catch (error) {
-        console.error(`Error fetching public profile for ${username}:`, error);
+        
         throw error; // Let the component handle the error message via toast
     }
 };

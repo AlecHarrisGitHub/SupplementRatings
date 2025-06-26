@@ -57,7 +57,6 @@ const ManageComments = () => {
         } catch (err) {
             const errorMessage = err.message || 'Failed to fetch comments.';
             setError(errorMessage);
-            console.error(err);
         } finally {
             setIsLoading(false);
         }

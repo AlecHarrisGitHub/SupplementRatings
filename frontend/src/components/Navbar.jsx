@@ -10,7 +10,7 @@ const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jp
 
 function Navbar() {
     const { isAuthenticated, isAdmin, user, logout } = useAuth();
-    // console.log('Navbar Auth State:', { isAuthenticated, isAdmin });
+    
     const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState(null);
     const openUserMenu = Boolean(anchorEl);

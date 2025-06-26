@@ -14,7 +14,6 @@ function Logout() {
                 logout();
                 navigate('/login', { state: { from: 'logout' } });
             } catch (error) {
-                console.error('Logout error:', error);
                 // Still logout the user on the frontend even if the API call fails
                 logout();
                 navigate('/login', { state: { from: 'logout' } });

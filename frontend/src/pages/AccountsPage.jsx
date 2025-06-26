@@ -101,8 +101,7 @@ function AccountsPage() {
             }
             setNextPage(nextPageUrl);
         } catch (err) {
-            console.error("Error fetching ratings:", err);
-            setRatingsError(err.message);
+            toast.error("Could not fetch your ratings.");
         } finally {
             setLoadingRatings(false);
             setLoadingMore(false);
@@ -121,8 +120,7 @@ function AccountsPage() {
                 setAllConditions(Array.isArray(conditionsData) ? conditionsData : conditionsData.results || []);
                 setConditionsError(null);
             } catch (err) {
-                console.error("Error fetching all conditions:", err);
-                setConditionsError(err.message || "Could not load conditions list.");
+                toast.error("Could not load conditions list.");
             } finally {
                 setLoadingAllConditions(false);
             }
@@ -161,7 +159,7 @@ function AccountsPage() {
                     setUploadSuccess(true);
                 }
             } catch (err) {
-                setUploadError(err.message || 'Failed to upload image.');
+                toast.error("Failed to upload image.");
             } finally {
                 setIsUploading(false);
                 if (fileInputRef.current) {
@@ -183,8 +181,7 @@ function AccountsPage() {
             updateUser({ chronic_conditions: updatedConditionsData });
             setSaveConditionsSuccess(true);
         } catch (err) {
-            console.error("Error saving chronic conditions:", err);
-            setConditionsError(err.message || "Failed to save chronic conditions.");
+            toast.error("Failed to save chronic conditions.");
         } finally {
             setSavingConditions(false);
         }
@@ -208,14 +205,12 @@ function AccountsPage() {
         if (!ratingToDelete) return;
         try {
             await deleteMyRating(ratingToDelete);
-            setRatings(prevRatings => prevRatings.filter(r => r.id !== ratingToDelete));
-            toast.success("Rating deleted successfully!");
-        } catch (err) {
-            console.error("Error deleting rating:", err);
-            toast.error(err.message || "Failed to delete rating.");
-        } finally {
+            toast.success("Rating deleted successfully.");
+            setRatings(ratings.filter(r => r.id !== ratingToDelete));
             setOpenDeleteDialog(false);
             setRatingToDelete(null);
+        } catch (err) {
+            toast.error("Failed to delete rating.");
         }
     };
 
@@ -250,8 +245,7 @@ function AccountsPage() {
             setEditingComment(null);
             toast.success("Comment updated successfully!");
         } catch (err) {
-            console.error("Error updating comment:", err);
-            toast.error(err.message || "Failed to update comment.");
+            toast.error("Failed to update comment.");
         }
     };
 
@@ -269,15 +263,23 @@ function AccountsPage() {
         if (!commentToDelete) return;
         try {
             await deleteCommentAPI(commentToDelete);
-            const updatedComments = user.comments.filter(c => c.id !== commentToDelete);
-            updateUser({ ...user, comments: updatedComments });
-            toast.success("Comment deleted successfully!");
-        } catch (err) {
-            console.error("Error deleting comment:", err);
-            toast.error(err.message || "Failed to delete comment.");
-        } finally {
+            // After deletion, update the state of the parent rating's comments
+            // This is a bit complex as we need to find the rating and update its comments array
+            const updatedRatings = ratings.map(r => {
+                if (r.comments.some(c => c.id === commentToDelete)) {
+                    return {
+                        ...r,
+                        comments: r.comments.filter(c => c.id !== commentToDelete)
+                    };
+                }
+                return r;
+            });
+            setRatings(updatedRatings);
             setShowDeleteCommentDialog(false);
             setCommentToDelete(null);
+            toast.success("Comment deleted successfully.");
+        } catch (err) {
+            toast.error("Failed to delete comment.");
         }
     };
 

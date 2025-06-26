@@ -24,6 +24,7 @@ const DeleteConditionModal = ({ open, onClose, condition, onConditionDeleted }) 
     const [targetCondition, setTargetCondition] = useState(null);
     const [loadingConditions, setLoadingConditions] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (open && deleteAction === 'transfer_ratings') {
@@ -35,7 +36,6 @@ const DeleteConditionModal = ({ open, onClose, condition, onConditionDeleted }) 
                 })
                 .catch(error => {
                     toast.error("Failed to load conditions for transfer.");
-                    console.error("Failed to load conditions:", error);
                 })
                 .finally(() => setLoadingConditions(false));
         }
@@ -68,7 +68,7 @@ const DeleteConditionModal = ({ open, onClose, condition, onConditionDeleted }) 
             onClose();
         } catch (error) {
             toast.error(error.error || 'Failed to delete condition/purpose.');
-            console.error("Delete condition error:", error);
+            setError(error.message || "An error occurred.");
         } finally {
             setIsDeleting(false);
         }

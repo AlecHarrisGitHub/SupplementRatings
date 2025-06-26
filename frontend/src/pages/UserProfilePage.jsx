@@ -40,14 +40,10 @@ function UserProfilePage() {
         const fetchProfile = async () => {
             try {
                 setLoading(true);
-                const data = await getUserPublicProfile(username);
-                setProfile(data);
-                setError(null);
+                const profileData = await getUserPublicProfile(username);
+                setProfile(profileData);
             } catch (err) {
-                console.error("Error fetching public profile:", err);
-                toast.error(err.response?.data?.error || 'Failed to load profile.');
-                setError(err.response?.data?.error || 'Profile not found or an error occurred.');
-                setProfile(null);
+                setError('Could not load user profile.');
             } finally {
                 setLoading(false);
             }

@@ -49,7 +49,7 @@ const ManageRatings = () => {
                 params.search = currentSearchTerm; 
             }
             // Use the new searchAllRatings function
-            const data = await searchAllRatings(params); 
+            const data = await searchAllRatings({ search: currentSearchTerm, ordering: sortModel[0] ? `${sortModel[0].sort === 'desc' ? '-' : ''}${sortModel[0].field}` : '-created_at' });
             
             if (data && (Array.isArray(data) || data.results)) {
                 setRatings(data.results || data);
@@ -66,7 +66,7 @@ const ManageRatings = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [itemsPerPage]);
+    }, [itemsPerPage, sortModel]);
 
     useEffect(() => {
         fetchRatings(page, searchTerm);

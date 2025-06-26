@@ -23,6 +23,7 @@ const DeleteBrandModal = ({ open, onClose, brand, onBrandDeleted }) => {
     const [targetBrand, setTargetBrand] = useState(null);
     const [loadingBrands, setLoadingBrands] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         if (open && deleteAction === 'replace_with_another') {
@@ -35,7 +36,6 @@ const DeleteBrandModal = ({ open, onClose, brand, onBrandDeleted }) => {
                 })
                 .catch(error => {
                     toast.error("Failed to load brands for replacement.");
-                    console.error("Failed to load brands:", error);
                 })
                 .finally(() => setLoadingBrands(false));
         }
@@ -71,7 +71,7 @@ const DeleteBrandModal = ({ open, onClose, brand, onBrandDeleted }) => {
             onClose(); // Close modal
         } catch (error) {
             toast.error(error.error || 'Failed to delete brand.');
-            console.error("Delete brand error:", error);
+            setError(error.message || "An error occurred.");
         } finally {
             setIsDeleting(false);
         }

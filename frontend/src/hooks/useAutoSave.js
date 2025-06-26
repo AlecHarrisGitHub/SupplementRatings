@@ -48,9 +48,9 @@ export const useAutoSave = (formKey, formData, saveFunction, options = {}) => {
             lastSavedData.current = dataString;
             saveToLocalStorage(data);
             onAutoSaveSuccess(data);
-            console.log('Auto-save completed successfully');
+            
         } catch (error) {
-            console.error('Auto-save failed:', error);
+            
             onAutoSaveError(error);
         }
     }, [enableAutoSave, saveFunction, saveToLocalStorage, onAutoSaveSuccess, onAutoSaveError]);

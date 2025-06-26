@@ -21,30 +21,30 @@ const DeleteSupplementModal = ({ open, onClose, supplement, onSupplementDeleted 
     const [targetSupplement, setTargetSupplement] = useState(null);
     const [loadingSupplements, setLoadingSupplements] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
+        const fetchSupplements = async () => {
+            try {
+                const data = await getAllSupplements();
+                setAllSupplements(data);
+            } catch (error) {
+                
+            }
+        };
+
         if (open && transferRatings) {
             setLoadingSupplements(true);
             // Fetch all supplements to populate the dropdown for transferring ratings
             // Ensure getAllSupplements is implemented in api.js to fetch all supplements (not paginated for this purpose)
-            getAllSupplements() // No need to pass params if api.js handles it, or pass {} if needed
-                .then(data => {
-                    // getAllSupplements now returns an array (results) directly
-                    const filteredSupplements = Array.isArray(data) ? data.filter(s => s.id !== supplement?.id) : [];
-                    setAllSupplements(filteredSupplements);
-                })
-                .catch(error => {
-                    toast.error("Failed to load supplements for transfer.");
-                    console.error("Failed to load supplements:", error);
-                })
-                .finally(() => setLoadingSupplements(false));
+            fetchSupplements();
         }
         if (!open) {
             // Reset state when modal is closed
             setTransferRatings(false);
             setTargetSupplement(null);
         }
-    }, [open, transferRatings, supplement?.id]);
+    }, [open, transferRatings]);
 
     const handleDelete = async () => {
         if (!supplement) return;
@@ -57,13 +57,13 @@ const DeleteSupplementModal = ({ open, onClose, supplement, onSupplementDeleted 
         setIsDeleting(true);
         try {
             const transferToId = transferRatings && targetSupplement ? targetSupplement.id : null;
-            const response = await deleteSupplement(supplement.id, transferToId);
+            await deleteSupplement(supplement.id, transferToId);
             toast.success(response.message || 'Supplement deleted successfully!');
             onSupplementDeleted(supplement.id); // Callback to update parent list
             onClose(); // Close modal
         } catch (error) {
-            toast.error(error.error || 'Failed to delete supplement.');
-            console.error("Delete error:", error);
+            toast.error(error.message || 'Failed to delete supplement.');
+            setError(error.message || "An error occurred during deletion.");
         } finally {
             setIsDeleting(false);
         }

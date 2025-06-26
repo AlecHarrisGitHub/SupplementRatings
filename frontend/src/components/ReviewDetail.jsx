@@ -337,8 +337,6 @@ function CommentBox({
 }
 
 function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
-    console.log('[ReviewDetail] Component rendering. Rating ID:', rating?.id);
-
     const { user: currentUser } = useAuth();
     const [newComment, setNewComment] = useState('');
     const [isReplying, setIsReplying] = useState(false);
@@ -353,7 +351,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const location = useLocation(); // Added useLocation hook
 
     useEffect(() => {
-        console.log('[ReviewDetail DeepLinkEffect] Triggered. Rating ID:', rating?.id, 'Location state:', location.state);
         setCurrentRating(rating);
         const initialThreadItem = transformRatingToThreadItem(rating, rating.is_edited);
         if (initialThreadItem) {
@@ -363,19 +360,14 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
 
         const { commentId: targetCommentId, ratingId: locationRatingId } = location.state || {};
-        console.log('[ReviewDetail DeepLinkEffect] Target Comment ID:', targetCommentId, 'Target Rating ID:', locationRatingId);
 
         if (rating && targetCommentId && String(rating.id) === String(locationRatingId)) {
-            console.log('[ReviewDetail DeepLinkEffect] Rating ID matches. Attempting to find comment thread.');
             const pathToComment = traceToTop(targetCommentId, rating.comments || []);
             if (pathToComment.length > 0) {
-                console.log('[ReviewDetail DeepLinkEffect] Path to comment found:', pathToComment);
                 setThread([initialThreadItem, ...pathToComment]);
                 setReplyToComment(pathToComment[pathToComment.length - 1]);
             } else {
-                console.warn(`[ReviewDetail DeepLinkEffect] Deep link target commentId ${targetCommentId} not found in rating ${rating.id}`);
                 setReplyToComment(null);
-                // Ensure thread is reset if path not found
                 if (initialThreadItem) {
                     setThread([initialThreadItem]);
                 }
@@ -389,19 +381,12 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     }, [rating, location.state]);
 
     useEffect(() => {
-        // This effect handles scrolling to a specific comment if commentId is in location state
         const { commentId, ratingId: locationRatingId } = location.state || {};
 
         if (commentId && currentRating && String(currentRating.id) === String(locationRatingId)) {
             const commentElement = document.getElementById(`comment-${commentId}`);
             if (commentElement) {
                 commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                // Optionally, add a temporary highlight effect
-                commentElement.style.transition = 'background-color 0.5s ease-in-out';
-                commentElement.style.backgroundColor = '#f0f8ff'; // AliceBlue for highlight
-                setTimeout(() => {
-                    commentElement.style.backgroundColor = ''; // Reset background
-                }, 2000); // Highlight for 2 seconds
             }
         }
     }, [location.state, currentRating]);
@@ -514,8 +499,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         }
     };
 
-    console.log('Rating in ReviewDetail:', rating); // Debug log
-
     const handleSubmitComment = async (e) => {
         e.preventDefault();
         try {
@@ -604,7 +587,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             
             onCommentAdded(response);
         } catch (error) {
-            console.error('Error adding comment:', error);
             toast.error('Failed to add comment');
         }
     };
@@ -666,7 +648,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         const fullClickedComment = findCommentById(currentRating.comments, commentData.id);
 
         if (!fullClickedComment) {
-            console.error("Clicked comment not found in currentRating structure:", commentData.id);
             setReplyToComment(null); 
             return;
         }
@@ -727,8 +708,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
         return <Typography>Loading review details...</Typography>; // Or some other placeholder
     }
 
-    console.log('Current currentRating in ReviewDetail:', currentRating); // <-- ADD THIS LOG
-
     return (
         <Box>
             <Button 
@@ -742,9 +721,6 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
             {currentRating && currentRating.user && (
                 <Paper elevation={1} sx={{ p: {xs: 1, md: 2}, mb: 3, border: '1px solid #e0e0e0' }}>
                     {thread.map((item, index) => {
-                        if (item.isReviewThreadItem) { // <-- ADD CONDITIONAL LOG
-                            console.log('Review Item passed to CommentBox:', item);
-                        }
                         return (
                             <React.Fragment key={item.id}>
                                 <CommentBox

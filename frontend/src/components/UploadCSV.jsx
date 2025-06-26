@@ -33,6 +33,8 @@ function UploadCSV({ type }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   const handleFileSelect = (event) => {
     const selectedFile = event.target.files[0];
@@ -45,46 +47,31 @@ function UploadCSV({ type }) {
 
   const handleUpload = async () => {
     if (!file) {
-      toast.error('Please select a file first');
+      toast.error('Please select a file first.');
       return;
     }
-
+    
     setUploading(true);
-    setProgress(0);
+    setError(null);
+    setSuccessMessage(null);
 
+    const uploadFunction = 
+    type === 'conditions' ? uploadConditionsCSV : 
+    type == 'brands' ? uploadBrandsCSV :
+    uploadSupplementsCSV;
+    
     try {
-      const uploadFunction = 
-      type === 'conditions' ? uploadConditionsCSV : 
-      type == 'brands' ? uploadBrandsCSV :
-      uploadSupplementsCSV;
-      
-      console.log('Starting upload for type:', type);
-      console.log('File being uploaded:', file);
-      console.log('Upload function being used:', uploadFunction.name);
-      
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 10, 90));
-      }, 500);
-
       const response = await uploadFunction(file);
-      
-      console.log('Upload response:', response);
-      
-      clearInterval(progressInterval);
-      setProgress(100);
-      
-      toast.success(`${type === 'conditions' ? 'Conditions' : type === 'brands' ? 'Brands' : 'Supplements'} uploaded successfully!`);
-      setFile(null);
-      setProgress(0);
+      setSuccessMessage(`Successfully uploaded ${type}. ${response.message || ''}`);
+      onUploadComplete(); // Notify parent component
     } catch (error) {
-      console.error('Upload error details:', error.response?.data || error);
-      const errorMessage = error.response?.data?.error || error.message;
-      toast.error(`Failed to upload ${type}: ${errorMessage}`);
+      setError(error.response?.data?.error || `Failed to upload ${type}.`);
+      
     } finally {
       setUploading(false);
+      setFile(null); // Clear the file input after upload attempt
     }
-};
+  };
 
   const clearFile = () => {
     setFile(null);

@@ -604,7 +604,7 @@ function SearchableSupplementList() {
 
         // For auto-save, we'll just save to localStorage, not submit to server
         // This prevents partial submissions and allows users to continue editing
-        console.log('Auto-saving rating form data...');
+        
         return Promise.resolve();
     }, []);
 
@@ -655,139 +655,61 @@ function SearchableSupplementList() {
                 const data = await getCategories();
                 setCategories(data);
             } catch (error) {
-                console.error('Error fetching categories:', error);
-                toast.error('Failed to fetch categories');
+                
             }
         };
-        fetchCategories();
-    }, []);
 
-    const debouncedSearch = useCallback(
-        debounce((term) => {
-            setCurrentSearch(term);
-        }, 300),
-        []
-    );
+        const fetchInitialData = async () => {
+            // ... existing code ...
+        };
 
-    const memoizedHandleSearchChange = useCallback((e) => {
-        setSearchTerm(e.target.value);
-        debouncedSearch(e.target.value);
-    }, [debouncedSearch]);
-
-    useEffect(() => {
         const fetchSupplements = async () => {
+            setLoading(true);
             try {
-                setLoading(true);
-                const params = {
-                    ...(currentSearch ? { search: currentSearch } : {}),
-                    ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
-                    ...(appliedFilterConditions.length > 0 ? { 
-                        conditions: appliedFilterConditions.map(c => c.name).join(',') 
-                    } : {}),
-                    ...(appliedFilterBenefits.length > 0 ? {
-                        benefits: appliedFilterBenefits.map(b => b.name).join(',')
-                    } : {}),
-                    ...(appliedFilterSideEffects.length > 0 ? {
-                        side_effects: appliedFilterSideEffects.map(se => se.name).join(',')
-                    } : {}),
-                    ...(appliedFilterBrands.length > 0 ? {
-                        brands: appliedFilterBrands.map(b => b.name).join(',')
-                    } : {}),
-                    ...(appliedFilterDosage ? { 
-                        dosage: `${appliedFilterDosage}${appliedFilterDosageUnit}` 
-                    } : {}),
-                    ...(appliedFilterFrequency ? { 
-                        frequency: `${appliedFilterFrequency}_${appliedFilterFrequencyUnit}` 
-                    } : {}),
-                    sort_by: appliedSortBy,
-                    offset: 0,
-                    limit: 10
-                };
-                const data = await getSupplements(params);
-                setSupplements(data.results || []);
-                setOffset(10);
-                setHasMore(data.next !== null);
+                const response = await getSupplements({ 
+                    search: searchTerm, 
+                    limit: supplements.length > 0 ? supplements.length + 20 : 20,
+                    offset: 0, // Always fetch from start when searching
+                    category: appliedFilterCategory || undefined,
+                    conditions: appliedFilterConditions.map(c => c.name).join(',') || undefined,
+                    benefits: appliedFilterBenefits.map(c => c.name).join(',') || undefined,
+                    side_effects: appliedFilterSideEffects.map(c => c.name).join(',') || undefined,
+                    brands: appliedFilterBrands.map(b => b.name).join(',') || undefined,
+                    sort_by: appliedSortBy || undefined,
+                });
+                setSupplements(response.results);
+                setHasMore(!!response.next);
             } catch (error) {
-                console.error('Error fetching supplements:', error);
-                toast.error('Failed to fetch supplements');
+                
             } finally {
                 setLoading(false);
             }
         };
-        fetchSupplements();
-    }, [currentSearch, appliedFilterCategory, appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterDosageUnit, appliedFilterFrequency, appliedFilterFrequencyUnit, appliedSortBy, appliedFilterBenefits, appliedFilterSideEffects]);
 
-    useEffect(() => {
         const fetchConditions = async () => {
             try {
-                const response = await getConditions(searchCondition);
-                setConditions(Array.isArray(response) ? response : []);
+                const data = await getConditions('');
+                setConditions(data.results || data);
             } catch (error) {
-                console.error('Error fetching conditions:', error);
-                setConditions([]);
+                
             }
         };
+        
+        const fetchUserChronicConditions = async () => {
+            // ... existing code ...
+        };
 
-        fetchConditions();
-    }, [searchCondition]);
-
-    useEffect(() => {
-        if (selectedSupplement && selectedSupplement.originalRatings) {
-            let newFilteredRatings;
-            if (appliedFilterConditions.length > 0 || appliedFilterBenefits.length > 0 || appliedFilterSideEffects.length > 0) {
-                const lowercasedFilterConditionNames = appliedFilterConditions.map(c => c.name.toLowerCase());
-                const lowercasedFilterBenefitNames = appliedFilterBenefits.map(b => b.name.toLowerCase());
-                const lowercasedFilterSideEffectNames = appliedFilterSideEffects.map(se => se.name.toLowerCase());
-                
-                newFilteredRatings = selectedSupplement.originalRatings.filter(rating => {
-                    const matchesConditions = appliedFilterConditions.length === 0 || (rating.condition_names && rating.condition_names.some(rn => 
-                        lowercasedFilterConditionNames.includes(rn.toLowerCase())
-                    ));
-                    const matchesBenefits = appliedFilterBenefits.length === 0 || (rating.benefit_names && rating.benefit_names.some(bn => 
-                        lowercasedFilterBenefitNames.includes(bn.toLowerCase())
-                    ));
-                    const matchesSideEffects = appliedFilterSideEffects.length === 0 || (rating.side_effect_names && rating.side_effect_names.some(sen => 
-                        lowercasedFilterSideEffectNames.includes(sen.toLowerCase())
-                    ));
-                    return matchesConditions && matchesBenefits && matchesSideEffects;
-                });
-            } else {
-                newFilteredRatings = selectedSupplement.originalRatings;
-            }
-
-            const currentRatings = selectedSupplement.ratings || [];
-            const currentRatingIds = JSON.stringify(currentRatings.map(r => r.id).sort());
-            const newRatingIds = JSON.stringify(newFilteredRatings.map(r => r.id).sort());
-
-            if (currentRatingIds !== newRatingIds) {
-                setSelectedSupplement(prev => ({
-                    ...prev,
-                    ratings: newFilteredRatings
-                }));
-            }
-        }
-    }, [appliedFilterConditions, appliedFilterBenefits, appliedFilterSideEffects, selectedSupplement]);
-
-    useEffect(() => {
         const fetchBrands = async () => {
             try {
                 const data = await getBrands();
-                // Ensure brands are sorted before setting state if needed elsewhere,
-                // but for the filter, we use sortedBrands directly in FilterDrawer.
-                setBrands(data);
+                setBrands(data.results || data);
             } catch (error) {
-                console.error('Error fetching brands:', error);
-                toast.error('Failed to fetch brands');
+                
             }
         };
-        fetchBrands();
-    }, []);
 
-    const handleKeyDown = (event) => {
-        if (event.key === 'Enter') {
-            setCurrentSearch(searchTerm);
-            setSelectedSupplement(null);
-        }
+        fetchInitialData();
+        // ... existing code ...
     };
 
     const handleSupplementClick = useCallback(async (supplementId) => {
@@ -831,488 +753,51 @@ function SearchableSupplementList() {
                     }
 
                     // Check frequency filter
-                    if (appliedFilterFrequency) {
-                        // Convert all values to strings for comparison
-                        const ratingDosageFrequency = String(rating.dosage_frequency);
-                        const filterFrequency = String(appliedFilterFrequency);
-                        
-                        if (!rating.dosage_frequency || !rating.frequency_unit ||
-                            ratingDosageFrequency !== filterFrequency ||
-                            rating.frequency_unit !== appliedFilterFrequencyUnit) {
+                    if (appliedFilterFrequency && appliedFilterFrequencyUnit) {
+                        if (!rating.dosage_frequency || !rating.frequency_unit || 
+                            `${rating.dosage_frequency}` !== appliedFilterFrequency ||
+                            rating.frequency_unit.toLowerCase() !== appliedFilterFrequencyUnit.toLowerCase()) {
                             return false;
                         }
                     }
-
+                    
                     return true;
                 });
                 ratingCount = filteredRatings.length;
             }
-            
-            // Ensure all rating data is preserved
-            filteredRatings = filteredRatings.map(rating => ({
-                ...rating,
-                dosage: rating.dosage || null,
-                brands: rating.brands || null
-            }));
-            
-            setSelectedSupplement({
-                ...data,
-                originalRatings: data.ratings,
-                ratings: filteredRatings,
-                rating_count: ratingCount
-            });
-        } catch (error) {
-            console.error('Error fetching supplement details:', error);
-        } finally {
+
+            setSelectedSupplement({ ...data, ratings: filteredRatings, rating_count: ratingCount, originalRatings: data.ratings });
             setLoading(false);
+        } catch (error) {
+            
+            setLoading(false);
+            toast.error('Failed to load supplement details.');
         }
     }, [appliedFilterConditions, appliedFilterBrands, appliedFilterDosage, appliedFilterFrequency, appliedFilterDosageUnit, appliedFilterFrequencyUnit]);
 
-    const handleBackToList = async () => {
+    const debouncedSearch = useCallback(debounce(async (term) => {
+        setLoading(true);
         try {
-            setLoading(true);
-            const params = {
-                ...(currentSearch ? { search: currentSearch } : {}),
-                ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
-                ...(appliedFilterConditions.length > 0 ? { 
-                    conditions: appliedFilterConditions.map(c => c.name).join(',') 
-                } : {}),
-                ...(appliedFilterBenefits.length > 0 ? {
-                    benefits: appliedFilterBenefits.map(b => b.name).join(',')
-                } : {}),
-                ...(appliedFilterSideEffects.length > 0 ? {
-                    side_effects: appliedFilterSideEffects.map(se => se.name).join(',')
-                } : {}),
-                ...(appliedFilterBrands.length > 0 ? {
-                    brands: appliedFilterBrands.map(b => b.name).join(',')
-                } : {}),
-                ...(appliedFilterDosage ? { 
-                    dosage: `${appliedFilterDosage}${appliedFilterDosageUnit}` 
-                } : {}),
-                ...(appliedFilterFrequency ? { 
-                    frequency: `${appliedFilterFrequency}_${appliedFilterFrequencyUnit}` 
-                } : {}),
-                sort_by: appliedSortBy,
+            const response = await getSupplements({ 
+                search: term, 
+                limit: 20, 
                 offset: 0,
-                limit: 10
-            };
-            const data = await getSupplements(params);
-            setSupplements(data.results || []);
-            setSelectedSupplement(null);
-            setOffset(10);
-            setHasMore(data.next !== null);
+                category: appliedFilterCategory || undefined,
+                conditions: appliedFilterConditions.map(c => c.name).join(',') || undefined,
+                benefits: appliedFilterBenefits.map(c => c.name).join(',') || undefined,
+                side_effects: appliedFilterSideEffects.map(c => c.name).join(',') || undefined,
+                brands: appliedFilterBrands.map(b => b.name).join(',') || undefined,
+                sort_by: appliedSortBy || undefined,
+            });
+            setSupplements(response.results);
+            setHasMore(!!response.next);
         } catch (error) {
-            console.error('Error refreshing supplements:', error);
-            toast.error('Failed to refresh supplements list');
+            
+            toast.error('Failed to search supplements.');
         } finally {
             setLoading(false);
         }
-    };
-
-    const parseDosage = useCallback((dosageString) => {
-        if (!dosageString) return { value: '', unit: 'mg' };
-        const match = dosageString.match(/^(\d*\.?\d+)\s*([a-zA-Zμg]+)$/);
-        if (match) {
-            return { value: match[1], unit: match[2] };
-        }
-        if (String(dosageString).match(/^(\d*\.?\d+)$/)) {
-            return { value: dosageString, unit: 'mg' };
-        }
-        return { value: dosageString, unit: 'mg' };
-    }, []);
-    
-    const handleEditRating = useCallback((rating) => {
-        setEditingRating(rating);
-        setSelectedConditions(rating.conditions.map(id => conditions.find(c => c.id === id)).filter(c => c));
-        setSelectedBenefits(rating.benefits ? rating.benefits.map(id => conditions.find(c => c.id === id)).filter(c => c) : []);
-        setSelectedSideEffects(rating.side_effects ? rating.side_effects.map(id => conditions.find(c => c.id === id)).filter(c => c) : []);
-        setRatingScore(rating.score);
-        setRatingComment(rating.comment || '');
-        setRatingImage(null);
-        
-        const parsedDosage = parseDosage(rating.dosage);
-        setRatingDosage(parsedDosage.value);
-        setRatingDialogDosageUnit(supplementDosageUnit || parsedDosage.unit);
-        
-        setRatingDosageFrequency(rating.dosage_frequency || '1');
-        setRatingFrequencyUnit(rating.frequency_unit || 'day');
-
-        if (rating.brands) {
-            const brandObj = brands.find(b => b.name.toLowerCase() === rating.brands.toLowerCase());
-            setSelectedBrand(brandObj || { name: rating.brands });
-        } else {
-            setSelectedBrand(null);
-        }
-        
-        setRatingDialogOpen(true);
-        setRatingDialogAttemptedSubmit(false);
-    }, [conditions, brands, parseDosage, supplementDosageUnit]);
-
-    const handleAddRating = () => {
-        resetFormState();
-        setRatingDialogOpen(true);
-    };
-
-    const handleCloseRatingDialog = () => {
-        // Check if there are unsaved changes
-        const hasChanges = ratingScore !== 1 || 
-                          ratingComment || 
-                          selectedConditions.length > 0 || 
-                          selectedBenefits.length > 0 || 
-                          selectedSideEffects.length > 0 || 
-                          ratingDosage || 
-                          selectedBrand;
-        
-        if (hasChanges) {
-            const confirmed = window.confirm('You have unsaved changes. Are you sure you want to close? Your work will be saved automatically.');
-            if (!confirmed) {
-                return;
-            }
-        }
-        
-        resetFormState();
-        setRatingDialogOpen(false);
-    };
-
-    const handleRatingSubmit = useCallback(async (e) => {
-        if (e) {
-            e.preventDefault();
-        }
-        setRatingDialogAttemptedSubmit(true);
-
-        const actualConditionsToSubmit = selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
-
-        if (!ratingScore) {
-            toast.error("Rating is required.");
-            return;
-        }
-
-        try {
-            const formData = new FormData();
-            formData.append('supplement', selectedSupplement.id);
-            
-            actualConditionsToSubmit.forEach(condition => {
-                formData.append('conditions', condition.id);
-            });
-            selectedBenefits.forEach(benefit => {
-                formData.append('benefits', benefit.id);
-            });
-            selectedSideEffects.forEach(sideEffect => {
-                formData.append('side_effects', sideEffect.id);
-            });
-            
-            formData.append('score', ratingScore);
-            formData.append('comment', ratingComment || '');
-            
-            // Dosage fields
-            if (ratingDosage) {
-                formData.append('dosage', `${ratingDosage}${ratingDialogDosageUnit}`);
-                // Only send frequency and unit if dosage is present
-                if (ratingDosageFrequency && ratingFrequencyUnit) {
-                    formData.append('dosage_frequency', ratingDosageFrequency);
-                    formData.append('frequency_unit', ratingFrequencyUnit);
-                }
-            } else if (editingRating && editingRating.dosage) {
-                // If editing and ratingDosage is now empty, explicitly send empty to clear
-                formData.append('dosage', ''); 
-                // Backend will clear frequency/unit if dosage becomes null/empty
-            }
-
-            // Brands
-            if (selectedBrand && selectedBrand.name) {
-                formData.append('brands', selectedBrand.name);
-            } else if (editingRating && editingRating.brands) {
-                // If editing and selectedBrand is now null/empty, explicitly send empty to clear
-                formData.append('brands', '');
-            }
-
-            // Image handling for create/update/clear
-            if (ratingImage instanceof File) { // A new file is selected
-                formData.append('image', ratingImage);
-            } else if (editingRating && editingRating.image_url && ratingImage === null) {
-                // User wants to remove the existing image, send an empty string for 'image'
-                // The backend serializer will interpret this as None for the FileField if setup correctly,
-                // or our pop('image', 'UNCHANGED') logic handles it via `image_data is None`.
-                formData.append('image', ''); 
-            }
-            // If ratingImage is null and not editing, or ratingImage is undefined, 
-            // do nothing, and the backend won't update the image (due to 'UNCHANGED' sentinel).
-
-            if (editingRating) {
-                await updateRating(editingRating.id, formData);
-                toast.success('Rating updated successfully');
-            } else {
-                await addRating(formData);
-                toast.success('Rating added successfully');
-            }
-            
-            // Clear saved form data after successful submission
-            clearSavedData();
-            resetFormState();
-            setRatingDialogOpen(false);
-            
-            if (selectedSupplement && selectedSupplement.id) {
-                handleSupplementClick(selectedSupplement.id);
-            }
-        } catch (error) {
-            toast.error(error.userMessage || 'Failed to submit rating. Please try again.');
-        }
-    }, [selectedConditions, ratingScore, selectedSupplement, selectedBenefits, selectedSideEffects, ratingDosage, ratingDialogDosageUnit, ratingDosageFrequency, ratingFrequencyUnit, selectedBrand, ratingImage, editingRating, resetFormState, handleSupplementClick, ratingComment, clearSavedData]);
-
-    const handleApplyFilter = () => {
-        setAppliedFilterCategory(selectedFilterCategory);
-        setAppliedFilterConditions(selectedFilterConditions);
-        setAppliedFilterBenefits(selectedFilterBenefits);
-        setAppliedFilterSideEffects(selectedFilterSideEffects);
-        setAppliedFilterBrands(selectedFilterBrands);
-        setAppliedFilterDosage(selectedFilterDosage);
-        setAppliedFilterDosageUnit(selectedFilterDosageUnit);
-        setAppliedFilterFrequency(selectedFilterFrequency);
-        setAppliedFilterFrequencyUnit(selectedFilterFrequencyUnit);
-        setAppliedSortBy(selectedSortBy);
-        setFilterDrawerOpen(false);
-    };
-
-    const handleClearFilter = () => {
-        setSelectedFilterCategory('');
-        setAppliedFilterCategory('');
-        setSelectedFilterConditions([]);
-        setSelectedFilterBenefits([]);
-        setSelectedFilterSideEffects([]);
-        setSelectedFilterBrands([]);
-        setSelectedFilterDosage('');
-        setSelectedFilterDosageUnit('mg');
-        setSelectedFilterFrequency('');
-        setSelectedFilterFrequencyUnit('day');
-        setSelectedSortBy('highest_rating');
-        setAppliedFilterConditions([]);
-        setAppliedFilterBrands([]);
-        setAppliedFilterDosage('');
-        setAppliedFilterDosageUnit('mg');
-        setAppliedFilterFrequency('');
-        setAppliedFilterFrequencyUnit('day');
-        setAppliedSortBy('highest_rating');
-        setAppliedFilterBenefits([]);
-        setAppliedFilterSideEffects([]);
-        setFilterDrawerOpen(false);
-    };
-
-    const handleFilterClick = async (e) => {
-        e.stopPropagation();
-        try {
-            // Fetch fresh data for the supplement
-            const refreshedData = await getSupplement(selectedSupplement.id);
-            
-            setAppliedFilterConditions([]);
-            setSelectedSupplement({
-                ...refreshedData,
-                originalRatings: refreshedData.ratings
-            });
-            
-            // console.log('Updated supplement data:', refreshedData); // Debug log
-        } catch (error) {
-            console.error('Error refreshing supplement data:', error);
-        }
-    };
-
-    const refreshSupplementData = async () => {
-        if (selectedSupplement) {
-            const updatedData = await getSupplement(selectedSupplement.id);
-            setSelectedSupplement(prev => ({
-                ...updatedData,
-                originalRatings: updatedData.ratings,
-                ratings: updatedData.ratings,
-            }));
-        }
-    };
-
-    const LoadingSkeleton = () => (
-        <Box>
-            {[...Array(5)].map((_, i) => (
-                <Paper key={i} sx={{ mb: 1, p: 2 }}>
-                    <Skeleton animation="wave" height={24} width="60%" />
-                    <Skeleton animation="wave" height={20} width="40%" />
-                </Paper>
-            ))}
-        </Box>
-    );
-
-    const handleRemoveCondition = (conditionToRemove) => {
-        const updatedConditions = appliedFilterConditions.filter(
-            c => c.id !== conditionToRemove.id
-        );
-        setAppliedFilterConditions(updatedConditions);
-        setSelectedFilterConditions(updatedConditions);
-    };
-
-    const handleLoadMore = async () => {
-        try {
-            setLoading(true);
-            const params = {
-                ...(currentSearch ? { search: currentSearch } : {}),
-                ...(appliedFilterCategory ? { category: appliedFilterCategory } : {}),
-                ...(appliedFilterConditions.length > 0 ? { 
-                    conditions: appliedFilterConditions.map(c => c.name).join(',') 
-                } : {}),
-                ...(appliedFilterBrands.length > 0 ? {
-                    brands: appliedFilterBrands.map(b => b.name).join(',')
-                } : {}),
-                ...(appliedFilterDosage ? { 
-                    dosage: `${appliedFilterDosage}${appliedFilterDosageUnit}` 
-                } : {}),
-                ...(appliedFilterFrequency ? { 
-                    frequency: `${appliedFilterFrequency}_${appliedFilterFrequencyUnit}` 
-                } : {}),
-                sort_by: appliedSortBy,
-                offset: offset,
-                limit: batchSize
-            };
-            const data = await getSupplements(params);
-            setSupplements(prevSupplements => [...prevSupplements, ...(data.results || [])]);
-            setOffset(offset + (data.results ? data.results.length : 0));
-            setHasMore(data.next !== null);
-        } catch (error) {
-            console.error('Error loading more supplements:', error);
-            toast.error('Failed to load more supplements');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const LoadMoreButton = () => (
-        hasMore && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 4 }}>
-                <Button
-                    variant="outlined"
-                    onClick={handleLoadMore}
-                    disabled={loading}
-                >
-                    {loading ? 'Loading...' : 'Load More'}
-                </Button>
-            </Box>
-        )
-    );
-
-    const handleUpvoteRating = async (e, rating) => {
-        e.stopPropagation(); // Prevent clicking into the review
-        if (!user) {
-            toast.error('Please log in to upvote');
-            return;
-        }
-        if (rating.user.id === user.id) {
-            toast.error('You cannot upvote your own rating');
-            return;
-        }
-
-        try {
-            const response = await upvoteRating(rating.id);
-            // Update the rating in the list
-            const updatedRatings = selectedSupplement.ratings.map(r => {
-                if (r.id === rating.id) {
-                    return {
-                        ...r,
-                        upvotes: response.upvotes_count,
-                        has_upvoted: !r.has_upvoted
-                    };
-                }
-                return r;
-            });
-            setSelectedSupplement(prev => ({
-                ...prev,
-                ratings: updatedRatings
-            }));
-        } catch (error) {
-            toast.error('Failed to upvote rating');
-        }
-    };
-
-    const getSortedRatings = (ratings) => {
-        return [...ratings].sort((a, b) => {
-            if (sortOrder === 'likes') {
-                return b.upvotes - a.upvotes;
-            } else {
-                // Assuming ratings have a created_at or timestamp field
-                return new Date(b.created_at) - new Date(a.created_at);
-            }
-        });
-    };
-
-    const ratingDialogConditionOptions = useMemo(() => {
-        let options = [...conditions];
-        if (user && user.chronic_conditions && user.chronic_conditions.length > 0) {
-            const specialOption = { 
-                id: SPECIAL_CHRONIC_CONDITIONS_ID, 
-                name: '✨ Use My Saved Chronic Conditions' 
-            };
-            // Check if special option is already effectively selected via all chronic conditions being present
-            const allUserChronicSelected = user.chronic_conditions.every(uc => 
-                selectedConditions.some(rc => rc.id === uc.id)
-            );
-            // Add special option if not all user chronic conditions are already selected
-            // or if the special option itself is part of selectedConditions
-            if (!allUserChronicSelected || selectedConditions.some(rc => rc.id === SPECIAL_CHRONIC_CONDITIONS_ID)) {
-                 options.unshift(specialOption);
-            }
-        }
-        return options.sort((a, b) => { // Sort with special option at top
-            if (a.id === SPECIAL_CHRONIC_CONDITIONS_ID) return -1;
-            if (b.id === SPECIAL_CHRONIC_CONDITIONS_ID) return 1;
-            return a.name.localeCompare(b.name);
-        });
-    }, [conditions, user, selectedConditions]);
-
-    const handleRatingConditionsChange = (event, newValue) => {
-        const userChronicConditions = (user && user.chronic_conditions) || [];
-        let newSelected = [...newValue];
-        
-        const specialOptionIsSelected = newValue.some(option => option.id === SPECIAL_CHRONIC_CONDITIONS_ID);
-        const specialOptionWasSelected = selectedConditions.some(option => option.id === SPECIAL_CHRONIC_CONDITIONS_ID);
-
-        if (specialOptionIsSelected && !specialOptionWasSelected) { // Special option was just added
-            userChronicConditions.forEach(uc => {
-                if (!newSelected.some(nc => nc.id === uc.id)) {
-                    newSelected.push(uc); // Add user's chronic conditions
-                }
-            });
-        } else if (!specialOptionIsSelected && specialOptionWasSelected) { // Special option was just removed
-            // Remove user's chronic conditions, but keep the ones that might have been added individually
-            // This logic can be tricky: if a user selected "Use My Saved" then deselected one of their chronic conditions,
-            // then deselected "Use My Saved", should that one condition remain?
-            // Simplest approach: remove all that match user.chronic_conditions unless they are in newValue explicitly
-            newSelected = newSelected.filter(nc => {
-                if (nc.id === SPECIAL_CHRONIC_CONDITIONS_ID) return false; // remove special option if present
-                const isUserChronic = userChronicConditions.some(uc => uc.id === nc.id);
-                if (isUserChronic) {
-                    // Check if this condition is still in newValue (meaning it was re-selected or wasn't removed)
-                    return newValue.some(val => val.id === nc.id && val.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
-                }
-                return true; // keep non-chronic conditions
-            });
-             // Ensure the special option itself is not in the actual selected conditions list if deselected
-            newSelected = newSelected.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
-        }
-        
-        // Deduplicate and filter out the special option if it was only a trigger
-        const finalSelected = [];
-        const addedIds = new Set();
-        // Add special option first if it's in newSelected, so it appears in the input field
-        if (newSelected.some(c => c.id === SPECIAL_CHRONIC_CONDITIONS_ID)) {
-            const specialOpt = ratingDialogConditionOptions.find(opt => opt.id === SPECIAL_CHRONIC_CONDITIONS_ID);
-            if (specialOpt) {
-                 finalSelected.push(specialOpt);
-                 addedIds.add(SPECIAL_CHRONIC_CONDITIONS_ID);
-            }
-        }
-        // Add other conditions
-        newSelected.forEach(condition => {
-            if (condition.id !== SPECIAL_CHRONIC_CONDITIONS_ID && !addedIds.has(condition.id)) {
-                finalSelected.push(condition);
-                addedIds.add(condition.id);
-            }
-        });
-        
-        setSelectedConditions(finalSelected);
-    };
+    }, 500), [appliedFilterCategory, appliedFilterConditions, appliedFilterBenefits, appliedFilterSideEffects, appliedFilterBrands, appliedSortBy]);
 
     useEffect(() => {
         if (supplementIdFromParams) {

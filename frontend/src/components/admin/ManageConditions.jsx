@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { toast } from 'react-toastify';
-import { getConditions } from '../../services/api'; // This is the existing search/list function
+import { getConditions, getAllConditions } from '../../services/api'; // This is the existing search/list function
 import DeleteConditionModal from './DeleteConditionModal';
 
 const ManageConditions = () => {
@@ -31,13 +31,12 @@ const ManageConditions = () => {
             // If your getConditions from api.js is primarily for search with typeahead,
             // you might need to ensure it can also fetch all conditions for this admin list.
             // Or use the new getAllConditions if that's more suitable for a full list.
-            const data = await getConditions(); // Or getAllConditions()
-            setConditions(Array.isArray(data) ? data : (data.results || []));
+            const data = await getAllConditions();
+            setConditions(data);
         } catch (err) {
             const errorMessage = err.message || 'Failed to fetch conditions/purposes.';
             setError(errorMessage);
             toast.error(errorMessage);
-            console.error(err);
         } finally {
             setIsLoading(false);
         }

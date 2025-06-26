@@ -52,7 +52,6 @@ const ManageSupplements = () => {
             const errorMessage = err.message || 'Failed to fetch supplements.';
             setError(errorMessage);
             toast.error(errorMessage);
-            console.error(err);
         } finally {
             setIsLoading(false);
         }

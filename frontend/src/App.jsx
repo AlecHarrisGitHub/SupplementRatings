@@ -56,7 +56,7 @@ function App() {
             await sessionManager.refreshToken();
             setSessionWarningOpen(false);
         } catch (error) {
-            console.error('Failed to extend session:', error);
+            
             // If refresh fails, the session manager will handle logout
         }
     };

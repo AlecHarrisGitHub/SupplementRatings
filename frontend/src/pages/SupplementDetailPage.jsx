@@ -29,7 +29,6 @@ function SupplementDetailPage() {
                     if (foundRating) {
                         setSelectedRating(foundRating);
                     } else {
-                        console.warn(`Rating with ID ${ratingId} not found in supplement ${supplementId}. Displaying first rating or message.`);
                         // Fallback: select the first rating if available, or handle as needed
                         setSelectedRating(supplementData.ratings?.[0] || null);
                          if (!supplementData.ratings?.[0]) {
@@ -186,7 +185,7 @@ function SupplementDetailPage() {
                         navigate(`/supplements/${supplementId}`, { replace: true, state: {} });
                     }}
                     onCommentAdded={(newComment) => {
-                        console.log('Comment added:', newComment);
+                        
                     }}
                     onEditRating={(updatedRatingData, isTextOnlyUpdate) => {
                         setSelectedRating(prev => ({...prev, ...updatedRatingData}));
@@ -194,7 +193,7 @@ function SupplementDetailPage() {
                             ...prevSup,
                             ratings: prevSup.ratings.map(r => r.id === updatedRatingData.id ? {...r, ...updatedRatingData} : r)
                         }));
-                        console.log('Rating edited:', updatedRatingData);
+                        
                     }}
                 />
             </Paper>

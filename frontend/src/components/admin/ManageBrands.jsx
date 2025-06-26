@@ -27,12 +27,11 @@ const ManageBrands = () => {
         setError(null);
         try {
             const data = await getBrands();
-            setBrands(Array.isArray(data) ? data : (data.results || [])); // Adjust based on getBrands response structure
+            setBrands(data.results);
         } catch (err) {
             const errorMessage = err.message || 'Failed to fetch brands.';
             setError(errorMessage);
             toast.error(errorMessage);
-            console.error(err);
         } finally {
             setIsLoading(false);
         }

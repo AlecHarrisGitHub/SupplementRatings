@@ -2,17 +2,19 @@ import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSupplements } from '../services/api'
 import { Container, Typography, List, ListItem, ListItemText } from '@mui/material'
+import axios from 'axios'
 
 function SupplementList() {
   const [supplements, setSupplements] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     const fetchSupplements = async () => {
       try {
         setLoading(true)
-        const response = await getSupplements()
+        const response = await axios.get(`/api/supplements/?search=${searchTerm}`)
         // console.log('API Response:', response)
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -28,7 +30,7 @@ function SupplementList() {
     }
 
     fetchSupplements()
-  }, [])
+  }, [searchTerm])
 
   if (loading) return <div>Loading supplements...</div>
   if (error) return <div>{error}</div>
@@ -39,6 +41,12 @@ function SupplementList() {
       <Typography variant="h4" gutterBottom>
         Supplements
       </Typography>
+      <input
+        type="text"
+        placeholder="Search supplements..."
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+      />
       <List>
         {supplements.map((supplement) => (
           <ListItem 
