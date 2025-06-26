@@ -15,9 +15,7 @@ class SessionManager {
         this.refreshTimeout = null;
         this.warningTimeout = null;
         this.autoSaveInterval = null;
-        this.isRefreshing = false;
-        this.failedRefreshAttempts = 0;
-        this.maxRefreshAttempts = 3;
+        this.refreshTokenPromise = null;
     }
 
     // Start session monitoring
@@ -83,46 +81,36 @@ class SessionManager {
     }
 
     // Refresh token
-    async refreshToken() {
-        if (this.isRefreshing) return;
+    refreshToken() {
+        if (this.refreshTokenPromise) {
+            return this.refreshTokenPromise;
+        }
 
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (!refreshToken) {
+        const refreshTokenValue = localStorage.getItem('refreshToken');
+        if (!refreshTokenValue) {
             this.handleSessionExpired();
-            return;
+            return Promise.reject(new Error("No refresh token available."));
         }
 
-        this.isRefreshing = true;
-
-        try {
-            const response = await axios.post(`${API_BASE_URL}token/refresh/`, {
-                refresh: refreshToken
-            });
-
-            const { access } = response.data;
-            localStorage.setItem('token', access);
-            this.failedRefreshAttempts = 0;
-
-            // Reschedule monitoring with new token
-            this.scheduleTokenRefresh();
-            this.scheduleWarning();
-
-            console.log('Token refreshed successfully');
-        } catch (error) {
-            console.error('Token refresh failed:', error);
-            this.failedRefreshAttempts++;
-            
-            if (this.failedRefreshAttempts >= this.maxRefreshAttempts) {
+        this.refreshTokenPromise = axios
+            .post(`${API_BASE_URL}token/refresh/`, {
+                refresh: refreshTokenValue,
+            })
+            .then((response) => {
+                const { access } = response.data;
+                localStorage.setItem('token', access);
+                this.startSessionMonitoring(); // Reschedule everything
+                this.refreshTokenPromise = null;
+                return access;
+            })
+            .catch((error) => {
+                console.error('Token refresh failed:', error);
                 this.handleSessionExpired();
-            } else {
-                // Retry after 30 seconds
-                setTimeout(() => {
-                    this.refreshToken();
-                }, 30000);
-            }
-        } finally {
-            this.isRefreshing = false;
-        }
+                this.refreshTokenPromise = null;
+                return Promise.reject(error);
+            });
+        
+        return this.refreshTokenPromise;
     }
 
     // Show session warning
@@ -236,34 +224,24 @@ API.interceptors.request.use((config) => {
 API.interceptors.response.use(
     (response) => response,
     (error) => {
-        const requestUrl = error.config.url;
+        const originalRequest = error.config;
         const authEndpoints = ['token/obtain/', 'register/', 'token/refresh/'];
 
         if (
             error.response?.status === 401 &&
-            !authEndpoints.some((endpoint) => requestUrl.includes(endpoint))
+            !originalRequest._retry &&
+            !authEndpoints.some((endpoint) => originalRequest.url.includes(endpoint))
         ) {
-            // Try to refresh token first
-            if (!sessionManager.isRefreshing) {
-                sessionManager.refreshToken().then(() => {
-                    // Retry the original request
-                    const originalRequest = error.config;
-                    const token = localStorage.getItem('token');
-                    if (token) {
-                        originalRequest.headers.Authorization = `Bearer ${token}`;
-                        return API(originalRequest);
-                    }
-                }).catch(() => {
-                    // Refresh failed, logout user
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('isAdmin');
-                    window.location.href = '/login';
+            originalRequest._retry = true;
+            return sessionManager.refreshToken()
+                .then(token => {
+                    originalRequest.headers.Authorization = `Bearer ${token}`;
+                    return API(originalRequest);
+                })
+                .catch(err => {
+                    // Refresh failed, user is logged out.
+                    return Promise.reject(err);
                 });
-            }
-            
-            // It's important to return a promise that will not resolve
-            // to prevent further processing by the caller if a redirect is happening.
-            return new Promise(() => {}); 
         }
 
         // Prepare a more detailed error object to be rejected
@@ -274,29 +252,16 @@ API.interceptors.response.use(
         };
 
         if (error.response?.data) {
-            const responseData = error.response.data;
-            if (typeof responseData === 'string') {
-                customError.message = responseData;
-            } else if (responseData.detail) {
-                customError.message = responseData.detail;
-            } else if (responseData.error) {
-                customError.message = responseData.error;
-            } else if (typeof responseData === 'object' && Object.keys(responseData).length > 0) {
-                // For DRF validation errors (or other structured errors)
-                // Extract the first error message as a general message
-                const firstErrorKey = Object.keys(responseData)[0];
-                if (Array.isArray(responseData[firstErrorKey]) && responseData[firstErrorKey].length > 0) {
-                    customError.message = responseData[firstErrorKey][0];
-                } else if (typeof responseData[firstErrorKey] === 'string') {
-                    customError.message = responseData[firstErrorKey];
-                } else {
-                    // Fallback if the first error isn't a string/array of strings
-                    // but we still have an object in responseData.
-                    customError.message = "Validation failed. Please check your input.";
+            const errorData = error.response.data;
+            // Handle different error structures from Django REST Framework
+            if (typeof errorData === 'object' && errorData !== null) {
+                const messages = Object.values(errorData).flat();
+                if (messages.length > 0) {
+                    customError.message = messages.join(' ');
                 }
+            } else if (typeof errorData === 'string') {
+                customError.message = errorData;
             }
-        } else if (error.message && !error.response) { // Network errors or other errors without a response object
-            customError.message = error.message;
         }
         
         return Promise.reject(customError);

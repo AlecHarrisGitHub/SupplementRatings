@@ -613,14 +613,14 @@ function SearchableSupplementList() {
         enableAutoSave: ratingDialogOpen,
         autoSaveInterval: 30000, // 30 seconds
         onRestoreData: (savedData) => {
-            if (savedData) {
+            if (savedData && savedData.supplementId === selectedSupplement?.id) {
                 setRatingScore(savedData.ratingScore || 1);
                 setRatingComment(savedData.ratingComment || '');
                 setSelectedConditions(savedData.selectedConditions || []);
                 setSelectedBenefits(savedData.selectedBenefits || []);
                 setSelectedSideEffects(savedData.selectedSideEffects || []);
                 setRatingDosage(savedData.ratingDosage || '');
-                setRatingDialogDosageUnit(savedData.ratingDialogDosageUnit || supplementDosageUnit || 'mg');
+                setRatingDialogDosageUnit(savedData.ratingDialogDosageUnit || 'mg');
                 setSelectedBrand(savedData.selectedBrand || null);
                 setRatingDosageFrequency(savedData.ratingDosageFrequency || '1');
                 setRatingFrequencyUnit(savedData.ratingFrequencyUnit || 'day');
