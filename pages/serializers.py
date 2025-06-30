@@ -28,14 +28,20 @@ class PublicProfileUserSerializer(serializers.ModelSerializer):
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
         if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
+            if 'default.jpg' in obj.profile.image.url:
+                # For the default image, construct a full path to a known default location
+                media_url = getattr(settings, 'MEDIA_URL', '/media/')
+                default_image_path = f"{media_url}profile_pics/default.jpg"
+                if request:
+                    return request.build_absolute_uri(default_image_path)
+                return default_image_path
+            
+            # For any non-default image, just return its URL.
+            # This works regardless of the upload_to path.
             if request:
                 return request.build_absolute_uri(obj.profile.image.url)
             return obj.profile.image.url
-        media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        default_image_path = f"{media_url}profile_pics/default.jpg"
-        if request:
-            return request.build_absolute_uri(default_image_path)
-        return default_image_path
+        return None # Return None if no profile or image exists
 
 class RegisterUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True)
@@ -73,6 +79,27 @@ class RegisterUserSerializer(serializers.ModelSerializer):
             logger.error(f"Error in RegisterUserSerializer create method: {str(e)}", exc_info=True)
             raise
 
+    def get_profile_image_url(self, obj):
+        request = self.context.get('request')
+        # Check for a specific profile image and that it's not the default
+        if hasattr(obj, 'profile') and obj.profile.image and 'default.jpg' not in obj.profile.image.url:
+            if request:
+                return request.build_absolute_uri(obj.profile.image.url)
+            return obj.profile.image.url
+        
+        # If no specific image, construct the full URL for the default image
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return default_image_path
+
+    def get_chronic_conditions(self, obj):
+        if hasattr(obj, 'profile') and hasattr(obj.profile, 'chronic_conditions'):
+            conditions = obj.profile.chronic_conditions.all()
+            return ConditionSerializer(conditions, many=True, context=self.context).data
+        return []
+
 class BasicUserSerializer(serializers.ModelSerializer):
     profile_image_url = serializers.SerializerMethodField()
     chronic_conditions = serializers.SerializerMethodField()
@@ -84,18 +111,20 @@ class BasicUserSerializer(serializers.ModelSerializer):
 
     def get_profile_image_url(self, obj):
         request = self.context.get('request')
-        # obj is User instance, so access profile via obj.profile
         if hasattr(obj, 'profile') and obj.profile.image and hasattr(obj.profile.image, 'url'):
+            if 'default.jpg' in obj.profile.image.url:
+                # For the default image, construct a full path to a known default location
+                media_url = getattr(settings, 'MEDIA_URL', '/media/')
+                default_image_path = f"{media_url}profile_pics/default.jpg"
+                if request:
+                    return request.build_absolute_uri(default_image_path)
+                return default_image_path
+            
+            # For any non-default image, just return its URL.
             if request:
                 return request.build_absolute_uri(obj.profile.image.url)
             return obj.profile.image.url
-        
-        # Fallback to default image URL
-        media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        default_image_path = f"{media_url}profile_pics/default.jpg"
-        if request:
-            return request.build_absolute_uri(default_image_path)
-        return default_image_path
+        return None # Return None if no profile or image exists
 
     def get_chronic_conditions(self, obj):
         if hasattr(obj, 'profile') and hasattr(obj.profile, 'chronic_conditions'):
