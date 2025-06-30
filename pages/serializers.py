@@ -8,6 +8,7 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 from django.db.models import Count
+import os
 
 logger = logging.getLogger(__name__)
 
