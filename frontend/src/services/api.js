@@ -807,8 +807,8 @@ export const updateProfileImage = async (imageData) => {
     try {
         const response = await API.post('profile/image-upload/', imageData, {
             headers: {
-                // 'Content-Type': 'multipart/form-data' // Handled by browser for FormData
-            }
+                'Content-Type': 'multipart/form-data',
+            },
         });
         return response.data;
     } catch (error) {

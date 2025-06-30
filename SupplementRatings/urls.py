@@ -14,7 +14,8 @@ from pages.views import (
     register_user,
     verify_email,
     PasswordResetRequestView,
-    PasswordResetConfirmView
+    PasswordResetConfirmView,
+    ProfileImageUpdateAPIView
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -75,6 +76,7 @@ api_urlpatterns = [
     path('verify-email/<str:token>/', verify_email, name='verify-email'),
     path('password-reset/', PasswordResetRequestView.as_view(), name='password-reset-request'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
+    path('profile/image-upload/', ProfileImageUpdateAPIView.as_view(), name='profile-image-update'),
     path('', include(router.urls)),
 ]
 
