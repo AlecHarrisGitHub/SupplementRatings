@@ -434,10 +434,10 @@ class PublicRatingSerializer(RatingSerializer):
 class PublicProfileSerializer(serializers.ModelSerializer):
     user = PublicProfileUserSerializer(source='*') 
     ratings = PublicRatingSerializer(many=True, read_only=True)
-    comments = PublicCommentSerializer(many=True, read_only=True)
+    comments = CommentSerializer(many=True, read_only=True, source='comment_set')
 
     class Meta:
-        model = Profile
+        model = User # The public profile is for a User
         fields = ['user', 'ratings', 'comments']
 
 class PasswordResetRequestSerializer(serializers.Serializer):
