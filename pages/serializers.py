@@ -165,12 +165,13 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class ProfileSerializer(serializers.ModelSerializer):
     user = BasicUserSerializer(read_only=True)
-    image_url = serializers.SerializerMethodField()
     chronic_conditions = ConditionSerializer(many=True, read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Profile
-        fields = ['user', 'image', 'image_url', 'chronic_conditions']
+        fields = ['user', 'image', 'chronic_conditions', 'image_url']
+        read_only_fields = ['user']
         extra_kwargs = {
             'image': {'write_only': True, 'required': False}
         }
@@ -181,12 +182,17 @@ class ProfileSerializer(serializers.ModelSerializer):
             if request:
                 return request.build_absolute_uri(obj.image.url)
             return obj.image.url
+        # Construct default URL
         media_url = getattr(settings, 'MEDIA_URL', '/media/')
         default_image_path = f"{media_url}profile_pics/default.jpg"
         if request:
             return request.build_absolute_uri(default_image_path)
-        return f"/media/profile_pics/default.jpg"
+        return default_image_path # Fallback for non-request contexts
 
+class ProfileImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['image']
 
 class RatingSerializer(serializers.ModelSerializer):
     user = PublicProfileUserSerializer(read_only=True)
@@ -428,10 +434,10 @@ class PublicRatingSerializer(RatingSerializer):
 class PublicProfileSerializer(serializers.ModelSerializer):
     user = PublicProfileUserSerializer(source='*') 
     ratings = PublicRatingSerializer(many=True, read_only=True)
-    comments = CommentSerializer(source='comment_set', many=True, read_only=True)
+    comments = PublicCommentSerializer(many=True, read_only=True)
 
     class Meta:
-        model = User # The public profile is for a User
+        model = Profile
         fields = ['user', 'ratings', 'comments']
 
 class PasswordResetRequestSerializer(serializers.Serializer):

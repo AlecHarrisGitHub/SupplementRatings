@@ -900,23 +900,18 @@ class ProfileImageUpdateAPIView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request, *args, **kwargs):
-        if not hasattr(request.user, 'profile'):
-            # This case should ideally be handled by the signal creating a profile
-            # but as a safeguard:
-            Profile.objects.get_or_create(user=request.user)
+        if 'image' not in request.FILES:
+            return Response({'error': 'No image file provided.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        profile = request.user.profile
-        # We are using a Django form here. A DRF serializer could also be used.
-        form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
+        profile, created = Profile.objects.get_or_create(user=request.user)
         
-        if form.is_valid():
-            form.save()
-            # After saving, get the updated profile to serialize its image URL
-            updated_profile = Profile.objects.get(user=request.user)
-            serializer = ProfileSerializer(updated_profile, context={'request': request})
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(form.errors, status=status.HTTP_400_BAD_REQUEST)
+        # Manually update the image and save the profile
+        profile.image = request.FILES['image']
+        profile.save()
+        
+        # Return the updated profile data, including the new image URL
+        serializer = ProfileSerializer(profile, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
