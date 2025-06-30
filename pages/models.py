@@ -25,7 +25,7 @@ class Profile(models.Model):
 
         if self.image:
             try:
-                img = PILImage.open(self.image.path)
+                img = PILImage.open(self.image)
 
                 if img.height > 300 or img.width > 300:
                     output_size = (300, 300)
