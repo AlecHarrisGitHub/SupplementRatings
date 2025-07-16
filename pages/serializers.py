@@ -200,10 +200,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['user', 'image', 'chronic_conditions', 'image_url']
-        read_only_fields = ['user']
-        extra_kwargs = {
-            'image': {'write_only': True, 'required': False}
-        }
+        read_only_fields = ['user', 'image']
 
     def get_image_url(self, obj):
         request = self.context.get('request')
