@@ -13,6 +13,7 @@ from .serializers import (
     RegisterUserSerializer,
     BasicUserSerializer,
     ProfileSerializer,
+    ProfileImageUrlSerializer,
     PublicProfileSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer
@@ -909,8 +910,8 @@ class ProfileImageUpdateAPIView(APIView):
         profile.image = request.FILES['image']
         profile.save()
         
-        # Return the updated profile data, including the new image URL
-        serializer = ProfileSerializer(profile, context={'request': request})
+        # Return only the updated image URL
+        serializer = ProfileImageUrlSerializer(profile, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST'])
