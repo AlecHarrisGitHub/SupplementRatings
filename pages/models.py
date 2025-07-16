@@ -10,43 +10,53 @@ import os
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.validators import MinValueValidator, MaxValueValidator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(default='default.jpg', upload_to='ratings/')
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics/')
     chronic_conditions = models.ManyToManyField('Condition', blank=True, related_name='user_profiles')
 
     def __str__(self):
         return f'{self.user.username} Profile'
 
     def save(self, *args, **kwargs):
+        logger.debug(f"Starting Profile.save() for user: {self.user.username}")
         process_image = False
         if self.pk:
             try:
                 old_instance = Profile.objects.get(pk=self.pk)
                 if old_instance.image != self.image:
+                    logger.debug("Profile image has changed. Scheduling for processing.")
                     process_image = True
             except Profile.DoesNotExist:
-                # This case might occur if the profile is being created for an existing user
-                # for the first time, so we should process the image if it exists.
+                logger.warning(f"Profile with pk={self.pk} not found, but pk exists. Assuming new image for processing.")
                 if self.image:
                     process_image = True
         elif self.image:
+            logger.debug("New profile instance with an image. Scheduling for processing.")
             process_image = True
 
         # Ensure we don't try to process the 'default.jpg' string
         if self.image and self.image.name == 'default.jpg':
+            logger.debug("Image is 'default.jpg', skipping processing.")
             process_image = False
 
         # An uploaded file will have a 'file' attribute. An image from the DB won't until opened.
         # This check ensures we only process actual new file uploads.
+        logger.debug(f"Checking if image should be processed. Flag: {process_image}, Has 'file' attr: {hasattr(self.image, 'file')}")
         if process_image and hasattr(self.image, 'file'):
             try:
+                logger.info(f"Processing profile image for {self.user.username}. Original name: {self.image.name}")
                 img = PILImage.open(self.image)
+                logger.debug(f"Image opened with Pillow. Format: {img.format}, Size: {img.size}, Mode: {img.mode}")
 
                 if img.height > 300 or img.width > 300:
                     output_size = (300, 300)
+                    logger.debug(f"Resizing image to {output_size}")
                     img.thumbnail(output_size, PILImage.Resampling.LANCZOS)
                 
                 buffer = BytesIO()
@@ -54,18 +64,23 @@ class Profile(models.Model):
                 save_kwargs = {'quality': 80}
                 
                 if img.mode != 'RGB' and img.mode != 'RGBA':
+                        logger.warning(f"Image mode is {img.mode}. Converting to RGBA for WEBP saving.")
                         img = img.convert('RGBA') if save_format == 'WEBP' else img.convert('RGB')
 
+                logger.debug(f"Saving processed image to buffer in {save_format} format.")
                 img.save(buffer, format=save_format, **save_kwargs)
                 
                 file_name_without_ext, _ = os.path.splitext(self.image.name)
                 new_file_name = file_name_without_ext + '.webp'
+                logger.debug(f"New file name will be: {new_file_name}")
                 
                 # Replace the in-memory file with the processed version before saving
                 self.image.save(new_file_name, ContentFile(buffer.getvalue()), save=False)
+                logger.info(f"Successfully processed and replaced image in memory for {self.user.username}.")
             except Exception as e:
-                print(f"Error processing profile image for {self.user.username}: {e}")
+                logger.error(f"Error processing profile image for {self.user.username}: {e}", exc_info=True)
 
+        logger.debug(f"Calling super().save() for profile of {self.user.username}")
         super().save(*args, **kwargs)
 
 
