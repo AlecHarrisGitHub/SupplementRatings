@@ -1,3 +1,5 @@
+// frontend/src/pages/AccountsPage.jsx
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -46,10 +48,11 @@ function AccountsPage() {
     const [nextPage, setNextPage] = useState(null);
     const [loadingMore, setLoadingMore] = useState(false);
 
+    // --- Start of new code for image upload ---
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState(null);
-    const [uploadSuccess, setUploadSuccess] = useState(false);
     const fileInputRef = useRef(null);
+    // --- End of new code for image upload ---
 
     const [allConditions, setAllConditions] = useState([]);
     const [selectedConditions, setSelectedConditions] = useState([]);
@@ -61,7 +64,6 @@ function AccountsPage() {
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [ratingToDelete, setRatingToDelete] = useState(null);
 
-    // State for comment editing and deletion
     const [editingComment, setEditingComment] = useState(null);
     const [editedCommentContent, setEditedCommentContent] = useState('');
     const [commentToDelete, setCommentToDelete] = useState(null);
@@ -110,14 +112,16 @@ function AccountsPage() {
     };
 
     useEffect(() => {
-        fetchRatings('/api/ratings/my_ratings/');
+        if(user) {
+            fetchRatings('/api/ratings/my_ratings/');
+        }
     }, [user]);
 
     useEffect(() => {
         const fetchAllConditions = async () => {
             try {
                 setLoadingAllConditions(true);
-                const conditionsData = await getAllConditions(); // Assuming this returns { results: [...] } or an array
+                const conditionsData = await getAllConditions();
                 setAllConditions(Array.isArray(conditionsData) ? conditionsData : conditionsData.results || []);
                 setConditionsError(null);
             } catch (err) {
@@ -131,7 +135,6 @@ function AccountsPage() {
     }, []);
 
     useEffect(() => {
-        // Initialize selectedConditions from user context when user data or allConditions are loaded
         if (user && user.chronic_conditions && allConditions.length > 0) {
             const userConditionIds = user.chronic_conditions.map(c => c.id);
             setSelectedConditions(allConditions.filter(c => userConditionIds.includes(c.id)));
@@ -144,24 +147,24 @@ function AccountsPage() {
         }
     };
 
+    // --- Start of new function for image upload ---
     const handleImageUpload = async (event) => {
         const file = event.target.files[0];
         if (file && user) {
             setIsUploading(true);
             setUploadError(null);
-            setUploadSuccess(false);
-
             const formData = new FormData();
             formData.append('image', file);
-
             try {
                 const updatedProfileData = await updateProfileImageAPI(formData);
                 if (updatedProfileData.image_url) {
                     updateUser({ profile_image_url: updatedProfileData.image_url });
-                    setUploadSuccess(true);
+                    toast.success("Profile picture updated!");
                 }
             } catch (err) {
-                setUploadError(err.message || 'Failed to upload image.');
+                const errorMessage = err.response?.data?.error || err.message || 'Failed to upload image.';
+                setUploadError(errorMessage);
+                toast.error(errorMessage);
             } finally {
                 setIsUploading(false);
                 if (fileInputRef.current) {
@@ -170,6 +173,7 @@ function AccountsPage() {
             }
         }
     };
+    // --- End of new function for image upload ---
 
     const handleSaveChronicConditions = async () => {
         setSavingConditions(true);
@@ -178,13 +182,14 @@ function AccountsPage() {
         const conditionIds = selectedConditions.map(c => c.id);
         try {
             const updatedConditionsData = await updateUserChronicConditionsAPI(conditionIds);
-            // Update AuthContext with the new chronic conditions
-            // The API returns the new list of condition objects for the user
             updateUser({ chronic_conditions: updatedConditionsData });
             setSaveConditionsSuccess(true);
+            toast.success("Chronic conditions saved!");
         } catch (err) {
             console.error("Error saving chronic conditions:", err);
-            setConditionsError(err.message || "Failed to save chronic conditions.");
+            const errorMessage = err.response?.data?.error || err.message || "Failed to save chronic conditions.";
+            setConditionsError(errorMessage);
+            toast.error(errorMessage);
         } finally {
             setSavingConditions(false);
         }
@@ -224,17 +229,12 @@ function AccountsPage() {
         setRatingToDelete(null);
     };
 
-    // Helper to format date (MM/DD/YYYY)
     const formatDate = (dateString) => {
         if (!dateString) return '';
         const date = new Date(dateString);
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const year = date.getFullYear();
-        return `${month}/${day}/${year}`;
+        return format(date, 'MM/dd/yyyy');
     };
 
-    // Comment Edit/Delete Handlers
     const handleEditComment = (comment) => {
         setEditingComment(comment);
         setEditedCommentContent(comment.content);
@@ -244,9 +244,8 @@ function AccountsPage() {
         if (!editingComment) return;
         try {
             const updatedComment = await updateCommentAPI(editingComment.id, editedCommentContent);
-            // Update user context
             const updatedComments = user.comments.map(c => c.id === editingComment.id ? updatedComment : c);
-            updateUser({ ...user, comments: updatedComments });
+            updateUser({ comments: updatedComments });
             setEditingComment(null);
             toast.success("Comment updated successfully!");
         } catch (err) {
@@ -270,7 +269,7 @@ function AccountsPage() {
         try {
             await deleteCommentAPI(commentToDelete);
             const updatedComments = user.comments.filter(c => c.id !== commentToDelete);
-            updateUser({ ...user, comments: updatedComments });
+            updateUser({ comments: updatedComments });
             toast.success("Comment deleted successfully!");
         } catch (err) {
             console.error("Error deleting comment:", err);
@@ -298,8 +297,9 @@ function AccountsPage() {
                                 accept="image/*" 
                                 id="profile-image-upload-input" 
                                 type="file" 
-                                onChange={handleImageUpload}
+                                onChange={handleImageUpload} 
                                 ref={fileInputRef}
+                                disabled={isUploading}
                             />
                             <Box sx={{position: 'relative', display: 'inline-block'}}>
                                 <Avatar 
@@ -333,7 +333,6 @@ function AccountsPage() {
                     </Box>
                 )}
 
-                {/* Chronic Conditions Management Section */}
                 <Box sx={{ mt: 4, mb: 3, p: 2, border: '1px solid #eee', borderRadius: '4px' }}>
                     <Typography variant="h5" component="h2" gutterBottom>
                         Manage Your Chronic Conditions
@@ -380,13 +379,10 @@ function AccountsPage() {
                 </Box>
 
                 <Snackbar
-                    open={uploadSuccess || saveConditionsSuccess}
+                    open={saveConditionsSuccess}
                     autoHideDuration={4000}
-                    onClose={() => {
-                        setUploadSuccess(false);
-                        setSaveConditionsSuccess(false);
-                    }}
-                    message={uploadSuccess ? "Profile picture updated!" : (saveConditionsSuccess ? "Chronic conditions saved!" : "")}
+                    onClose={() => setSaveConditionsSuccess(false)}
+                    message={"Chronic conditions saved!"}
                 />
 
                 <Typography variant="h5" component="h2" sx={{ mt: 4, mb: 2, borderBottom: '1px solid #ddd', pb: 1 }}>
@@ -416,8 +412,8 @@ function AccountsPage() {
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, mt: 0.5 }}>
                                     <MuiRating value={rating.score} readOnly size="small"/>
                                     <Box>
-                                        <Button size="small" onClick={() => handleEditRating(rating)} sx={{ mr: 1 }}>Edit</Button>
-                                        <Button size="small" color="error" onClick={() => confirmDeleteRating(rating.id)}>Delete</Button>
+                                        <Button size="small" onClick={(e) => { e.stopPropagation(); handleEditRating(rating); }} sx={{ mr: 1 }}>Edit</Button>
+                                        <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); confirmDeleteRating(rating.id); }}>Delete</Button>
                                     </Box>
                                 </Box>
                                 {rating.comment && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>{rating.comment}</Typography>}
@@ -446,7 +442,7 @@ function AccountsPage() {
                                             </Box>
                                 )}
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'right', mt: 1}}>
-                                    {format(new Date(rating.created_at), 'MM/dd/yyyy')}
+                                    {formatDate(rating.created_at)}
                                     {rating.is_edited && <Typography component="span" variant="caption" color="text.secondary"> (edited)</Typography>}
                                             </Typography>
                             </Paper>
@@ -463,7 +459,6 @@ function AccountsPage() {
                 )}
             </Paper>
 
-            {/* My Comments Section */}
             <Paper elevation={3} sx={{ p: { xs: 2, md: 4 }, mt: 3 }}>
                 <Typography variant="h5" component="h2" sx={{ mb: 2, borderBottom: '1px solid #ddd', pb: 1 }}>
                     My Comments
@@ -475,7 +470,8 @@ function AccountsPage() {
                                 key={comment.id} 
                                 elevation={1} 
                                 sx={{ mb: 2, p: 2, cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0,0,0,0.02)' } }}
-                                onClick={() => {
+                                onClick={(e) => {
+                                    e.stopPropagation();
                                     if (!editingComment || editingComment.id !== comment.id) {
                                         navigate(`/supplements/${comment.supplement_id}`, { state: { commentId: comment.id, ratingId: comment.rating_id } });
                                     }
@@ -492,8 +488,8 @@ function AccountsPage() {
                                             onChange={(e) => setEditedCommentContent(e.target.value)}
                                             sx={{ mb: 1 }}
                                         />
-                                        <Button size="small" onClick={handleSaveEditedComment} variant="contained" sx={{ mr: 1}}>Save</Button>
-                                        <Button size="small" onClick={handleCancelEditComment}>Cancel</Button>
+                                        <Button size="small" onClick={(e) => {e.stopPropagation(); handleSaveEditedComment();}} variant="contained" sx={{ mr: 1}}>Save</Button>
+                                        <Button size="small" onClick={(e) => {e.stopPropagation(); handleCancelEditComment();}}>Cancel</Button>
                                     </Box>
                                 ) : (
                                     <ListItemText
@@ -520,8 +516,8 @@ function AccountsPage() {
                                 )}
                                 {(!editingComment || editingComment.id !== comment.id) && (
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
-                                        <Button size="small" onClick={() => handleEditComment(comment)} sx={{ mr: 1 }}>Edit</Button>
-                                        <Button size="small" color="error" onClick={() => confirmDeleteComment(comment.id)}>Delete</Button>
+                                        <Button size="small" onClick={(e) => { e.stopPropagation(); handleEditComment(comment); }} sx={{ mr: 1 }}>Edit</Button>
+                                        <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); confirmDeleteComment(comment.id); }}>Delete</Button>
                                     </Box>
                                 )}
                             </Paper>
@@ -532,7 +528,6 @@ function AccountsPage() {
                 )}
             </Paper>
 
-            {/* Delete Rating Confirmation Dialog */}
             <Dialog
                 open={openDeleteDialog}
                 onClose={handleCloseDeleteDialog}
@@ -553,7 +548,6 @@ function AccountsPage() {
                 </DialogActions>
             </Dialog>
 
-            {/* Delete Comment Confirmation Dialog */}
             <Dialog
                 open={showDeleteCommentDialog}
                 onClose={() => setShowDeleteCommentDialog(false)}

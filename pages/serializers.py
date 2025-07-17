@@ -241,28 +241,50 @@ class ProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ['user', 'image']
 
     def get_image_url(self, obj):
-        logger.warning("V3 DEBUG: In ProfileSerializer get_image_url. If you see this, the minimal serializer was not used for the immediate response.")
         request = self.context.get('request')
 
-        # Handle case where there is no image or it's the default
-        if not obj.image or not obj.image.name or 'default.jpg' in obj.image.name:
-            media_url = getattr(settings, 'MEDIA_URL', '/media/')
-            default_image_path = f"{media_url}profile_pics/default.jpg"
-            if request:
-                return request.build_absolute_uri(default_image_path)
-            return default_image_path
+        # Try to generate a URL for a specific, non-default profile image
+        if obj.image and hasattr(obj.image, 'name') and obj.image.name and 'default.jpg' not in obj.image.name:
+            image_url = None
+            # In production, we need to generate a presigned URL for S3
+            if settings.IS_PRODUCTION:
+                try:
+                    s3_key = obj.image.name
+                    if settings.AWS_LOCATION and not s3_key.startswith(settings.AWS_LOCATION + '/'):
+                        s3_key = f"{settings.AWS_LOCATION.strip('/')}/{s3_key.lstrip('/')}"
 
-        # Production: Generate a presigned URL for non-default images
-        if settings.IS_PRODUCTION:
-            return get_presigned_s3_url(obj.image)
-        
-        # Development: Build absolute URI for non-default images
-        if hasattr(obj.image, 'url'):
-            if request:
-                return request.build_absolute_uri(obj.image.url)
-            return obj.image.url
-        
-        return None # Should not be reached
+                    s3_client = boto3.client(
+                        's3',
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name=settings.AWS_S3_REGION_NAME,
+                        config=Config(signature_version='s3v4')
+                    )
+                    
+                    image_url = s3_client.generate_presigned_url(
+                        'get_object',
+                        Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': s3_key},
+                        ExpiresIn=settings.AWS_QUERYSTRING_EXPIRE
+                    )
+                except Exception as e:
+                    logger.error(f"Error generating presigned URL for profile image {obj.image.name}: {e}")
+                    image_url = None # Explicitly set to None on error
+
+            # In development, just build the full local URL
+            else:
+                if hasattr(obj.image, 'url'):
+                    image_url = request.build_absolute_uri(obj.image.url)
+
+            # If we successfully generated a URL for the user's specific image, return it
+            if image_url:
+                return image_url
+
+        # Fallback for all other cases (no image, default image, or URL generation error)
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        default_image_path = f"{media_url}profile_pics/default.jpg"
+        if request:
+            return request.build_absolute_uri(default_image_path)
+        return default_image_path
 
 class ProfileImageSerializer(serializers.ModelSerializer):
     class Meta:
