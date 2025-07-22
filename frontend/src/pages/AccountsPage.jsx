@@ -411,10 +411,6 @@ function AccountsPage() {
                                 </Typography>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1, mt: 0.5 }}>
                                     <MuiRating value={rating.score} readOnly size="small"/>
-                                    <Box>
-                                        <Button size="small" onClick={(e) => { e.stopPropagation(); handleEditRating(rating); }} sx={{ mr: 1 }}>Edit</Button>
-                                        <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); confirmDeleteRating(rating.id); }}>Delete</Button>
-                                    </Box>
                                 </Box>
                                 {rating.comment && <Typography variant="body2" color="text.secondary" sx={{ mb: 1, whiteSpace: 'pre-wrap' }}>{rating.comment}</Typography>}
                                 {rating.condition_names && rating.condition_names.length > 0 && 
@@ -513,12 +509,6 @@ function AccountsPage() {
                                             </Box>
                                         }
                                     />
-                                )}
-                                {(!editingComment || editingComment.id !== comment.id) && (
-                                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', mt: 1 }}>
-                                        <Button size="small" onClick={(e) => { e.stopPropagation(); handleEditComment(comment); }} sx={{ mr: 1 }}>Edit</Button>
-                                        <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); confirmDeleteComment(comment.id); }}>Delete</Button>
-                                    </Box>
                                 )}
                             </Paper>
                         ))}
