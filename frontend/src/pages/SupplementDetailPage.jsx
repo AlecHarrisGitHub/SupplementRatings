@@ -567,6 +567,17 @@ function SupplementDetailPage() {
                                 }));
                                 console.log('Rating edited:', updatedRatingData);
                             }}
+                            onCommentEdited={(updatedComment) => {
+                                // Refresh the supplement data to ensure all comment states are updated
+                                getSupplement(supplementId).then(data => {
+                                    setSupplement(data);
+                                    // If the currently selected review has comments, find the updated one
+                                    const newSelectedReview = data.ratings.find(r => r.id === selectedReview.id);
+                                    if (newSelectedReview) {
+                                        setSelectedReview(newSelectedReview);
+                                    }
+                                });
+                            }}
                         />
                     )}
                 </List>

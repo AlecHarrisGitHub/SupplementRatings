@@ -336,7 +336,7 @@ function CommentBox({
     );
 }
 
-function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
+function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating, onCommentEdited }) {
     console.log('[ReviewDetail] Component rendering. Rating ID:', rating?.id);
 
     const { user: currentUser } = useAuth();
@@ -351,6 +351,52 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
     const [newCommentImage, setNewCommentImage] = useState(null); // State for the new comment's image
     const commentInputRef = useRef(null);
     const location = useLocation(); // Added useLocation hook
+
+    const handleCommentEdit = async (commentId, newContent) => {
+        try {
+            const updatedComment = await updateComment(commentId, newContent);
+
+            // Create a recursive function to update the comment in the nested structure
+            const updateCommentInData = (comments) => {
+                return comments.map(c => {
+                    if (c.id === commentId) {
+                        return { ...c, ...updatedComment };
+                    }
+                    if (c.replies && c.replies.length > 0) {
+                        return { ...c, replies: updateCommentInData(c.replies) };
+                    }
+                    return c;
+                });
+            };
+
+            // Update the main rating's comments
+            const updatedComments = updateCommentInData(currentRating.comments);
+            const newLocalRating = { ...currentRating, comments: updatedComments };
+            setCurrentRating(newLocalRating);
+
+            // If we are in a reply thread, update that specific state too
+            if (replyToComment) {
+                setReplyToComment(prev => ({
+                    ...prev,
+                    replies: updateCommentInData(prev.replies || [])
+                }));
+            }
+
+            // Update the comment in the breadcrumb-style thread view
+            setThread(prevThread => prevThread.map(item => 
+                item.id === commentId ? { ...item, ...updatedComment } : item
+            ));
+            
+            if (onCommentEdited) {
+                onCommentEdited(updatedComment);
+            }
+
+            toast.success("Comment updated successfully!");
+        } catch (error) {
+            console.error("Failed to update comment:", error);
+            toast.error("Failed to update comment.");
+        }
+    };
 
     useEffect(() => {
         console.log('[ReviewDetail DeepLinkEffect] Triggered. Rating ID:', rating?.id, 'Location state:', location.state);
@@ -767,7 +813,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                         // Update in thread
                                          setThread(prev => prev.map(ct => ct.id === item.id ? {...ct, content: editedText, is_edited: true} : ct));
 
-                                    } : updateComment} 
+                                    } : (commentId, newContent) => handleCommentEdit(commentId, newContent)} 
                                     currentUser={currentUser}
                                     onUpvote={() => item.isReviewThreadItem ? handleUpvoteRating() : handleUpvoteComment(item)}
                                     isReviewThreadItem={item.isReviewThreadItem}
@@ -820,7 +866,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                 comment={reply}
                                 onCommentClick={handleCommentClick} 
                                 isNested={true} // Direct replies under a comment can be nested
-                                onEdit={updateComment}
+                                onEdit={(commentId, newContent) => handleCommentEdit(commentId, newContent)}
                                 currentUser={currentUser}
                                 onUpvote={() => handleUpvoteComment(reply)}
                             />
@@ -832,7 +878,7 @@ function ReviewDetail({ rating, onBack, onCommentAdded, onEditRating }) {
                                 comment={commentItem}
                                 onCommentClick={handleCommentClick} 
                                 isNested={false} // Top-level comments are not nested relative to the review itself
-                                onEdit={updateComment}
+                                onEdit={(commentId, newContent) => handleCommentEdit(commentId, newContent)}
                                 currentUser={currentUser}
                                 onUpvote={() => handleUpvoteComment(commentItem)}
                             />

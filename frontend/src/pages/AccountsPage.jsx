@@ -245,7 +245,7 @@ function AccountsPage() {
         try {
             const updatedComment = await updateCommentAPI(editingComment.id, editedCommentContent);
             const updatedComments = user.comments.map(c => c.id === editingComment.id ? updatedComment : c);
-            updateUser({ comments: updatedComments });
+            updateUser({ ...user, comments: updatedComments });
             setEditingComment(null);
             toast.success("Comment updated successfully!");
         } catch (err) {
