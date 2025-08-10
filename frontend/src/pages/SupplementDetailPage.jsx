@@ -184,7 +184,7 @@ const SupplementRatingItem = ({ rating, handleReviewClick, user, handleEditRatin
 };
 
 function SupplementDetailPage() {
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, updateUser } = useAuth();
     const { id: supplementId } = useParams();
     const location = useLocation();
     const navigate = useNavigate();
@@ -576,6 +576,12 @@ function SupplementDetailPage() {
                                     if (newSelectedReview) {
                                         setSelectedReview(newSelectedReview);
                                     }
+                                });
+                                // Also update the user context to refresh comment list on AccountsPage
+                                updateUser({ 
+                                    comments: user.comments.map(c => 
+                                        c.id === updatedComment.id ? updatedComment : c
+                                    ) 
                                 });
                             }}
                         />

@@ -1,6 +1,6 @@
 // frontend/src/pages/AccountsPage.jsx
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
     Typography,
@@ -29,7 +29,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI, deleteMyRating, updateComment as updateCommentAPI, deleteComment as deleteCommentAPI } from '../services/api';
+import API, { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI, deleteMyRating, updateComment as updateCommentAPI, deleteComment as deleteCommentAPI } from '../services/api';
 import { styled } from '@mui/material/styles';
 import { toast } from 'react-toastify';
 
@@ -69,13 +69,17 @@ function AccountsPage() {
     const [commentToDelete, setCommentToDelete] = useState(null);
     const [showDeleteCommentDialog, setShowDeleteCommentDialog] = useState(false);
 
-    const fetchRatings = async (url) => {
+    const fetchRatings = useCallback(async (url, isInitialLoad = true) => {
         if (!user) {
             setRatingsError("User not found. Please log in.");
-            setLoadingRatings(false);
+            if (isInitialLoad) setLoadingRatings(false);
             return;
         }
-        setLoadingMore(true);
+        if (!isInitialLoad) {
+            setLoadingMore(true);
+        } else {
+            setLoadingRatings(true);
+        }
         setRatingsError(null);
 
         try {
@@ -96,26 +100,51 @@ function AccountsPage() {
                              (Array.isArray(data) ? data : []);
             const nextPageUrl = data.next || null;
 
-            if (url.includes('/api/ratings/my_ratings/')) {
-                setRatings(newItems);
-            } else {
-                setRatings(prev => [...(Array.isArray(prev) ? prev : []), ...newItems]);
-            }
+            setRatings(prev => isInitialLoad ? newItems : [...(Array.isArray(prev) ? prev : []), ...newItems]);
             setNextPage(nextPageUrl);
         } catch (err) {
             console.error("Error fetching ratings:", err);
             setRatingsError(err.message);
         } finally {
-            setLoadingRatings(false);
+            if (isInitialLoad) setLoadingRatings(false);
             setLoadingMore(false);
         }
-    };
+    }, [user]);
+
+    const fetchInitialData = useCallback(async () => {
+        if (user) {
+            fetchRatings('/api/ratings/my_ratings/', true);
+        }
+    }, [user, fetchRatings]);
+
 
     useEffect(() => {
-        if(user) {
-            fetchRatings('/api/ratings/my_ratings/');
-        }
-    }, [user]);
+        fetchInitialData();
+    }, [fetchInitialData]);
+
+    useEffect(() => {
+        const handleFocus = async () => {
+            if (user) {
+                console.log('Accounts page focused, refetching data...');
+                fetchInitialData();
+
+                // Also refetch user details which includes comments and other profile info
+                try {
+                    const response = await API.get('/user/me/');
+                    updateUser(response.data);
+                } catch (error) {
+                    console.error("Failed to refetch user details on focus:", error);
+                }
+            }
+        };
+
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [user, fetchInitialData, updateUser]);
+
 
     useEffect(() => {
         const fetchAllConditions = async () => {

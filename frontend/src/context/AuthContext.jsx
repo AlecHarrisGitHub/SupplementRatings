@@ -25,37 +25,35 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true); // Add loading state
 
   // Add this useEffect to initialize auth state from localStorage
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    const storedIsAdmin = localStorage.getItem('isAdmin') === 'true';
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          // Verify token and fetch fresh user data
+          const userDetails = await getCurrentUserDetails();
+          setUser(userDetails);
+          setIsAdmin(userDetails.is_staff || false);
+          setIsAuthenticated(true);
+          
+          // Update localStorage with fresh data
+          localStorage.setItem('user', JSON.stringify(userDetails));
+          localStorage.setItem('isAdmin', userDetails.is_staff ? 'true' : 'false');
 
-    if (token && storedUser) {
-      setIsAuthenticated(true);
-      setIsAdmin(storedIsAdmin);
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        if (parsedUser) { // Ensure parsedUser is not null/undefined
-          setUser(parsedUser);
-          // Start session monitoring for existing authenticated user
           sessionManager.startSessionMonitoring();
-        } else {
-          // Handle case where storedUser is "null" or invalid JSON string that parses to null
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-          localStorage.removeItem('isAdmin');
-          localStorage.removeItem('refreshToken');
+        } catch (error) {
+          console.error("Auth initialization failed, token might be invalid.", error);
+          // Token is invalid, clear storage and log out
+          logout();
         }
-      } catch (e) {
-        console.error("Error parsing stored user from localStorage", e);
-        localStorage.removeItem('user');
-        localStorage.removeItem('token');
-        localStorage.removeItem('isAdmin');
-        localStorage.removeItem('refreshToken');
       }
-    }
+      setLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (token, isAdminUser, userData) => {
@@ -130,14 +128,16 @@ export const AuthProvider = ({ children }) => {
   // Function to update parts of the user object
   const updateUser = (updatedFields) => {
     setUser(prevUser => {
-      const newUser = { ...prevUser, ...updatedFields };
+      // Create a deep copy to ensure re-render for nested changes
+      const newUserData = JSON.parse(JSON.stringify(prevUser || {}));
+      const newUser = { ...newUserData, ...updatedFields };
       localStorage.setItem('user', JSON.stringify(newUser));
       return newUser;
     });
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout, updateUser }}>
+    <AuthContext.Provider value={{ isAuthenticated, isAdmin, user, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );
