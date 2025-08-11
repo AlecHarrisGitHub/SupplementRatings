@@ -114,8 +114,14 @@ function AccountsPage() {
     const fetchInitialData = useCallback(async () => {
         if (user) {
             fetchRatings('/api/ratings/my_ratings/', true);
+            try {
+                const response = await API.get('/user/me/');
+                updateUser(response.data);
+            } catch (error) {
+                console.error("Failed to refetch user details on AccountsPage mount:", error);
+            }
         }
-    }, [user, fetchRatings]);
+    }, [user, fetchRatings, updateUser]);
 
 
     useEffect(() => {
@@ -591,4 +597,4 @@ function AccountsPage() {
     );
 }
 
-export default AccountsPage; 
+export default AccountsPage;
