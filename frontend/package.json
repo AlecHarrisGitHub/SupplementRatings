@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "backend": "cd .. && python manage.py runserver",
+    "backend": "cd .. && .venv\\Scripts\\python.exe manage.py runserver",
     "start": "concurrently \"npm run dev\" \"npm run backend\""
   },
   "dependencies": {
