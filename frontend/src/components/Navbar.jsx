@@ -72,17 +72,20 @@ function Navbar() {
                         {/* SUPPLEMENTBASE removed as per user request */}
                     </Typography>
 
-                    <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-                        <IconButton
-                            size="large"
-                            aria-label="mobile menu"
-                            aria-controls="mobile-menu"
-                            aria-haspopup="true"
-                            onClick={handleMobileMenuToggle}
-                            color="inherit"
-                        >
-                            <MenuIcon />
-                        </IconButton>
+                    <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
+                        <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
+                        {isAdmin && (
+                            <>
+                                <Button color="inherit" component={Link} to="/upload-supplements">Upload Supplements</Button>
+                                <Button color="inherit" component={Link} to="/upload-conditions">Upload Purposes</Button>
+                                <Button color="inherit" component={Link} to="/upload-brands">Upload Brands</Button>
+                            </>
+                        )}
+                    </Box>
+
+                    {/* Mobile Supplements Button */}
+                    <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'center' }}>
+                        <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
                     </Box>
                     
                     <Typography
@@ -162,45 +165,54 @@ function Navbar() {
                             </>
                         ) : (
                             <>
-                                <Button color="inherit" component={Link} to="/login">Login</Button>
-                                <Button color="inherit" component={Link} to="/signup">Signup</Button>
+                                {/* Desktop Login/Signup */}
+                                <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+                                    <Button color="inherit" component={Link} to="/login">Login</Button>
+                                    <Button color="inherit" component={Link} to="/signup">Signup</Button>
+                                </Box>
+                                
+                                {/* Mobile Login/Signup Hamburger Menu */}
+                                <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+                                    <IconButton
+                                        size="large"
+                                        aria-label="mobile auth menu"
+                                        aria-controls="mobile-auth-menu"
+                                        aria-haspopup="true"
+                                        onClick={handleMobileMenuToggle}
+                                        color="inherit"
+                                    >
+                                        <MenuIcon />
+                                    </IconButton>
+                                </Box>
                             </>
                         )}
                     </Box>
                 </Toolbar>
             </Container>
             
-            {/* Mobile Navigation Drawer */}
-            <Drawer
-                anchor="left"
-                open={mobileMenuOpen}
-                onClose={handleMobileMenuClose}
-                sx={{ display: { xs: 'block', md: 'none' } }}
-            >
-                <Box
-                    sx={{ width: 250 }}
-                    role="presentation"
+            {/* Mobile Authentication Drawer */}
+            {!isAuthenticated && (
+                <Drawer
+                    anchor="right"
+                    open={mobileMenuOpen}
+                    onClose={handleMobileMenuClose}
+                    sx={{ display: { xs: 'block', md: 'none' } }}
                 >
-                    <List>
-                        <ListItem button onClick={() => handleMobileNavigation('/supplements')}>
-                            <ListItemText primary="Supplements" />
-                        </ListItem>
-                        {isAdmin && (
-                            <>
-                                <ListItem button onClick={() => handleMobileNavigation('/upload-supplements')}>
-                                    <ListItemText primary="Upload Supplements" />
-                                </ListItem>
-                                <ListItem button onClick={() => handleMobileNavigation('/upload-conditions')}>
-                                    <ListItemText primary="Upload Purposes" />
-                                </ListItem>
-                                <ListItem button onClick={() => handleMobileNavigation('/upload-brands')}>
-                                    <ListItemText primary="Upload Brands" />
-                                </ListItem>
-                            </>
-                        )}
-                    </List>
-                </Box>
-            </Drawer>
+                    <Box
+                        sx={{ width: 200 }}
+                        role="presentation"
+                    >
+                        <List>
+                            <ListItem button onClick={() => handleMobileNavigation('/login')}>
+                                <ListItemText primary="Login" />
+                            </ListItem>
+                            <ListItem button onClick={() => handleMobileNavigation('/signup')}>
+                                <ListItemText primary="Signup" />
+                            </ListItem>
+                        </List>
+                    </Box>
+                </Drawer>
+            )}
         </AppBar>
     );
 }
