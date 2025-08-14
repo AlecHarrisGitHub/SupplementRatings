@@ -84,7 +84,7 @@ function Navbar() {
                     </Box>
 
                     {/* Mobile Supplements Button */}
-                    <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'center' }}>
+                    <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'flex-start', ml: 2 }}>
                         <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
                     </Box>
                     
