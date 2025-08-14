@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, Avatar, Menu, MenuItem } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, Avatar, Menu, MenuItem, Drawer, List, ListItem, ListItemText } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import MenuIcon from '@mui/icons-material/Menu';
 
 const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
 
@@ -13,6 +14,7 @@ function Navbar() {
     // console.log('Navbar Auth State:', { isAuthenticated, isAdmin });
     const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState(null);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const openUserMenu = Boolean(anchorEl);
     
     const handleUserMenuOpen = (event) => {
@@ -33,6 +35,19 @@ function Navbar() {
     const handleMyAccount = () => {
         navigate('/accounts');
         handleUserMenuClose();
+    };
+
+    const handleMobileMenuToggle = () => {
+        setMobileMenuOpen(!mobileMenuOpen);
+    };
+
+    const handleMobileMenuClose = () => {
+        setMobileMenuOpen(false);
+    };
+
+    const handleMobileNavigation = (path) => {
+        navigate(path);
+        handleMobileMenuClose();
     };
 
     return (
@@ -58,7 +73,16 @@ function Navbar() {
                     </Typography>
 
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' } }}>
-                        {/* Hamburger menu icon could go here */}
+                        <IconButton
+                            size="large"
+                            aria-label="mobile menu"
+                            aria-controls="mobile-menu"
+                            aria-haspopup="true"
+                            onClick={handleMobileMenuToggle}
+                            color="inherit"
+                        >
+                            <MenuIcon />
+                        </IconButton>
                     </Box>
                     
                     <Typography
@@ -145,6 +169,38 @@ function Navbar() {
                     </Box>
                 </Toolbar>
             </Container>
+            
+            {/* Mobile Navigation Drawer */}
+            <Drawer
+                anchor="left"
+                open={mobileMenuOpen}
+                onClose={handleMobileMenuClose}
+                sx={{ display: { xs: 'block', md: 'none' } }}
+            >
+                <Box
+                    sx={{ width: 250 }}
+                    role="presentation"
+                >
+                    <List>
+                        <ListItem button onClick={() => handleMobileNavigation('/supplements')}>
+                            <ListItemText primary="Supplements" />
+                        </ListItem>
+                        {isAdmin && (
+                            <>
+                                <ListItem button onClick={() => handleMobileNavigation('/upload-supplements')}>
+                                    <ListItemText primary="Upload Supplements" />
+                                </ListItem>
+                                <ListItem button onClick={() => handleMobileNavigation('/upload-conditions')}>
+                                    <ListItemText primary="Upload Purposes" />
+                                </ListItem>
+                                <ListItem button onClick={() => handleMobileNavigation('/upload-brands')}>
+                                    <ListItemText primary="Upload Brands" />
+                                </ListItem>
+                            </>
+                        )}
+                    </List>
+                </Box>
+            </Drawer>
         </AppBar>
     );
 }
