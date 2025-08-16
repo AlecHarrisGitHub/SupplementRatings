@@ -38,9 +38,12 @@ FRONTEND_DEV_URLS = [
     'http://localhost:5173',
 ]
 
-FRONTEND_PROD_URL = 'https://supplementratings.com'
+FRONTEND_PROD_URLS = [
+    'https://supplementratings.com',
+    'https://www.supplementratings.com',
+]
 
-FRONTEND_URL = FRONTEND_PROD_URL if not DEBUG else FRONTEND_DEV_URLS[0]
+FRONTEND_URL = (FRONTEND_PROD_URLS[0] if not DEBUG else FRONTEND_DEV_URLS[0])
 
 # Development and Production CORS/Host settings
 if DEBUG:
@@ -53,12 +56,12 @@ if DEBUG:
     CSRF_TRUSTED_ORIGINS = FRONTEND_DEV_URLS
 else:
     ALLOWED_HOSTS = ['3.15.155.109', '.supplementratings.com']
-    CORS_ALLOWED_ORIGINS = [FRONTEND_PROD_URL]
+    CORS_ALLOWED_ORIGINS = FRONTEND_PROD_URLS
     CORS_ALLOW_CREDENTIALS = True
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    CSRF_TRUSTED_ORIGINS = [FRONTEND_PROD_URL]
+    CSRF_TRUSTED_ORIGINS = FRONTEND_PROD_URLS
 CORS_ALLOWED_METHODS = [
     'GET',
     'POST',
