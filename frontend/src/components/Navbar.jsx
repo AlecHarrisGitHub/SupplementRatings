@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, Avatar, Menu, MenuItem, Drawer, List, ListItem, ListItemText } from '@mui/material';
+import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, Avatar, Menu, MenuItem } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-hot-toast';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
@@ -14,7 +14,8 @@ function Navbar() {
     // console.log('Navbar Auth State:', { isAuthenticated, isAdmin });
     const navigate = useNavigate();
     const [anchorEl, setAnchorEl] = useState(null);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [mobileMenuAnchorEl, setMobileMenuAnchorEl] = useState(null);
+    const openAuthMenu = Boolean(mobileMenuAnchorEl);
     const openUserMenu = Boolean(anchorEl);
     
     const handleUserMenuOpen = (event) => {
@@ -37,17 +38,17 @@ function Navbar() {
         handleUserMenuClose();
     };
 
-    const handleMobileMenuToggle = () => {
-        setMobileMenuOpen(!mobileMenuOpen);
+    const handleAuthMenuOpen = (event) => {
+        setMobileMenuAnchorEl(event.currentTarget);
     };
 
-    const handleMobileMenuClose = () => {
-        setMobileMenuOpen(false);
+    const handleAuthMenuClose = () => {
+        setMobileMenuAnchorEl(null);
     };
 
-    const handleMobileNavigation = (path) => {
+    const handleAuthNavigation = (path) => {
         navigate(path);
-        handleMobileMenuClose();
+        handleAuthMenuClose();
     };
 
     return (
@@ -154,20 +155,15 @@ function Navbar() {
                             </>
                         ) : (
                             <>
-                                {/* Desktop Login/Signup */}
-                                <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-                                    <Button color="inherit" component={Link} to="/login">Login</Button>
-                                    <Button color="inherit" component={Link} to="/signup">Signup</Button>
-                                </Box>
-                                
-                                {/* Mobile Login/Signup Hamburger Menu */}
-                                <Box sx={{ display: { xs: 'flex', md: 'none' } }}>
+                                {/* Auth Hamburger Menu */}
+                                <Box sx={{ display: 'flex' }}>
                                     <IconButton
                                         size="large"
-                                        aria-label="mobile auth menu"
-                                        aria-controls="mobile-auth-menu"
+                                        aria-label="auth menu"
+                                        aria-controls={openAuthMenu ? 'auth-menu' : undefined}
                                         aria-haspopup="true"
-                                        onClick={handleMobileMenuToggle}
+                                        aria-expanded={openAuthMenu ? 'true' : undefined}
+                                        onClick={handleAuthMenuOpen}
                                         color="inherit"
                                     >
                                         <MenuIcon />
@@ -179,28 +175,20 @@ function Navbar() {
                 </Toolbar>
             </Container>
             
-            {/* Mobile Authentication Drawer */}
+            {/* Authentication Dropdown Menu (all sizes when unauthenticated) */}
             {!isAuthenticated && (
-                <Drawer
-                    anchor="right"
-                    open={mobileMenuOpen}
-                    onClose={handleMobileMenuClose}
-                    sx={{ display: { xs: 'block', md: 'none' } }}
+                <Menu
+                    id="auth-menu"
+                    anchorEl={mobileMenuAnchorEl}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                    open={openAuthMenu}
+                    onClose={handleAuthMenuClose}
+                    keepMounted
                 >
-                    <Box
-                        sx={{ width: 200 }}
-                        role="presentation"
-                    >
-                        <List>
-                            <ListItem button onClick={() => handleMobileNavigation('/login')}>
-                                <ListItemText primary="Login" />
-                            </ListItem>
-                            <ListItem button onClick={() => handleMobileNavigation('/signup')}>
-                                <ListItemText primary="Signup" />
-                            </ListItem>
-                        </List>
-                    </Box>
-                </Drawer>
+                    <MenuItem onClick={() => handleAuthNavigation('/login')}>Login</MenuItem>
+                    <MenuItem onClick={() => handleAuthNavigation('/signup')}>Signup</MenuItem>
+                </Menu>
             )}
         </AppBar>
     );
