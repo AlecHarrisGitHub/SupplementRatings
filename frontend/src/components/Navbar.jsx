@@ -72,17 +72,6 @@ function Navbar() {
                         {/* SUPPLEMENTBASE removed as per user request */}
                     </Typography>
 
-                    <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-                        <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
-                        {isAdmin && (
-                            <>
-                                <Button color="inherit" component={Link} to="/upload-supplements">Upload Supplements</Button>
-                                <Button color="inherit" component={Link} to="/upload-conditions">Upload Purposes</Button>
-                                <Button color="inherit" component={Link} to="/upload-brands">Upload Brands</Button>
-                            </>
-                        )}
-                    </Box>
-
                     {/* Mobile Supplements Button */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'flex-start', ml: 2 }}>
                         <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
