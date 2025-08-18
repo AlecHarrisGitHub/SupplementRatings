@@ -1711,15 +1711,31 @@ function SearchableSupplementList() {
                             sx={{ mb: 2 }}
                         />
 
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
+                        <Autocomplete
+                            options={brands}
+                            getOptionLabel={(option) => option.name}
+                            value={selectedBrand}
+                            onChange={(_, newValue) => setSelectedBrand(newValue)}
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Brand Used"
+                                    fullWidth
+                                    sx={{ mb: 2 }}
+                                />
+                            )}
+                        />
+
+                        <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>Dosage</Typography>
+                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'flex-start' }, gap: 2, mb: 2 }}>
                             {supplementDosageUnit ? (
                                 <TextField
-                                    label="Dosage"
+                                    label="Amount"
                                     type="number"
                                     variant="outlined"
                                     value={ratingDosage}
                                     onChange={(e) => setRatingDosage(e.target.value)}
-                                    sx={{ width: '256px' }}
+                                    sx={{ width: { xs: '100%', sm: '256px' } }}
                                     placeholder="e.g., 500"
                                     InputProps={{
                                         inputProps: { min: 0 },
@@ -1729,12 +1745,12 @@ function SearchableSupplementList() {
                             ) : (
                                 <>
                                     <TextField
-                                        label="Dosage"
+                                        label="Amount"
                                         type="number"
                                         variant="outlined"
                                         value={ratingDosage}
                                         onChange={(e) => setRatingDosage(e.target.value)}
-                                        sx={{ width: '120px' }}
+                                        sx={{ width: { xs: '100%', sm: '120px' } }}
                                         placeholder="e.g., 500"
                                         InputProps={{ inputProps: { min: 0 } }}
                                     />
@@ -1743,7 +1759,7 @@ function SearchableSupplementList() {
                                         label="Unit"
                                         value={ratingDialogDosageUnit}
                                         onChange={(e) => setRatingDialogDosageUnit(e.target.value)}
-                                        sx={{ width: '120px' }}
+                                        sx={{ width: { xs: '100%', sm: '120px' } }}
                                         variant="outlined"
                                     >
                                         <MenuItem value="mg">mg</MenuItem>
@@ -1771,7 +1787,7 @@ function SearchableSupplementList() {
                                 variant="outlined"
                                 value={ratingDosageFrequency}
                                 onChange={(e) => setRatingDosageFrequency(e.target.value)}
-                                sx={{ width: '90px' }}
+                                sx={{ width: { xs: '100%', sm: '90px' } }}
                                 placeholder="e.g., 2"
                                 InputProps={{ inputProps: { min: 1 } }}
                             />
@@ -1780,7 +1796,7 @@ function SearchableSupplementList() {
                                 label="Frequency"
                                 value={ratingFrequencyUnit}
                                 onChange={(e) => setRatingFrequencyUnit(e.target.value)}
-                                sx={{ width: '130px' }}
+                                sx={{ width: { xs: '100%', sm: '130px' } }}
                                 variant="outlined"
                             >
                                 <MenuItem value="day">Per Day</MenuItem>
@@ -1790,20 +1806,6 @@ function SearchableSupplementList() {
                             </TextField>
                         </Box>
 
-                        <Autocomplete
-                            options={brands}
-                            getOptionLabel={(option) => option.name}
-                            value={selectedBrand}
-                            onChange={(_, newValue) => setSelectedBrand(newValue)}
-                            renderInput={(params) => (
-                                <TextField
-                                    {...params}
-                                    label="Brand Used"
-                                    fullWidth
-                                    sx={{ mb: 2 }}
-                                />
-                            )}
-                        />
                         
                         
                         <ImageUpload 
