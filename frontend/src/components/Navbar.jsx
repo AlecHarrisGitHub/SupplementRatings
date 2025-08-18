@@ -18,7 +18,10 @@ function Navbar() {
     const openAuthMenu = Boolean(mobileMenuAnchorEl);
     const openUserMenu = Boolean(anchorEl);
     
-    const handleGoToSupplements = () => {
+    const handleGoToSupplements = (event) => {
+        if (event && event.currentTarget && typeof event.currentTarget.blur === 'function') {
+            event.currentTarget.blur();
+        }
         // Navigate to supplements and request a reset of list view and filters
         navigate('/supplements', { state: { resetToList: true } });
         setMobileMenuAnchorEl(null);
@@ -82,7 +85,15 @@ function Navbar() {
 
                     {/* Mobile Supplements Button */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'flex-start', ml: 2 }}>
-                        <Button color="inherit" onClick={handleGoToSupplements}>Supplements</Button>
+                        <Button 
+                            color="inherit" 
+                            onClick={handleGoToSupplements}
+                            disableRipple
+                            disableFocusRipple
+                            sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
+                        >
+                            Supplements
+                        </Button>
                     </Box>
                     
                     <Typography
@@ -105,7 +116,15 @@ function Navbar() {
                     </Typography>
 
                     <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-                        <Button color="inherit" onClick={handleGoToSupplements}>Supplements</Button>
+                        <Button 
+                            color="inherit" 
+                            onClick={handleGoToSupplements}
+                            disableRipple
+                            disableFocusRipple
+                            sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
+                        >
+                            Supplements
+                        </Button>
                         {isAdmin && (
                             <>
                                 <Button color="inherit" component={Link} to="/upload-supplements">Upload Supplements</Button>
