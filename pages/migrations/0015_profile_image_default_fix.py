@@ -10,7 +10,8 @@ def forwards_update_default_path(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('pages', '0014_add_is_edited_fields'),
+        # Ensure the migration that creates Profile runs before this one
+        ('pages', '0011_rating_benefits_rating_side_effects_and_more'),
     ]
 
     operations = [
