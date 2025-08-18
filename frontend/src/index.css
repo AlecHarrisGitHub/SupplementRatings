@@ -53,6 +53,18 @@ button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
+/* AppBar link adjustments to avoid sticky dark text on mobile */
+.MuiAppBar-root a {
+  color: inherit !important;
+  -webkit-tap-highlight-color: transparent;
+}
+.MuiAppBar-root a:visited,
+.MuiAppBar-root a:active,
+.MuiAppBar-root a:focus {
+  color: inherit !important;
+}
+
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
