@@ -20,7 +20,11 @@ function Signup() {
     setLoading(true);
     try {
       await registerUser({ username, email, password });
-      toast.success('Registration successful! Please check your email to verify your account.');
+      toast.success(
+        <span>
+          Registration successful! Please check your email to verify your account. <strong>Also check your spam/junk folder.</strong>
+        </span>
+      );
       navigate('/login');
     } catch (error) {
       console.error('Registration error:', error);
