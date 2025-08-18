@@ -145,6 +145,20 @@ DATABASES = {
     }
 }
 
+DEV_THROTTLE_RATES = {
+    'anon': '10000/minute',
+    'user': '20000/minute',
+    'auth': '200/minute',
+    'register': '200/minute',
+}
+
+PROD_THROTTLE_RATES = {
+    'anon': '100/day',
+    'user': '1000/day',
+    'auth': '5/minute',
+    'register': '5/hour',
+}
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
@@ -158,20 +172,10 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle'
     ],
-    'DEFAULT_THROTTLE_RATES': {
-        'anon': '100/day',
-        'user': '1000/day',
-        'auth': '5/minute',
-        'register': '5/hour'
-    }
+    'DEFAULT_THROTTLE_RATES': DEV_THROTTLE_RATES if DEBUG else PROD_THROTTLE_RATES,
 }
 
-REST_FRAMEWORK_THROTTLE_RATES = {
-    'anon': '100/day',
-    'user': '1000/day',
-    'auth': '5/minute',
-    'register': '5/hour'
-}
+REST_FRAMEWORK_THROTTLE_RATES = DEV_THROTTLE_RATES if DEBUG else PROD_THROTTLE_RATES
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=4),

@@ -272,6 +272,32 @@ API.interceptors.response.use(
 const cache = new Map();
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Lightweight request-level cache and in-flight dedupe to avoid rapid duplicate calls
+const requestCache = new Map(); // key -> { data, ts }
+const inFlightRequests = new Map(); // key -> Promise
+const REQUEST_CACHE_DURATION = 30 * 1000; // 30 seconds freshness for meta endpoints
+
+const fetchWithRequestCache = async (key, fetcher) => {
+    const cached = requestCache.get(key);
+    if (cached && Date.now() - cached.ts < REQUEST_CACHE_DURATION) {
+        return cached.data;
+    }
+    if (inFlightRequests.has(key)) {
+        return inFlightRequests.get(key);
+    }
+    const p = (async () => {
+        try {
+            const data = await fetcher();
+            requestCache.set(key, { data, ts: Date.now() });
+            return data;
+        } finally {
+            inFlightRequests.delete(key);
+        }
+    })();
+    inFlightRequests.set(key, p);
+    return p;
+};
+
 const authenticatedFetch = async (endpoint, options = {}) => {
     const token = getAuthToken();
     if (!token) {
@@ -434,15 +460,16 @@ export const getCommentsForRating = async (ratingId) => {
 };
 
 export const getConditions = async (searchTerm) => {
-    try {
-        const response = await API.get('conditions/', {
-            params: { search: searchTerm }
-        });
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching conditions:', error);
-        throw error;
-    }
+    const key = `conditions:${searchTerm || ''}`;
+    return fetchWithRequestCache(key, async () => {
+        try {
+            const response = await API.get('conditions/', { params: { search: searchTerm } });
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching conditions:', error);
+            throw error;
+        }
+    });
 };
 
 export const uploadConditionsCSV = async (file) => {
@@ -655,13 +682,15 @@ export const uploadBrandsCSV = async (file) => {
 };
 
 export const getBrands = async () => {
-    try {
-        const response = await API.get('/brands/');
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching brands:', error);
-        throw error;
-    }
+    return fetchWithRequestCache('brands', async () => {
+        try {
+            const response = await API.get('/brands/');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching brands:', error);
+            throw error;
+        }
+    });
 };
 
 export const deleteBrand = async (brandId, options = {}) => {
@@ -710,13 +739,15 @@ export const upvoteComment = async (commentId) => {
 };
 
 export const getCategories = async () => {
-    try {
-        const response = await API.get('supplements/categories/');
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        throw error;
-    }
+    return fetchWithRequestCache('categories', async () => {
+        try {
+            const response = await API.get('supplements/categories/');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+            throw error;
+        }
+    });
 };
 
 // Function to get ALL conditions for dropdowns
@@ -827,13 +858,15 @@ export const updateProfileImage = async (imageData) => {
 };
 
 export const getCurrentUserDetails = async () => {
-    try {
-        const response = await API.get('user/me/'); // Corrected endpoint
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching current user details:', error);
-        throw error;
-    }
+    return fetchWithRequestCache('user_me', async () => {
+        try {
+            const response = await API.get('user/me/');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching current user details:', error);
+            throw error;
+        }
+    });
 };
 
 export const getUserChronicConditions = async () => {

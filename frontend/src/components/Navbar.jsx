@@ -18,12 +18,20 @@ function Navbar() {
     const openAuthMenu = Boolean(mobileMenuAnchorEl);
     const openUserMenu = Boolean(anchorEl);
     
-    const handleGoToSupplements = (event) => {
-        if (event && event.currentTarget && typeof event.currentTarget.blur === 'function') {
-            // Allow ripple/press effect to render briefly, then clear focus
-            const target = event.currentTarget;
-            setTimeout(() => target.blur(), 80);
-        }
+    const blurActiveElement = (delayMs = 80) => {
+        setTimeout(() => {
+            if (typeof document !== 'undefined') {
+                const el = document.activeElement;
+                if (el && typeof el.blur === 'function') {
+                    el.blur();
+                }
+            }
+        }, delayMs);
+    };
+
+    const handleGoToSupplements = () => {
+        // Allow ripple/press effect to render briefly, then clear focus
+        blurActiveElement(60);
         // Navigate to supplements and request a reset of list view and filters
         navigate('/supplements', { state: { resetToList: true } });
         setMobileMenuAnchorEl(null);
@@ -90,8 +98,8 @@ function Navbar() {
                         <Button 
                             color="inherit" 
                             onClick={handleGoToSupplements}
-                            onMouseUp={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
-                            onTouchEnd={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
+                            onMouseUp={() => blurActiveElement(60)}
+                            onTouchEnd={() => blurActiveElement(60)}
                             sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
                         >
                             Supplements
@@ -121,8 +129,8 @@ function Navbar() {
                         <Button 
                             color="inherit" 
                             onClick={handleGoToSupplements}
-                            onMouseUp={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
-                            onTouchEnd={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
+                            onMouseUp={() => blurActiveElement(60)}
+                            onTouchEnd={() => blurActiveElement(60)}
                             sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
                         >
                             Supplements
