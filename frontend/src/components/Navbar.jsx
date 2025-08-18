@@ -18,25 +18,7 @@ function Navbar() {
     const openAuthMenu = Boolean(mobileMenuAnchorEl);
     const openUserMenu = Boolean(anchorEl);
     
-    const blurActiveElement = (delayMs = 80) => {
-        setTimeout(() => {
-            if (typeof document !== 'undefined') {
-                const el = document.activeElement;
-                if (el && typeof el.blur === 'function') {
-                    el.blur();
-                }
-            }
-        }, delayMs);
-    };
-
-    const handleGoToSupplements = () => {
-        // Allow ripple/press effect to render briefly, then clear focus
-        blurActiveElement(60);
-        // Navigate to supplements and request a reset of list view and filters
-        navigate('/supplements', { state: { resetToList: true } });
-        setMobileMenuAnchorEl(null);
-        setAnchorEl(null);
-    };
+    // No custom click handler for Supplements; use Link with state like other buttons
 
     const handleUserMenuOpen = (event) => {
         setAnchorEl(event.currentTarget);
@@ -95,15 +77,7 @@ function Navbar() {
 
                     {/* Mobile Supplements Button */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'flex-start', ml: 2 }}>
-                        <Button 
-                            color="inherit" 
-                            onClick={handleGoToSupplements}
-                            onMouseUp={() => blurActiveElement(60)}
-                            onTouchEnd={() => blurActiveElement(60)}
-                            sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
-                        >
-                            Supplements
-                        </Button>
+                        <Button color="inherit" component={Link} to="/supplements" state={{ resetToList: true }}>Supplements</Button>
                     </Box>
                     
                     <Typography
@@ -126,15 +100,7 @@ function Navbar() {
                     </Typography>
 
                     <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-                        <Button 
-                            color="inherit" 
-                            onClick={handleGoToSupplements}
-                            onMouseUp={() => blurActiveElement(60)}
-                            onTouchEnd={() => blurActiveElement(60)}
-                            sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
-                        >
-                            Supplements
-                        </Button>
+                        <Button color="inherit" component={Link} to="/supplements" state={{ resetToList: true }}>Supplements</Button>
                         {isAdmin && (
                             <>
                                 <Button color="inherit" component={Link} to="/upload-supplements">Upload Supplements</Button>
