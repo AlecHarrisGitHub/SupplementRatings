@@ -619,6 +619,16 @@ function SupplementDetailPage() {
                             </Typography>
                         </Divider>
 
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={4}
+                            label="Comment"
+                            value={ratingComment}
+                            onChange={(e) => setRatingComment(e.target.value)}
+                            sx={{ mb: 2 }}
+                        />
+
                         <Autocomplete
                             multiple
                             options={conditions}
@@ -757,15 +767,7 @@ function SupplementDetailPage() {
                             )}
                         />
                         
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={4}
-                            label="Comment"
-                            value={ratingComment}
-                            onChange={(e) => setRatingComment(e.target.value)}
-                            sx={{ mb: 2 }}
-                        />
+                        
                         <ImageUpload 
                             onImageSelect={(file) => setRatingImage(file)}
                             currentImage={editingRating?.image || null}

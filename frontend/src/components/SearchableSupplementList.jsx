@@ -1630,6 +1630,16 @@ function SearchableSupplementList() {
                             </Typography>
                         </Divider>
 
+                        <TextField
+                            fullWidth
+                            multiline
+                            rows={4}
+                            label="Comment"
+                            value={ratingComment}
+                            onChange={(e) => setRatingComment(e.target.value)}
+                            sx={{ mb: 2 }}
+                        />
+
                         <Autocomplete
                             multiple
                             id="rating-conditions-autocomplete"
@@ -1795,15 +1805,7 @@ function SearchableSupplementList() {
                             )}
                         />
                         
-                        <TextField
-                            fullWidth
-                            multiline
-                            rows={4}
-                            label="Comment"
-                            value={ratingComment}
-                            onChange={(e) => setRatingComment(e.target.value)}
-                            sx={{ mb: 2 }}
-                        />
+                        
                         <ImageUpload 
                             onImageSelect={(file) => setRatingImage(file)}
                             currentImage={editingRating?.image || null}
