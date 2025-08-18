@@ -20,7 +20,9 @@ function Navbar() {
     
     const handleGoToSupplements = (event) => {
         if (event && event.currentTarget && typeof event.currentTarget.blur === 'function') {
-            event.currentTarget.blur();
+            // Allow ripple/press effect to render briefly, then clear focus
+            const target = event.currentTarget;
+            setTimeout(() => target.blur(), 80);
         }
         // Navigate to supplements and request a reset of list view and filters
         navigate('/supplements', { state: { resetToList: true } });
@@ -88,8 +90,8 @@ function Navbar() {
                         <Button 
                             color="inherit" 
                             onClick={handleGoToSupplements}
-                            disableRipple
-                            disableFocusRipple
+                            onMouseUp={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
+                            onTouchEnd={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
                             sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
                         >
                             Supplements
@@ -119,8 +121,8 @@ function Navbar() {
                         <Button 
                             color="inherit" 
                             onClick={handleGoToSupplements}
-                            disableRipple
-                            disableFocusRipple
+                            onMouseUp={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
+                            onTouchEnd={(e) => setTimeout(() => e.currentTarget.blur(), 80)}
                             sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
                         >
                             Supplements
