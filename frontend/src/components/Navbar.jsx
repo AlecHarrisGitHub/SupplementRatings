@@ -18,6 +18,13 @@ function Navbar() {
     const openAuthMenu = Boolean(mobileMenuAnchorEl);
     const openUserMenu = Boolean(anchorEl);
     
+    const handleGoToSupplements = () => {
+        // Navigate to supplements and request a reset of list view and filters
+        navigate('/supplements', { state: { resetToList: true } });
+        setMobileMenuAnchorEl(null);
+        setAnchorEl(null);
+    };
+
     const handleUserMenuOpen = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -75,7 +82,7 @@ function Navbar() {
 
                     {/* Mobile Supplements Button */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'flex-start', ml: 2 }}>
-                        <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
+                        <Button color="inherit" onClick={handleGoToSupplements}>Supplements</Button>
                     </Box>
                     
                     <Typography
@@ -98,7 +105,7 @@ function Navbar() {
                     </Typography>
 
                     <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' } }}>
-                        <Button color="inherit" component={Link} to="/supplements">Supplements</Button>
+                        <Button color="inherit" onClick={handleGoToSupplements}>Supplements</Button>
                         {isAdmin && (
                             <>
                                 <Button color="inherit" component={Link} to="/upload-supplements">Upload Supplements</Button>

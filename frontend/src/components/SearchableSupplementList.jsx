@@ -1358,6 +1358,38 @@ function SearchableSupplementList() {
         }
     }, [location.state, selectedSupplement, navigate, handleEditRating, ratingRefs]);
 
+    // Handle optional reset request from navigation (e.g., tapping Supplements in navbar)
+    useEffect(() => {
+        if (location.state && location.state.resetToList) {
+            // Clear search and filters
+            setSearchTerm('');
+            setCurrentSearch('');
+            setSelectedFilterConditions([]);
+            setSelectedFilterBenefits([]);
+            setSelectedFilterSideEffects([]);
+            setSelectedFilterBrands([]);
+            setSelectedFilterDosage('');
+            setSelectedFilterDosageUnit('mg');
+            setSelectedFilterFrequency('');
+            setSelectedFilterFrequencyUnit('day');
+            setSelectedFilterCategory('');
+            setAppliedFilterConditions([]);
+            setAppliedFilterBenefits([]);
+            setAppliedFilterSideEffects([]);
+            setAppliedFilterBrands([]);
+            setAppliedFilterDosage('');
+            setAppliedFilterDosageUnit('mg');
+            setAppliedFilterFrequency('');
+            setAppliedFilterFrequencyUnit('day');
+            setAppliedFilterCategory('');
+            setOffset(0);
+            setSelectedSupplement(null); // ensure we're on the list view
+
+            // Replace history state to avoid repeated resets on back/forward
+            navigate('/supplements', { replace: true, state: {} });
+        }
+    }, [location.state, navigate]);
+
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
