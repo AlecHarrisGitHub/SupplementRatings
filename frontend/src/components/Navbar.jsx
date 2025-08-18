@@ -94,7 +94,8 @@ function Navbar() {
                             state={{ resetToList: true }}
                             onTouchEnd={() => blurActiveElement(60)}
                             onMouseUp={() => blurActiveElement(60)}
-                            sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
+                            disableFocusRipple
+                            sx={{ '&:focus,&:focus-visible': { outline: 'none' }, WebkitTapHighlightColor: 'transparent' }}
                         >
                             Supplements
                         </Button>
@@ -127,7 +128,8 @@ function Navbar() {
                             state={{ resetToList: true }}
                             onTouchEnd={() => blurActiveElement(60)}
                             onMouseUp={() => blurActiveElement(60)}
-                            sx={{ '&:focus,&:focus-visible': { outline: 'none' } }}
+                            disableFocusRipple
+                            sx={{ '&:focus,&:focus-visible': { outline: 'none' }, WebkitTapHighlightColor: 'transparent' }}
                         >
                             Supplements
                         </Button>
