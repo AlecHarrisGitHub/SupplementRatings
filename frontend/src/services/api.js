@@ -402,6 +402,43 @@ export const getSupplementDetails = async (id) => {
     }
 };
 
+// Admin: create a supplement manually
+export const addSupplement = async ({ name, category, dosage_unit }) => {
+    try {
+        const payload = { name, category };
+        if (dosage_unit && String(dosage_unit).trim() !== '') {
+            payload.dosage_unit = dosage_unit;
+        }
+        const response = await API.post('supplements/', payload);
+        cache.clear();
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Admin: create a brand manually
+export const addBrand = async ({ name }) => {
+    try {
+        const response = await API.post('brands/', { name });
+        cache.clear();
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+// Admin: create a condition/purpose manually
+export const addCondition = async ({ name }) => {
+    try {
+        const response = await API.post('conditions/', { name });
+        cache.clear();
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
 export const getRatingsForSupplement = async (supplementId) => {
     try {
         const response = await API.get(`ratings/`, {

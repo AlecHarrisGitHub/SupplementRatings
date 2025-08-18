@@ -1,7 +1,7 @@
 // frontend/src/components/UploadCSV.jsx
 
 import React, { useState, useContext } from 'react';
-import { uploadSupplementsCSV, uploadConditionsCSV, uploadBrandsCSV } from '../services/api';
+import { uploadSupplementsCSV, uploadConditionsCSV, uploadBrandsCSV, addSupplement, addBrand, addCondition } from '../services/api';
 import { toast } from 'react-toastify';
 import { 
   Button, 
@@ -11,7 +11,12 @@ import {
   LinearProgress,
   IconButton,
   Input,
-  Divider
+  Divider,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -33,6 +38,10 @@ function UploadCSV({ type }) {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('');
+  const [dosageUnit, setDosageUnit] = useState('');
 
   const handleFileSelect = (event) => {
     const selectedFile = event.target.files[0];
@@ -40,6 +49,44 @@ function UploadCSV({ type }) {
       setFile(selectedFile);
     } else {
       toast.error('Please select a valid CSV file');
+    }
+  };
+
+  const resetManualForm = () => {
+    setName('');
+    setCategory('');
+    setDosageUnit('');
+  };
+
+  const handleManualSubmit = async () => {
+    try {
+      if (type === 'brands') {
+        if (!name.trim()) {
+          toast.error('Please enter a brand name');
+          return;
+        }
+        await addBrand({ name: name.trim() });
+        toast.success('Brand added');
+      } else if (type === 'conditions') {
+        if (!name.trim()) {
+          toast.error('Please enter a purpose name');
+          return;
+        }
+        await addCondition({ name: name.trim() });
+        toast.success('Purpose added');
+      } else {
+        if (!name.trim() || !category.trim()) {
+          toast.error('Please enter supplement name and category');
+          return;
+        }
+        await addSupplement({ name: name.trim(), category: category.trim(), dosage_unit: dosageUnit.trim() });
+        toast.success('Supplement added');
+      }
+      setManualOpen(false);
+      resetManualForm();
+    } catch (error) {
+      const message = error?.data?.error || error?.message || 'Failed to add item';
+      toast.error(message);
     }
   };
 
@@ -98,6 +145,17 @@ function UploadCSV({ type }) {
           Upload {type === 'conditions' ? 'Purposes' : type === 'brands' ? 'Brands' : 'Supplements'} CSV
         </Typography>
         
+        <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+          <Button
+            variant="outlined"
+            onClick={() => setManualOpen(true)}
+          >
+            Add manually
+          </Button>
+        </Box>
+
+        <Divider sx={{ my: 2 }}>or</Divider>
+
         <Box sx={{ my: 3 }}>
           <Button
             component="label"
@@ -141,6 +199,51 @@ function UploadCSV({ type }) {
           {uploading ? 'Uploading...' : 'Upload'}
         </Button>
       </Paper>
+
+      <Dialog open={manualOpen} onClose={() => setManualOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>
+          {type === 'conditions' ? 'Add Purpose' : type === 'brands' ? 'Add Brand' : 'Add Supplement'}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {type === 'brands' || type === 'conditions' ? (
+              <TextField
+                label={type === 'brands' ? 'Brand name' : 'Purpose name'}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoFocus
+                fullWidth
+              />
+            ) : (
+              <>
+                <TextField
+                  label="Supplement name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoFocus
+                  fullWidth
+                />
+                <TextField
+                  label="Category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  fullWidth
+                />
+                <TextField
+                  label="Dose unit (optional)"
+                  value={dosageUnit}
+                  onChange={(e) => setDosageUnit(e.target.value)}
+                  fullWidth
+                />
+              </>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setManualOpen(false); }}>Cancel</Button>
+          <Button variant="contained" onClick={handleManualSubmit}>Save</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
