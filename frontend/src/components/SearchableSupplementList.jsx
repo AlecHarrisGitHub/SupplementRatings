@@ -298,7 +298,7 @@ const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating,
             ref={ref}
             elevation={3} 
             sx={{ 
-                p: 2, 
+                p: { xs: 1.5, sm: 2 }, 
                 mb: 2,
                 cursor: 'pointer',
                 '&:hover': {
@@ -1477,7 +1477,7 @@ function SearchableSupplementList() {
                         Back to List
                     </Button>
                     
-                    <Paper sx={{ p: 3, mb: 3 }}>
+                    <Paper sx={{ p: { xs: 2, sm: 3 }, mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                             <Typography variant="h5">
                                 {selectedSupplement.name}
@@ -1499,8 +1499,15 @@ function SearchableSupplementList() {
                         </Box>
 
                         <Box sx={{ mb: 3 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Box sx={{ 
+                                display: 'flex', 
+                                flexDirection: { xs: 'column', sm: 'row' },
+                                alignItems: { xs: 'flex-start', sm: 'center' },
+                                justifyContent: { xs: 'flex-start', sm: 'space-between' },
+                                gap: { xs: 1.5, sm: 0 },
+                                mb: 2 
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap' }}>
                                     <Typography variant="subtitle1">
                                         {selectedSupplement.ratings.length > 0 ? (
                                             `Average Rating: ${(selectedSupplement.ratings.reduce((sum, rating) => sum + rating.score, 0) / selectedSupplement.ratings.length).toFixed(1)} (${selectedSupplement.ratings.length} ${selectedSupplement.ratings.length === 1 ? 'rating' : 'ratings'})`
@@ -1522,6 +1529,7 @@ function SearchableSupplementList() {
                                     size="small"
                                     value={sortOrder}
                                     onChange={(e) => setSortOrder(e.target.value)}
+                                    sx={{ minWidth: { xs: '100%', sm: 180 } }}
                                 >
                                     <MenuItem value="likes">Most Liked</MenuItem>
                                     <MenuItem value="recent">Most Recent</MenuItem>
