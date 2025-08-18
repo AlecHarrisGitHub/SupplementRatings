@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(default='default.jpg', upload_to='profile_pics/')
+    image = models.ImageField(default='profile_pics/default.jpg', upload_to='profile_pics/')
     chronic_conditions = models.ManyToManyField('Condition', blank=True, related_name='user_profiles')
 
     def __str__(self):
@@ -40,14 +40,13 @@ class Profile(models.Model):
             logger.debug("New profile instance with an image. Scheduling for processing.")
             process_image = True
 
-        # Ensure we don't try to process the 'default.jpg' string
-        if self.image and self.image.name == 'default.jpg':
+        # Ensure we don't try to process the default image placeholder
+        if self.image and self.image.name and 'default.jpg' in self.image.name:
             logger.debug("Image is 'default.jpg', skipping processing.")
             process_image = False
 
         # An uploaded file will have a 'file' attribute. An image from the DB won't until opened.
-        # This check ensures we only process actual new file uploads.
-        logger.debug(f"Checking if image should be processed. Flag: {process_image}, Has 'file' attr: {hasattr(self.image, 'file')}")
+        # Only check for the presence of a file handle if we actually intend to process the image.
         if process_image and hasattr(self.image, 'file'):
             try:
                 logger.info(f"Processing profile image for {self.user.username}. Original name: {self.image.name}")
