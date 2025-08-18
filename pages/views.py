@@ -43,6 +43,9 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.utils.html import strip_tags
 from .forms import ProfileUpdateForm
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.core.mail import EmailMessage
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -1080,3 +1083,45 @@ class PasswordResetConfirmView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def contact_message(request):
+    try:
+        name = request.data.get('name', '').strip()
+        email = request.data.get('email', '').strip()
+        subject = request.data.get('subject', '').strip() or 'Contact from SupplementRatings'
+        message = request.data.get('message', '').strip()
+
+        if not name or not email or not message:
+            return Response({'error': 'Name, email, and message are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            validate_email(email)
+        except ValidationError:
+            return Response({'error': 'Please provide a valid email address.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        body_lines = [
+            f"Name: {name}",
+            f"Email: {email}",
+            "",
+            message
+        ]
+        body = "\n".join(body_lines)
+
+        mail = EmailMessage(
+            subject=subject,
+            body=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[settings.DEFAULT_FROM_EMAIL],
+            cc=[email],
+            reply_to=[email],
+        )
+
+        mail.send(fail_silently=False)
+
+        return Response({'message': 'Your message has been sent successfully.'}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error in contact_message: {str(e)}", exc_info=True)
+        return Response({'error': 'Failed to send your message. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

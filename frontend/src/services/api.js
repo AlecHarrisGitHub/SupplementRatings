@@ -575,6 +575,15 @@ export const confirmPasswordReset = async (data) => {
     }
 };
 
+export const sendContactMessage = async ({ name, email, subject, message }) => {
+    try {
+        const response = await API.post('contact/', { name, email, subject, message });
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
 export const updateComment = async (commentId, content, image = null) => {
     try {
         const formData = new FormData();

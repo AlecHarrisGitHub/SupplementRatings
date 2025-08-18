@@ -10,6 +10,7 @@ import UploadCSV from './components/UploadCSV';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import NotFound from './pages/NotFound';
+import Contact from './pages/Contact';
 import EmailVerification from './pages/EmailVerification';
 import { Toaster } from 'react-hot-toast';
 import UploadBrands from './pages/UploadBrands';
@@ -94,6 +95,7 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/contact" element={<Contact />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password-confirm/:uidb64/:token" element={<ResetPasswordConfirm />} />
                 <Route path="/upload-supplements" element={<PrivateRoute adminOnly={true}><UploadCSV type="supplements" /></PrivateRoute>} />
