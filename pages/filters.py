@@ -6,6 +6,7 @@ class SupplementFilter(django_filters.FilterSet):
     conditions = django_filters.CharFilter(method='filter_by_related_condition_names')
     benefits = django_filters.CharFilter(method='filter_by_related_condition_names')
     side_effects = django_filters.CharFilter(method='filter_by_related_condition_names')
+    brands = django_filters.CharFilter(method='filter_by_brands_names')
     # Add other filters from your existing view if they were handled directly there before
     # For example: category, brands, dosage, frequency
 
@@ -42,31 +43,20 @@ class SupplementFilter(django_filters.FilterSet):
         query = Q(**{query_path_prefix: condition_names})
         return queryset.filter(query).distinct()
 
-    # If you had other specific filter logic in your SupplementViewSet,
-    # for example, for 'brands', 'dosage', 'frequency', you might need to add CharFilter
-    # with custom methods for them here as well, or use appropriate filter types
-    # from django-filters if they match your needs.
-    # Example for brands (if it was a CharField on Rating model and you want to filter by names):
-    # brands = django_filters.CharFilter(field_name='ratings__brands', lookup_expr='icontains') 
-    # This needs to match how 'brands' is stored and how you want to filter.
-    # The existing frontend sends brands as comma-separated names, so it would also need a custom method.
+    def filter_by_brands_names(self, queryset, name, value):
+        """
+        Filters supplements to those that have at least one rating whose
+        'brands' CharField contains any of the provided brand names.
+        Frontend sends comma-separated brand names.
+        """
+        if not value:
+            return queryset
+        brand_names = [n.strip() for n in value.split(',') if n.strip()]
+        if not brand_names:
+            return queryset
 
-    # Example: if 'brands' on the frontend sends comma-separated brand names
-    # brands = django_filters.CharFilter(method='filter_by_brands_names')
-    # def filter_by_brands_names(self, queryset, name, value):
-    #     if not value:
-    #         return queryset
-    #     brand_names = [n.strip() for n in value.split(',') if n.strip()]
-    #     if not brand_names:
-    #         return queryset
-    #     return queryset.filter(ratings__brands__in=brand_names).distinct() # Adjust 'ratings__brands__in' if brands is not a simple string on Rating model
-
-    # Example: if 'brands' on the frontend sends comma-separated brand names
-    # brands = django_filters.CharFilter(method='filter_by_brands_names')
-    # def filter_by_brands_names(self, queryset, name, value):
-    #     if not value:
-    #         return queryset
-    #     brand_names = [n.strip() for n in value.split(',') if n.strip()]
-    #     if not brand_names:
-    #         return queryset
-    #     return queryset.filter(ratings__brands__in=brand_names).distinct() # Adjust 'ratings__brands__in' if brands is not a simple string on Rating model 
+        # Use icontains OR chain so that a rating with comma-separated brands matches
+        brand_q = Q()
+        for bn in brand_names:
+            brand_q |= Q(ratings__brands__icontains=bn)
+        return queryset.filter(brand_q).distinct()

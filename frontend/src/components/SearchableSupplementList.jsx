@@ -814,10 +814,14 @@ function SearchableSupplementList() {
                         }
                     }
 
-                    // Check brands filter
+                    // Check brands filter (support ratings with comma-separated brand names)
                     if (appliedFilterBrands.length > 0) {
-                        const brandNames = appliedFilterBrands.map(b => b.name.toLowerCase());
-                        if (!rating.brands || !brandNames.includes(rating.brands.toLowerCase())) {
+                        const selectedBrandNames = new Set(appliedFilterBrands.map(b => (b.name || '').trim().toLowerCase()));
+                        const ratingBrandNames = String(rating.brands || '')
+                            .split(',')
+                            .map(n => n.trim().toLowerCase())
+                            .filter(Boolean);
+                        if (ratingBrandNames.length === 0 || !ratingBrandNames.some(n => selectedBrandNames.has(n))) {
                             return false;
                         }
                     }

@@ -112,6 +112,16 @@ class SupplementViewSet(viewsets.ModelViewSet):
             side_effect_names = [name.strip() for name in side_effects_param.split(',') if name.strip()]
             if side_effect_names:
                 rating_aggregation_q_filter &= Q(ratings__side_effects__name__in=side_effect_names)
+
+        # Filter by brands within rating aggregations if provided (matches any brand substring)
+        brands_param = self.request.query_params.get('brands', None)
+        if brands_param:
+            brand_names = [name.strip() for name in brands_param.split(',') if name.strip()]
+            if brand_names:
+                brand_q = Q()
+                for bn in brand_names:
+                    brand_q |= Q(ratings__brands__icontains=bn)
+                rating_aggregation_q_filter &= brand_q
         
         # Annotate with filtered aggregations
         # The `filter` argument to Avg and Count applies to the related 'ratings' queryset
