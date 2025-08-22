@@ -1,9 +1,9 @@
 // frontend/src/pages/Login.jsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { loginUser } from '../services/api';
+import { loginUser, loginWithGoogle, fetchGoogleClientId } from '../services/api';
 import { toast } from 'react-toastify';
 import { 
   Container, 
@@ -21,6 +21,7 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const googleButtonRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,6 +39,60 @@ function Login() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const initGoogle = async () => {
+      if (!(window.google && googleButtonRef.current)) return;
+      try {
+        // Prefer server-provided client ID; fall back to env if present
+        const serverClientId = await fetchGoogleClientId();
+        const clientId = serverClientId || import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+          console.warn('Google Client ID not configured.');
+          return;
+        }
+        // Avoid duplicate initialization during React StrictMode or HMR
+        if (window._gsiInited === clientId) {
+          return;
+        }
+        if (typeof window.google?.accounts?.id?.cancel === 'function') {
+          try { window.google.accounts.id.cancel(); } catch (e) {}
+        }
+        if (typeof window.google?.accounts?.id?.disableAutoSelect === 'function') {
+          try { window.google.accounts.id.disableAutoSelect(); } catch (e) {}
+        }
+        if (typeof window.google?.accounts?.id?.setLogLevel === 'function') {
+          try { window.google.accounts.id.setLogLevel('error'); } catch (e) {}
+        }
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          ux_mode: 'popup',
+          callback: async (response) => {
+            try {
+              const data = await loginWithGoogle(response.credential);
+              if (data.access) {
+                login(data.access);
+                toast.success('Logged in with Google!');
+                navigate('/supplements');
+              }
+            } catch (err) {
+              toast.error(err.message || 'Google login failed');
+            }
+          },
+        });
+        window.google.accounts.id.renderButton(googleButtonRef.current, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'rectangular',
+        });
+        window._gsiInited = clientId;
+      } catch (e) {
+        // Ignore init errors
+      }
+    };
+    initGoogle();
+  }, [login, navigate]);
 
 
   return (
@@ -87,6 +142,9 @@ function Login() {
             >
               {loading ? 'Logging in...' : 'Login'}
             </Button>
+            <Box sx={{ mt: 1, mb: 1 }}>
+              <div ref={googleButtonRef} style={{ display: 'flex', justifyContent: 'center' }} />
+            </Box>
           </form>
         </Paper>
       </Box>

@@ -16,7 +16,9 @@ from pages.views import (
     PasswordResetRequestView,
     PasswordResetConfirmView,
     ProfileImageUpdateAPIView,
-    contact_message
+    contact_message,
+    google_login,
+    google_client_id
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -79,6 +81,8 @@ api_urlpatterns = [
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password-reset-confirm'),
     path('profile/image-upload/', ProfileImageUpdateAPIView.as_view(), name='profile-image-update'),
     path('contact/', contact_message, name='contact-message'),
+    path('auth/google/', google_login, name='google-login'),
+    path('auth/google/client-id/', google_client_id, name='google-client-id'),
     path('', include(router.urls)),
 ]
 

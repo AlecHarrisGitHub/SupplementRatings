@@ -205,6 +205,16 @@ class SessionManager {
 // Create global session manager instance
 export const sessionManager = new SessionManager();
 
+// Helpers to manage auth header explicitly
+export const clearAuthHeader = () => {
+    try { delete API.defaults.headers.common['Authorization']; } catch (e) {}
+};
+export const setAuthHeader = (token) => {
+    if (token) {
+        API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    }
+};
+
 // Add a request interceptor to include the auth token and CSRF token
 API.interceptors.request.use((config) => {
     // Add auth token if it exists
@@ -576,6 +586,29 @@ export const loginUser = async (credentials) => {
     } catch (error) {
         console.error('Login error:', error);
         throw error;
+    }
+};
+
+export const loginWithGoogle = async (idToken) => {
+    try {
+        const response = await API.post('auth/google/', { id_token: idToken });
+        if (response.data.refresh) {
+            localStorage.setItem('refreshToken', response.data.refresh);
+        }
+        sessionManager.startSessionMonitoring();
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+export const fetchGoogleClientId = async () => {
+    try {
+        const response = await API.get('auth/google/client-id/');
+        return response.data?.client_id;
+    } catch (error) {
+        console.error('Failed to fetch Google client ID:', error);
+        return null;
     }
 };
 

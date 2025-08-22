@@ -33,9 +33,10 @@ from django.db import IntegrityError
 from pages.throttles import RegisterRateThrottle
 from .permissions import IsOwnerOrReadOnly, IsOwnerOrAdmin
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.tokens import RefreshToken
 import logging
 import os
-from decouple import config
+from decouple import config, Config, RepositoryEnv
 from rest_framework import filters
 from rest_framework.pagination import LimitOffsetPagination
 from django.contrib.auth.tokens import default_token_generator
@@ -52,6 +53,8 @@ from django.contrib import messages
 from rest_framework.parsers import MultiPartParser, FormParser # For file uploads
 from django_filters.rest_framework import DjangoFilterBackend # Import DjangoFilterBackend
 from .filters import SupplementFilter # Import your custom filter
+from google.oauth2 import id_token as google_id_token
+from google.auth.transport import requests as google_requests
 
 logger = logging.getLogger(__name__) # Moved logger to module level
 
@@ -1125,3 +1128,87 @@ def contact_message(request):
     except Exception as e:
         logger.error(f"Error in contact_message: {str(e)}", exc_info=True)
         return Response({'error': 'Failed to send your message. Please try again later.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def google_login(request):
+    try:
+        id_token = request.data.get('id_token')
+        if not id_token:
+            return Response({'error': 'Missing id_token'}, status=status.HTTP_400_BAD_REQUEST)
+
+        client_id = config('GOOGLE_OAUTH_CLIENT_ID', default=None)
+        if not client_id:
+            return Response({'error': 'Server misconfiguration: GOOGLE_OAUTH_CLIENT_ID not set'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        idinfo = google_id_token.verify_oauth2_token(id_token, google_requests.Request(), client_id)
+
+        if idinfo.get('iss') not in ['accounts.google.com', 'https://accounts.google.com']:
+            return Response({'error': 'Invalid token issuer'}, status=status.HTTP_400_BAD_REQUEST)
+
+        email = idinfo.get('email')
+        email_verified = idinfo.get('email_verified')
+        name = idinfo.get('name') or ''
+
+        if not email or not email_verified:
+            return Response({'error': 'Google account email not verified'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            base_username = email.split('@')[0][:20]
+            candidate = base_username
+            suffix = 1
+            while User.objects.filter(username__iexact=candidate).exists():
+                candidate = f"{base_username}{suffix}"
+                suffix += 1
+
+            user = User.objects.create_user(username=candidate, email=email)
+            if ' ' in name:
+                first, last = name.split(' ', 1)
+                user.first_name = first[:30]
+                user.last_name = last[:150]
+            else:
+                user.first_name = name[:30]
+            user.is_active = True
+            user.save()
+
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+
+        return Response({
+            'access': access_token,
+            'refresh': str(refresh),
+            'is_staff': user.is_staff,
+            'id': user.id,
+            'username': user.username,
+        }, status=status.HTTP_200_OK)
+    except ValueError:
+        return Response({'error': 'Invalid Google token'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"Error in google_login: {str(e)}", exc_info=True)
+        return Response({'error': 'Server error during Google login'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+@authentication_classes([])
+def google_client_id(request):
+    # Try environment variable first (supports container/host env)
+    client_id = os.environ.get('GOOGLE_OAUTH_CLIENT_ID')
+    # Fallback: re-read the root .env on demand to pick up recent changes without full restart
+    if not client_id:
+        try:
+            env_path = os.path.join(settings.BASE_DIR, '.env')
+            if os.path.exists(env_path):
+                fresh_cfg = Config(RepositoryEnv(env_path))
+                client_id = fresh_cfg('GOOGLE_OAUTH_CLIENT_ID', default=None)
+        except Exception:
+            client_id = None
+    if client_id:
+        client_id = client_id.strip()
+    if not client_id:
+        return Response({'error': 'GOOGLE_OAUTH_CLIENT_ID not configured'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response({'client_id': client_id})

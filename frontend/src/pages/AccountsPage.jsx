@@ -44,6 +44,7 @@ function AccountsPage() {
     const navigate = useNavigate();
     const [ratings, setRatings] = useState([]);
     const [loadingRatings, setLoadingRatings] = useState(true);
+    const [ratingsInitialLoaded, setRatingsInitialLoaded] = useState(false);
     const [ratingsError, setRatingsError] = useState(null);
     const [nextPage, setNextPage] = useState(null);
     const [loadingMore, setLoadingMore] = useState(false);
@@ -108,48 +109,42 @@ function AccountsPage() {
         } finally {
             if (isInitialLoad) setLoadingRatings(false);
             setLoadingMore(false);
+            if (isInitialLoad) setRatingsInitialLoaded(true);
         }
     }, [user]);
 
-    const fetchInitialData = useCallback(async () => {
+    const fetchInitialData = useCallback(async (isInitialLoad = true) => {
         if (user) {
-            fetchRatings('/api/ratings/my_ratings/', true);
+            fetchRatings('/api/ratings/my_ratings/', isInitialLoad);
             try {
                 const response = await API.get('/user/me/');
                 updateUser(response.data);
             } catch (error) {
-                console.error("Failed to refetch user details on AccountsPage mount:", error);
+                console.error("Failed to refetch user details:", error);
             }
         }
     }, [user, fetchRatings, updateUser]);
 
 
     useEffect(() => {
-        fetchInitialData();
+        fetchInitialData(true);
     }, [fetchInitialData]);
 
     useEffect(() => {
+        const lastFocusRef = { current: 0 };
         const handleFocus = async () => {
-            if (user) {
-                console.log('Accounts page focused, refetching data...');
-                fetchInitialData();
-
-                // Also refetch user details which includes comments and other profile info
-                try {
-                    const response = await API.get('/user/me/');
-                    updateUser(response.data);
-                } catch (error) {
-                    console.error("Failed to refetch user details on focus:", error);
-                }
+            if (!user) return;
+            const now = Date.now();
+            // Throttle focus refetches to once every 10s and do a silent refresh
+            if (now - lastFocusRef.current > 10000) {
+                lastFocusRef.current = now;
+                fetchInitialData(false);
             }
         };
 
         window.addEventListener('focus', handleFocus);
-
-        return () => {
-            window.removeEventListener('focus', handleFocus);
-        };
-    }, [user, fetchInitialData, updateUser]);
+        return () => window.removeEventListener('focus', handleFocus);
+    }, [user, fetchInitialData]);
 
 
     useEffect(() => {
@@ -426,7 +421,7 @@ function AccountsPage() {
                 {ratingsError && ratings.length === 0 && (
                      <Alert severity="error" sx={{ mt: 3, mb: 2 }}>{ratingsError}</Alert>
                 )}
-                {ratings.length === 0 && !loadingRatings && !ratingsError && (
+                {ratings.length === 0 && ratingsInitialLoaded && !ratingsError && (
                     <Typography sx={{ textAlign: 'center', mt: 3 }}>You have not made any ratings yet.</Typography>
                 )}
                 {ratingsError && ratings.length > 0 && (

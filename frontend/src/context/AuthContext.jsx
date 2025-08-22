@@ -2,7 +2,7 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { getCurrentUserDetails } from '../services/api'; // Import getCurrentUserDetails
-import { sessionManager } from '../services/api'; // Import session manager
+import { sessionManager, clearAuthHeader, setAuthHeader } from '../services/api'; // Import session manager
 
 const AuthContext = createContext(null);
 
@@ -58,6 +58,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (token, isAdminUser, userData) => {
     localStorage.setItem('token', token);
+    setAuthHeader(token);
     let userToStore = userData;
     let adminStatus = isAdminUser;
     let fetchedUserDetails = null;
@@ -120,6 +121,16 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('isAdmin');
     localStorage.removeItem('user');
+    clearAuthHeader();
+    try {
+      if (window.google?.accounts?.id?.disableAutoSelect) {
+        window.google.accounts.id.disableAutoSelect();
+      }
+      if (window.google?.accounts?.id?.cancel) {
+        window.google.accounts.id.cancel();
+      }
+      window._gsiInited = undefined;
+    } catch (e) {}
     setIsAuthenticated(false);
     setIsAdmin(false);
     setUser(null);

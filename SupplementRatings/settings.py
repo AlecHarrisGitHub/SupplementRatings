@@ -36,6 +36,8 @@ DEBUG = not DEBUG
 FRONTEND_DEV_URLS = [
     'http://127.0.0.1:5173',
     'http://localhost:5173',
+    'http://127.0.0.1:5174',
+    'http://localhost:5174',
 ]
 
 FRONTEND_PROD_URLS = [
