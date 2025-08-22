@@ -82,9 +82,20 @@ function Navbar() {
                             textDecoration: 'none',
                         }}
                     >
-                        {/* SUPPLEMENTBASE removed as per user request */}
+                        <Box
+                            component="img"
+                            src="/Supplement_Ratings_Logo.png"
+                            alt="Supplement Ratings"
+                            sx={{ height: 40, width: 'auto', display: 'block' }}
+                        />
                     </Typography>
 
+                    {/* Mobile Logo (top-left) */}
+                    <Box sx={{ display: { xs: 'flex', md: 'none' }, alignItems: 'center', mr: 1 }}>
+                        <IconButton component={Link} to="/" aria-label="Home" color="inherit" sx={{ p: 0 }}>
+                            <Box component="img" src="/Supplement_Ratings_Logo.png" alt="Supplement Ratings" sx={{ height: 32, width: 'auto' }} />
+                        </IconButton>
+                    </Box>
                     {/* Mobile Supplements Button */}
                     <Box sx={{ flexGrow: 1, display: { xs: 'flex', md: 'none' }, justifyContent: 'flex-start', ml: 2 }}>
                         <Button 
