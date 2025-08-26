@@ -113,6 +113,8 @@ const FilterDrawer = ({
         return [];
     }, [brands]);
 
+    const [showAdvanced, setShowAdvanced] = React.useState(false);
+
     return (
         <Drawer
             anchor="left"
@@ -156,22 +158,7 @@ const FilterDrawer = ({
                     sx={{ mb: 2 }}
                 />
 
-                <Autocomplete
-                    multiple
-                    options={conditions}
-                    getOptionLabel={(option) => option.name}
-                    value={selectedFilterSideEffects}
-                    onChange={(_, newValue) => setSelectedFilterSideEffects(newValue)}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Side Effects"
-                            margin="normal"
-                        />
-                    )}
-                    sx={{ mb: 2 }}
-                />
-
+                {/* Side Effects moved to advanced section */}
                 <Autocomplete
                     options={sortedCategories}
                     getOptionLabel={(option) => option}
@@ -187,75 +174,103 @@ const FilterDrawer = ({
                     sx={{ mb: 2 }}
                 />
 
-                <Autocomplete
-                    multiple
-                    options={sortedBrands}
-                    getOptionLabel={(option) => option.name}
-                    value={selectedFilterBrands}
-                    onChange={(_, newValue) => setSelectedFilterBrands(newValue)}
-                    renderInput={(params) => (
+                <Box sx={{ mb: 1 }}>
+                    <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => setShowAdvanced(prev => !prev)}
+                    >
+                        {showAdvanced ? 'Hide advanced filters' : 'Show advanced filters'}
+                    </Button>
+                </Box>
+
+                <Collapse in={showAdvanced}>
+                    <Autocomplete
+                        multiple
+                        options={conditions}
+                        getOptionLabel={(option) => option.name}
+                        value={selectedFilterSideEffects}
+                        onChange={(_, newValue) => setSelectedFilterSideEffects(newValue)}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Side Effects"
+                                margin="normal"
+                            />
+                        )}
+                        sx={{ mb: 2 }}
+                    />
+
+                    <Autocomplete
+                        multiple
+                        options={sortedBrands}
+                        getOptionLabel={(option) => option.name}
+                        value={selectedFilterBrands}
+                        onChange={(_, newValue) => setSelectedFilterBrands(newValue)}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Brands"
+                                margin="normal"
+                            />
+                        )}
+                        sx={{ mb: 2 }}
+                    />
+
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                         <TextField
-                            {...params}
-                            label="Brands"
-                            margin="normal"
+                            label="Dosage"
+                            type="number"
+                            value={selectedFilterDosage}
+                            onChange={(e) => setSelectedFilterDosage(e.target.value)}
+                            sx={{ width: '50%' }}
                         />
-                    )}
-                    sx={{ mb: 2 }}
-                />
+                        <Select
+                            value={selectedFilterDosageUnit}
+                            onChange={(e) => setSelectedFilterDosageUnit(e.target.value)}
+                            sx={{ width: '50%' }}
+                        >
+                            <MenuItem value="mg">mg</MenuItem>
+                            <MenuItem value="g">g</MenuItem>
+                            <MenuItem value="mcg">mcg</MenuItem>
+                            <MenuItem value="ml">ml</MenuItem>
+                            <MenuItem value="IU">IU</MenuItem>
+                        </Select>
+                    </Box>
 
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <TextField
-                        label="Dosage"
-                        type="number"
-                        value={selectedFilterDosage}
-                        onChange={(e) => setSelectedFilterDosage(e.target.value)}
-                        sx={{ width: '50%' }}
-                    />
+                    <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                        <TextField
+                            label="Frequency"
+                            type="number"
+                            value={selectedFilterFrequency}
+                            onChange={(e) => setSelectedFilterFrequency(e.target.value)}
+                            sx={{ width: '50%' }}
+                        />
+                        <Select
+                            value={selectedFilterFrequencyUnit}
+                            onChange={(e) => setSelectedFilterFrequencyUnit(e.target.value)}
+                            sx={{ width: '50%' }}
+                        >
+                            <MenuItem value="day">Per Day</MenuItem>
+                            <MenuItem value="week">Per Week</MenuItem>
+                            <MenuItem value="month">Per Month</MenuItem>
+                            <MenuItem value="year">Per Year</MenuItem>
+                        </Select>
+                    </Box>
+
+                    <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
+                        Sort By
+                    </Typography>
                     <Select
-                        value={selectedFilterDosageUnit}
-                        onChange={(e) => setSelectedFilterDosageUnit(e.target.value)}
-                        sx={{ width: '50%' }}
+                        fullWidth
+                        value={selectedSortBy}
+                        onChange={(e) => setSelectedSortBy(e.target.value)}
+                        sx={{ mb: 3 }}
                     >
-                        <MenuItem value="mg">mg</MenuItem>
-                        <MenuItem value="g">g</MenuItem>
-                        <MenuItem value="mcg">mcg</MenuItem>
-                        <MenuItem value="ml">ml</MenuItem>
-                        <MenuItem value="IU">IU</MenuItem>
+                        <MenuItem value="highest_rating">Highest Rating</MenuItem>
+                        <MenuItem value="most_ratings">Most Ratings</MenuItem>
                     </Select>
-                </Box>
-
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-                    <TextField
-                        label="Frequency"
-                        type="number"
-                        value={selectedFilterFrequency}
-                        onChange={(e) => setSelectedFilterFrequency(e.target.value)}
-                        sx={{ width: '50%' }}
-                    />
-                    <Select
-                        value={selectedFilterFrequencyUnit}
-                        onChange={(e) => setSelectedFilterFrequencyUnit(e.target.value)}
-                        sx={{ width: '50%' }}
-                    >
-                        <MenuItem value="day">Per Day</MenuItem>
-                        <MenuItem value="week">Per Week</MenuItem>
-                        <MenuItem value="month">Per Month</MenuItem>
-                        <MenuItem value="year">Per Year</MenuItem>
-                    </Select>
-                </Box>
-
-                <Typography variant="subtitle1" gutterBottom sx={{ mt: 3 }}>
-                    Sort By
-                </Typography>
-                <Select
-                    fullWidth
-                    value={selectedSortBy}
-                    onChange={(e) => setSelectedSortBy(e.target.value)}
-                    sx={{ mb: 3 }}
-                >
-                    <MenuItem value="highest_rating">Highest Rating</MenuItem>
-                    <MenuItem value="most_ratings">Most Ratings</MenuItem>
-                </Select>
+                </Collapse>
 
                 <Box sx={{ display: 'flex', gap: 2, mt: 'auto' }}>
                     <Button
