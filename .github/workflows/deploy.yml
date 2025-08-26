@@ -50,9 +50,20 @@ jobs:
 
       # Copy tarball directly to EC2
 
-      - name: Copy frontend build to EC2
+      - name: Copy frontend build to EC2 (robust)
         run: |
-          scp -o StrictHostKeyChecking=no -C frontend_dist.tar.gz ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist.tar.gz
+          set -e
+          host="${{ secrets.REMOTE_HOST }}"
+          user="${{ secrets.REMOTE_USER }}"
+          echo "Checking SSH reachability..."
+          timeout 15 bash -c "cat < /dev/null > /dev/tcp/$host/22" 2>/dev/null || true
+          echo "Uploading tarball with retries..."
+          SSH_OPTS="-o StrictHostKeyChecking=no -o ServerAliveInterval=20 -o ServerAliveCountMax=6 -o ConnectTimeout=20 -o IPQoS=throughput"
+          for attempt in 1 2 3; do
+            rsync -az --compress-level=6 --partial --inplace -e "ssh $SSH_OPTS" frontend_dist.tar.gz "$user@$host:~/SupplementRatings/frontend_dist.tar.gz" && break || {
+              echo "rsync attempt $attempt failed; retrying in 5s..."; sleep 5;
+            }
+          done
 
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
