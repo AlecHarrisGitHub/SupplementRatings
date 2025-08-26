@@ -24,12 +24,6 @@ jobs:
           npm ci
 
       - name: Build frontend
-        env:
-          AMAZON_AFFILIATE_LINK_HOME: ${{ secrets.AMAZON_AFFILIATE_LINK_HOME }}
-          AMAZON_AFFILIATE_LINK_CATEGORY: ${{ secrets.AMAZON_AFFILIATE_LINK_CATEGORY }}
-          # Also expose VITE_* equivalents for completeness
-          VITE_AFFILIATE_HOME_LINK: ${{ secrets.AMAZON_AFFILIATE_LINK_HOME }}
-          VITE_AFFILIATE_CATEGORY_LINK: ${{ secrets.AMAZON_AFFILIATE_LINK_CATEGORY }}
         run: |
           cd frontend
           npm run build
@@ -60,13 +54,11 @@ jobs:
           name: frontend-build
           path: frontend_dist
 
-      - name: Archive frontend build
-        run: |
-          tar -czf frontend_dist.tar.gz -C frontend_dist .
+      # Revert to copying files directly for simplicity
 
       - name: Copy frontend build to EC2
         run: |
-          scp -o StrictHostKeyChecking=no frontend_dist.tar.gz ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist.tar.gz
+          scp -o StrictHostKeyChecking=no -r frontend_dist/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist/
 
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
@@ -75,12 +67,7 @@ jobs:
             set -e
             cd ~/SupplementRatings
 
-            # Extract new frontend build tarball if present
-            if [ -f frontend_dist.tar.gz ]; then
-              mkdir -p frontend_dist
-              tar -xzf frontend_dist.tar.gz -C frontend_dist
-              rm -f frontend_dist.tar.gz
-            fi
+            mkdir -p frontend_dist
 
             # ---------- 1) back-up existing DB ----------
             # backup_dir="/home/ec2-user/db_backups"

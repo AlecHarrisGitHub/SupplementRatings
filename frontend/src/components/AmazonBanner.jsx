@@ -4,9 +4,9 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Alert, Box, Button, Container, Link as MuiLink, Typography } from '@mui/material';
 import { useBanner } from '../context/BannerContext';
 
-// Read affiliate links from env. Prefer VITE_ vars, but also support user's AMAZON_* names.
-const HOME_LINK = import.meta.env.VITE_AFFILIATE_HOME_LINK || import.meta.env.AMAZON_AFFILIATE_LINK_HOME || '';
-const CATEGORY_LINK_TEMPLATE = import.meta.env.VITE_AFFILIATE_CATEGORY_LINK || import.meta.env.AMAZON_AFFILIATE_LINK_CATEGORY || '';
+// Hard-coded affiliate links per user request
+const HOME_LINK = "https://www.amazon.com?&linkCode=ll2&tag=supplementrat-20&linkId=9312aba51e5cec1d6cd6f5a05c320db1&language=en_US&ref_=as_li_ss_tl";
+const CATEGORY_LINK_TEMPLATE = "https://www.amazon.com/s?k=Vitamin+A&crid=7KPFMQ19O8HC&sprefix=vitamin+a%2Caps%2C158&linkCode=ll2&tag=supplementrat-20&linkId=cee6c8a458a1e2d9152b76b6545824a8&language=en_US&ref_=as_li_ss_tl";
 
 function buildCategoryLink(template, supplementName) {
     if (!template || !supplementName) return template || '';
@@ -49,15 +49,7 @@ export default function AmazonBanner() {
     }, [isCategory, currentSupplementName]);
 
     useEffect(() => {
-        if (!warnedRef.current) {
-            if (!HOME_LINK) {
-                console.warn('Affiliate HOME link is not set (VITE_AFFILIATE_HOME_LINK or AMAZON_AFFILIATE_LINK_HOME). Banner will be hidden.');
-            }
-            if (!CATEGORY_LINK_TEMPLATE) {
-                console.warn('Affiliate CATEGORY link is not set (VITE_AFFILIATE_CATEGORY_LINK or AMAZON_AFFILIATE_LINK_CATEGORY). Category banner will fallback to HOME.');
-            }
-            warnedRef.current = true;
-        }
+        warnedRef.current = true;
     }, []);
 
     if (!href) return null;
