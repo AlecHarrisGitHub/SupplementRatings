@@ -4,3 +4,4 @@ Retry with updated .env
 push to build
 try to push again
 try again without vpn
+try again after reboot
