@@ -8,6 +8,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import App from './App';
 import './index.css';
 import 'react-toastify/dist/ReactToastify.css';
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import theme from './theme';
 
 const container = document.getElementById('root');
 const root = ReactDOM.createRoot(container);
@@ -16,7 +18,10 @@ root.render(
   <ErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <App />
+        </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>
   </ErrorBoundary>

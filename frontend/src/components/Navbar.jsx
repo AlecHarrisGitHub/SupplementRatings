@@ -64,7 +64,15 @@ function Navbar() {
     };
 
     return (
-        <AppBar position="static">
+        <AppBar 
+            position="sticky"
+            color="transparent"
+            sx={{
+                backdropFilter: 'saturate(180%) blur(8px)',
+                backgroundColor: 'rgba(255,255,255,0.7)',
+                borderBottom: theme => `1px solid ${theme.palette.divider}`
+            }}
+        >
             <Container maxWidth="xl">
                 <Toolbar disableGutters>
                     <Typography
@@ -175,7 +183,7 @@ function Navbar() {
                                     >
                                         {!user.profile_image_url && <AccountCircleIcon />}
                                     </Avatar>
-                                    <Typography variant="subtitle1" component="span" sx={{ ml: 1, mr: 0.5, color: 'white' }}>
+                                    <Typography variant="subtitle1" component="span" sx={{ ml: 1, mr: 0.5 }}>
                                         {user.username}
                                     </Typography>
                                 </IconButton>

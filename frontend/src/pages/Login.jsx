@@ -97,11 +97,16 @@ function Login() {
 
   return (
     <Container maxWidth="sm">
-      <Box sx={{ mt: 8, mb: 4 }}>
-        <Paper elevation={3} sx={{ p: 4 }}>
-          <Typography variant="h4" component="h1" gutterBottom align="center">
-            Login
-          </Typography>
+      <Box sx={{ mt: 10, mb: 6 }}>
+        <Paper elevation={0} sx={{ p: { xs: 3, sm: 4 }, borderRadius: 3, border: theme => `1px solid ${theme.palette.divider}` }}>
+          <Box sx={{ textAlign: 'center', mb: 1 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+              Welcome back
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Sign in to continue to Supplement Ratings
+            </Typography>
+          </Box>
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
