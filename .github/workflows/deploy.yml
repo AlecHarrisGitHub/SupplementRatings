@@ -41,11 +41,10 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       # 3. Add your server to known_hosts (so SSH won't prompt)
-      - name: Add remote host to known_hosts (best-effort)
-        continue-on-error: true
+      - name: Add remote host to known_hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts
 
       # Download the build artifact and deploy to EC2
       - name: Download frontend build artifact
@@ -54,8 +53,6 @@ jobs:
           name: frontend-build
           path: frontend_dist
 
-      # Revert to copying files directly for simplicity
-
       - name: Copy frontend build to EC2
         run: |
           scp -o StrictHostKeyChecking=no -r frontend_dist/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist/
@@ -63,7 +60,7 @@ jobs:
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+          ssh ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             set -e
             cd ~/SupplementRatings
 
