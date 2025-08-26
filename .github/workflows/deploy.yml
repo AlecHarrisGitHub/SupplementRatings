@@ -68,7 +68,23 @@ jobs:
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+          set -e
+          host="${{ secrets.REMOTE_HOST }}"
+          user="${{ secrets.REMOTE_USER }}"
+          SSH_OPTS="-o StrictHostKeyChecking=no -o ServerAliveInterval=20 -o ServerAliveCountMax=6 -o ConnectTimeout=20 -o BatchMode=yes -o IPQoS=throughput"
+          echo "Waiting for SSH to become reachable..."
+          for i in {1..18}; do # up to ~3 minutes
+            if timeout 10 bash -c "cat < /dev/null > /dev/tcp/$host/22" 2>/dev/null; then
+              echo "SSH port open"; break
+            fi
+            echo "SSH not reachable yet (attempt $i). Retrying in 10s..."; sleep 10
+          done
+
+          echo "Running remote deploy script (with retries)..."
+          for attempt in 1 2 3; do
+            ssh $SSH_OPTS "$user@$host" << 'EOF' && break || {
+              echo "SSH attempt $attempt failed; retrying in 10s..."; sleep 10; exit 1;
+            }
             set -e
             cd ~/SupplementRatings
 
@@ -79,24 +95,9 @@ jobs:
               rm -f frontend_dist.tar.gz
             fi
 
-            # ---------- 1) back-up existing DB ----------
-            # backup_dir="/home/ec2-user/db_backups"
-            # mkdir -p "$backup_dir"
-            # if [ -f db.sqlite3 ]; then
-            #   echo "⏳  Backing up db.sqlite3…"
-            #   cp db.sqlite3 "$backup_dir/db.sqlite3.$(date +%Y%m%d%H%M%S)"
-            # fi
-
             # ---------- 2) pull latest code ----------
             git fetch origin
             git reset --hard origin/main
-
-            # ---------- 3) restore DB (if missing) ----------
-            # if [ ! -f db.sqlite3 ] && ls "$backup_dir"/db.sqlite3.* >/dev/null 2>&1; then
-            #   echo "🔄  Restoring db.sqlite3…"
-            #   latest_backup=$(ls -t "$backup_dir"/db.sqlite3.* | head -n 1)
-            #   cp "$latest_backup" db.sqlite3
-            # fi
 
             # ---------- 4) rebuild & restart ----------
             if [ ! -f .env ]; then
@@ -107,10 +108,9 @@ jobs:
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
 
-            # No frontend build here; just collectstatic and migrate
             python manage.py collectstatic --noinput
             python manage.py migrate
 
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
-          EOF
+EOF
