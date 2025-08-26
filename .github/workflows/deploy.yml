@@ -24,6 +24,12 @@ jobs:
           npm ci
 
       - name: Build frontend
+        env:
+          AMAZON_AFFILIATE_LINK_HOME: ${{ secrets.AMAZON_AFFILIATE_LINK_HOME }}
+          AMAZON_AFFILIATE_LINK_CATEGORY: ${{ secrets.AMAZON_AFFILIATE_LINK_CATEGORY }}
+          # Also expose VITE_* equivalents for completeness
+          VITE_AFFILIATE_HOME_LINK: ${{ secrets.AMAZON_AFFILIATE_LINK_HOME }}
+          VITE_AFFILIATE_CATEGORY_LINK: ${{ secrets.AMAZON_AFFILIATE_LINK_CATEGORY }}
         run: |
           cd frontend
           npm run build
@@ -91,6 +97,12 @@ jobs:
 
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
+
+            # Build frontend on server so Vite reads this repo's .env at build time
+            cd frontend
+            npm ci
+            npm run build
+            cd ..
 
             # No frontend build here; just collectstatic and migrate
             python manage.py collectstatic --noinput
