@@ -60,9 +60,13 @@ jobs:
           name: frontend-build
           path: frontend_dist
 
+      - name: Archive frontend build
+        run: |
+          tar -czf frontend_dist.tar.gz -C frontend_dist .
+
       - name: Copy frontend build to EC2
         run: |
-          scp -o StrictHostKeyChecking=no -r frontend_dist/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist/
+          scp -o StrictHostKeyChecking=no frontend_dist.tar.gz ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist.tar.gz
 
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
@@ -70,6 +74,13 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
             set -e
             cd ~/SupplementRatings
+
+            # Extract new frontend build tarball if present
+            if [ -f frontend_dist.tar.gz ]; then
+              mkdir -p frontend_dist
+              tar -xzf frontend_dist.tar.gz -C frontend_dist
+              rm -f frontend_dist.tar.gz
+            fi
 
             # ---------- 1) back-up existing DB ----------
             # backup_dir="/home/ec2-user/db_backups"
