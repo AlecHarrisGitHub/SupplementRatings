@@ -42,11 +42,13 @@ jobs:
 
       # 3. Add your server to known_hosts (so SSH won't prompt)
       - name: Add remote host to known_hosts (best-effort)
-        if: ${{ secrets.REMOTE_HOST != '' }}
         continue-on-error: true
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -T 10 -H ${{ secrets.REMOTE_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+          host="${{ secrets.REMOTE_HOST }}"
+          if [ -n "$host" ]; then
+            mkdir -p ~/.ssh
+            ssh-keyscan -T 10 -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
 
       # Download the build artifact and deploy to EC2
       - name: Download frontend build artifact
