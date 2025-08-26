@@ -98,12 +98,6 @@ jobs:
             source ~/env_backups/venv/bin/activate
             pip install -r requirements.txt
 
-            # Build frontend on server so Vite reads this repo's .env at build time
-            cd frontend
-            npm ci
-            npm run build
-            cd ..
-
             # No frontend build here; just collectstatic and migrate
             python manage.py collectstatic --noinput
             python manage.py migrate
