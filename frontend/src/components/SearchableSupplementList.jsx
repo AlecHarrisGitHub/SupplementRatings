@@ -38,6 +38,7 @@ import ImageUpload from './ImageUpload';
 import StarIcon from '@mui/icons-material/Star';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useAutoSave } from '../hooks/useAutoSave';
+import { useBanner } from '../context/BannerContext';
 
 const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
 
@@ -514,6 +515,7 @@ function SearchableSupplementList() {
     const { id: supplementIdFromParams } = useParams();
     const navigate = useNavigate();
     const ratingRefs = useRef({});
+    const { setCurrentSupplementName } = useBanner();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [supplements, setSupplements] = useState([]);
@@ -676,6 +678,16 @@ function SearchableSupplementList() {
         };
         fetchCategories();
     }, []);
+
+    // Update top banner with current supplement name when a supplement is selected in this list view
+    useEffect(() => {
+        if (selectedSupplement && selectedSupplement.name) {
+            setCurrentSupplementName(selectedSupplement.name);
+        } else {
+            setCurrentSupplementName(null);
+        }
+        return () => setCurrentSupplementName(null);
+    }, [selectedSupplement?.name, setCurrentSupplementName]);
 
     const debouncedSearch = useCallback(
         debounce((term) => {

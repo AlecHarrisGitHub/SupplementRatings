@@ -34,6 +34,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import { IconButton } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
+import { useBanner } from '../context/BannerContext';
 
 const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
 const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
@@ -214,6 +215,7 @@ function SupplementDetailPage() {
     const [selectedBrand, setSelectedBrand] = useState(null);
     const [ratingImage, setRatingImage] = useState(null);
     const [searchCondition, setSearchCondition] = useState('');
+    const { setCurrentSupplementName } = useBanner();
 
     const { ratingId, commentId } = location.state || {};
 
@@ -242,6 +244,11 @@ function SupplementDetailPage() {
             try {
                 const supplementData = await getSupplement(supplementId);
                 setSupplement(supplementData);
+                if (supplementData?.name) {
+                    setCurrentSupplementName(supplementData.name);
+                } else {
+                    setCurrentSupplementName(null);
+                }
 
                 if (ratingId) {
                     const foundRating = supplementData.ratings?.find(r => String(r.id) === String(ratingId));
@@ -278,7 +285,10 @@ function SupplementDetailPage() {
         if (supplementId) {
             fetchSupplementDetails();
         }
-    }, [supplementId, ratingId, commentId]);
+        return () => {
+            setCurrentSupplementName(null);
+        };
+    }, [supplementId, ratingId, commentId, setCurrentSupplementName]);
 
     useEffect(() => {
         const fetchConditions = async () => {

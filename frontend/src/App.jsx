@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import AmazonBanner from './components/AmazonBanner';
+import { BannerProvider } from './context/BannerContext';
 import Login from './pages/Login';
 import Logout from './pages/Logout';
 import Signup from './pages/Signup';
@@ -68,7 +70,8 @@ function App() {
     };
 
     return (
-        <div>
+        <BannerProvider>
+            <AmazonBanner />
             <Navbar />
             <ToastContainer
                 position="top-right"
@@ -107,7 +110,7 @@ function App() {
                 <Route path="/profile/:username" element={<UserProfilePage />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
-        </div>
+        </BannerProvider>
     );
 }
 
