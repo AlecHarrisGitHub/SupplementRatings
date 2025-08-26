@@ -82,9 +82,7 @@ jobs:
 
           echo "Running remote deploy script (with retries)..."
           for attempt in 1 2 3; do
-            ssh $SSH_OPTS "$user@$host" << 'EOF' && break || {
-              echo "SSH attempt $attempt failed; retrying in 10s..."; sleep 10; exit 1;
-            }
+            ssh $SSH_OPTS "$user@$host" 'bash -s' <<'REMOTE_SCRIPT'
             set -e
             cd ~/SupplementRatings
 
@@ -113,4 +111,11 @@ jobs:
 
             sudo systemctl restart gunicorn
             sudo systemctl reload nginx
-EOF
+REMOTE_SCRIPT
+            rc=$?
+            if [ "$rc" -eq 0 ]; then
+              echo "Remote deploy succeeded"; break
+            else
+              echo "SSH attempt $attempt failed with code $rc; retrying in 10s..."; sleep 10
+            fi
+          done
