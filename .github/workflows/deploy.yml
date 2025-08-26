@@ -73,49 +73,22 @@ jobs:
           user="${{ secrets.REMOTE_USER }}"
           SSH_OPTS="-o StrictHostKeyChecking=no -o ServerAliveInterval=20 -o ServerAliveCountMax=6 -o ConnectTimeout=20 -o BatchMode=yes -o IPQoS=throughput"
           echo "Waiting for SSH to become reachable..."
-          for i in {1..18}; do # up to ~3 minutes
+          for i in 1 2 3 4 5 6 7 8 9 10; do
             if timeout 10 bash -c "cat < /dev/null > /dev/tcp/$host/22" 2>/dev/null; then
               echo "SSH port open"; break
             fi
-            echo "SSH not reachable yet (attempt $i). Retrying in 10s..."; sleep 10
+            echo "SSH not reachable yet (attempt $i). Retrying in 6s..."; sleep 6
           done
 
-          echo "Running remote deploy script (with retries)..."
-          for attempt in 1 2 3; do
-            ssh $SSH_OPTS "$user@$host" 'bash -s' <<'REMOTE_SCRIPT'
-            set -e
-            cd ~/SupplementRatings
-
-            mkdir -p frontend_dist
-            if [ -f frontend_dist.tar.gz ]; then
-              rm -rf frontend_dist/*
-              tar -xzf frontend_dist.tar.gz -C frontend_dist
-              rm -f frontend_dist.tar.gz
-            fi
-
-            # ---------- 2) pull latest code ----------
-            git fetch origin
-            git reset --hard origin/main
-
-            # ---------- 4) rebuild & restart ----------
-            if [ ! -f .env ]; then
-              sudo cp /home/ec2-user/env_backups/.env .env
-              sudo chown ec2-user:ec2-user .env
-            fi
-
-            source ~/env_backups/venv/bin/activate
-            pip install -r requirements.txt
-
-            python manage.py collectstatic --noinput
-            python manage.py migrate
-
-            sudo systemctl restart gunicorn
-            sudo systemctl reload nginx
-REMOTE_SCRIPT
-            rc=$?
-            if [ "$rc" -eq 0 ]; then
-              echo "Remote deploy succeeded"; break
-            else
-              echo "SSH attempt $attempt failed with code $rc; retrying in 10s..."; sleep 10
-            fi
-          done
+          ssh $SSH_OPTS "$user@$host" \
+            "set -e; cd ~/SupplementRatings; \
+            mkdir -p frontend_dist; \
+            if [ -f frontend_dist.tar.gz ]; then rm -rf frontend_dist/*; tar -xzf frontend_dist.tar.gz -C frontend_dist; rm -f frontend_dist.tar.gz; fi; \
+            git fetch origin && git reset --hard origin/main; \
+            if [ ! -f .env ]; then sudo cp /home/ec2-user/env_backups/.env .env && sudo chown ec2-user:ec2-user .env; fi; \
+            source ~/env_backups/venv/bin/activate; \
+            pip install -r requirements.txt; \
+            python manage.py collectstatic --noinput; \
+            python manage.py migrate; \
+            sudo systemctl restart gunicorn; \
+            sudo systemctl reload nginx"
