@@ -28,11 +28,9 @@ jobs:
           cd frontend
           npm run build
 
-      - name: Upload frontend build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/dist
+      - name: Archive frontend build
+        run: |
+          tar -czf frontend_dist.tar.gz -C frontend/dist .
 
       # 2. Start an SSH agent and load your private key
       - name: Setup SSH agent
@@ -50,16 +48,11 @@ jobs:
             ssh-keyscan -T 10 -H "$host" >> ~/.ssh/known_hosts 2>/dev/null || true
           fi
 
-      # Download the build artifact and deploy to EC2
-      - name: Download frontend build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend_dist
+      # Copy tarball directly to EC2
 
       - name: Copy frontend build to EC2
         run: |
-          scp -o StrictHostKeyChecking=no -r frontend_dist/* ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist/
+          scp -o StrictHostKeyChecking=no -C frontend_dist.tar.gz ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }}:~/SupplementRatings/frontend_dist.tar.gz
 
       # 4. SSH in, back-up DB, pull, rebuild, restart
       - name: Deploy to EC2
@@ -69,6 +62,11 @@ jobs:
             cd ~/SupplementRatings
 
             mkdir -p frontend_dist
+            if [ -f frontend_dist.tar.gz ]; then
+              rm -rf frontend_dist/*
+              tar -xzf frontend_dist.tar.gz -C frontend_dist
+              rm -f frontend_dist.tar.gz
+            fi
 
             # ---------- 1) back-up existing DB ----------
             # backup_dir="/home/ec2-user/db_backups"
