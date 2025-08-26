@@ -4,7 +4,9 @@ import path from 'node:path'
 export default defineConfig(({ mode }) => {
   const envLocal = loadEnv(mode, process.cwd(), '')
   const envRoot = loadEnv(mode, path.resolve(process.cwd(), '..'), '')
-  const env = { ...envRoot, ...envLocal }
+  // Include shell environment variables as highest-precedence source for CI/CD
+  const envProc = process.env || {}
+  const env = { ...envProc, ...envRoot, ...envLocal }
 
   return {
     plugins: [react()],
