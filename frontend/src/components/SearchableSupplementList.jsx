@@ -1423,6 +1423,20 @@ function SearchableSupplementList() {
 
     return (
         <Box sx={{ maxWidth: 800, mx: 'auto', p: 3 }}>
+            <Box
+                sx={{
+                    mb: 3,
+                    p: { xs: 2, sm: 3 },
+                    borderRadius: 3,
+                    border: theme => `1px solid ${theme.palette.divider}`,
+                    background: 'linear-gradient(135deg, rgba(30,136,229,0.06), rgba(124,77,255,0.06))'
+                }}
+            >
+                <Typography variant="h4" sx={{ mb: 0.5 }}>Discover supplements</Typography>
+                <Typography variant="body2" color="text.secondary">
+                    Search and filter by purpose, category, brand, dosage, and more.
+                </Typography>
+            </Box>
             <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
                 <TextField
                     fullWidth
@@ -1485,23 +1499,29 @@ function SearchableSupplementList() {
                                     key={supplement.id}
                                     onClick={() => handleSupplementClick(supplement.id)}
                                     sx={{
-                                        mb: 1,
+                                        mb: 1.25,
                                         cursor: 'pointer',
-                                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.04)' },
+                                        borderRadius: 2,
+                                        border: theme => `1px solid ${theme.palette.divider}`,
+                                        transition: 'transform 120ms ease, box-shadow 120ms ease',
+                                        '&:hover': { transform: 'translateY(-1px)', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' },
                                     }}
                                     component={Paper}
-                                    elevation={1}
+                                    elevation={0}
                                 >
                                     <Box sx={{ width: '100%' }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                             <ListItemText 
                                                 primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                         <Typography variant="subtitle1">
                                                             {supplement.name}
                                                         </Typography>
+                                                        {supplement.category && (
+                                                            <Chip size="small" variant="outlined" label={supplement.category} />
+                                                        )}
                                                         {supplement.is_edited && (
-                                                            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+                                                            <Typography component="span" variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
                                                                 (edited)
                                                             </Typography>
                                                         )}

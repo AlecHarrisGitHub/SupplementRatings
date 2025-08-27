@@ -87,16 +87,19 @@ function UserProfilePage() {
 
     return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-            <Paper elevation={3} sx={{ p: { xs: 2, md: 4 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <Paper elevation={0} sx={{ p: { xs: 2, md: 4 }, borderRadius: 3, border: theme => `1px solid ${theme.palette.divider}` }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                     <Avatar 
                         src={profile.user.profile_image_url || defaultProfileImage} 
                         alt={profile.user.username}
-                        sx={{ width: 80, height: 80, mr: 2 }}
+                        sx={{ width: 84, height: 84 }}
                     />
-                    <Typography variant="h4" component="h1">
-                        {profile.user.username}
-                    </Typography>
+                    <Box>
+                        <Typography variant="h4" component="h1">
+                            {profile.user.username}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">Member profile</Typography>
+                    </Box>
                 </Box>
 
                 <Divider sx={{ my: 3 }} />
@@ -109,8 +112,16 @@ function UserProfilePage() {
                         {profile.ratings.map((rating) => (
                             <Paper 
                                 key={rating.id} 
-                                elevation={1} 
-                                sx={{ mb: 2, p: 2, cursor: 'pointer', "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}
+                                elevation={0} 
+                                sx={{ 
+                                    mb: 2, 
+                                    p: 2, 
+                                    cursor: 'pointer', 
+                                    borderRadius: 2,
+                                    border: theme => `1px solid ${theme.palette.divider}`,
+                                    transition: 'transform 120ms ease, box-shadow 120ms ease',
+                                    "&:hover": { transform: 'translateY(-1px)', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' } 
+                                }}
                                 onClick={() => navigate(`/supplements/${rating.supplement}`, { state: { ratingId: rating.id } })}
                             >
                                 <ListItemText 
@@ -169,8 +180,16 @@ function UserProfilePage() {
                         {profile.comments.map((comment) => (
                             <Paper 
                                 key={comment.id} 
-                                elevation={1} 
-                                sx={{ mb: 2, p: 2, cursor: 'pointer', "&:hover": { backgroundColor: "rgba(0,0,0,0.02)" } }}
+                                elevation={0} 
+                                sx={{ 
+                                    mb: 2, 
+                                    p: 2, 
+                                    cursor: 'pointer', 
+                                    borderRadius: 2,
+                                    border: theme => `1px solid ${theme.palette.divider}`,
+                                    transition: 'transform 120ms ease, box-shadow 120ms ease',
+                                    "&:hover": { transform: 'translateY(-1px)', boxShadow: '0 8px 24px rgba(0,0,0,0.08)' } 
+                                }}
                                 onClick={() => navigate(`/supplements/${comment.supplement_id}`, { state: { commentId: comment.id, ratingId: comment.rating_id } })}
                             >
                                 <ListItemText
