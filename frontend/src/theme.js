@@ -67,9 +67,7 @@ const theme = createTheme({
     MuiCssBaseline: {
       styleOverrides: {
         body: {
-          backgroundImage:
-            'radial-gradient(ellipse at 20% 10%, rgba(30,136,229,0.06), transparent 45%), radial-gradient(ellipse at 80% 0%, rgba(124,77,255,0.06), transparent 40%)',
-          backgroundAttachment: 'fixed'
+          backgroundColor: neutral[50]
         }
       }
     },
