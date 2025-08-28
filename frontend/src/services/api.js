@@ -215,16 +215,32 @@ export const setAuthHeader = (token) => {
     }
 };
 
-// Add a request interceptor to include the auth token and CSRF token
+// Add a request interceptor to include the auth token on protected requests only
 API.interceptors.request.use((config) => {
-    // Add auth token if it exists
     const token = localStorage.getItem('token');
-    // console.log("TOKEN BEING SENT:", token ? "YES (length: " + token.length + ")" : "NO TOKEN");
-    if (token) {
+
+    // Public, read-only endpoints that must never send Authorization
+    // Sending an expired/invalid token can cause a 401 and break public browsing
+    const publicGetEndpoints = [
+        'supplements/',
+        'supplements/categories/',
+        'brands/',
+        'conditions/',
+    ];
+
+    const isGet = (config.method || 'get').toLowerCase() === 'get';
+    const url = config.url || '';
+    const isPublicGet = isGet && publicGetEndpoints.some((ep) => url.startsWith(ep) || url.startsWith(`/${ep}`));
+
+    if (!isPublicGet && token) {
         config.headers.Authorization = `Bearer ${token}`;
-        // console.log("AUTHORIZATION HEADER:", config.headers.Authorization);
+    } else if (isPublicGet) {
+        // Ensure no lingering Authorization header is sent to public endpoints
+        if (config.headers && 'Authorization' in config.headers) {
+            delete config.headers.Authorization;
+        }
     }
-    
+
     return config;
 }, (error) => {
     return Promise.reject(error);
