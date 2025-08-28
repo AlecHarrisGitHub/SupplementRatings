@@ -203,7 +203,7 @@ function Navbar() {
                                     onClose={handleUserMenuClose}
                                 >
                                     <MenuItem onClick={handleMyAccount}>My Account</MenuItem>
-                                    <MenuItem onClick={handleLogout}>Logout</MenuItem>
+                                    <MenuItem onClick={handleLogout}>Log Out</MenuItem>
                                     <MenuItem onClick={() => { handleUserMenuClose(); navigate('/contact'); }}>Contact Us</MenuItem>
                                 </Menu>
                             </>
@@ -241,7 +241,7 @@ function Navbar() {
                     keepMounted
                 >
                     <MenuItem onClick={() => handleAuthNavigation('/login')}>Login</MenuItem>
-                    <MenuItem onClick={() => handleAuthNavigation('/signup')}>Signup</MenuItem>
+                    <MenuItem onClick={() => handleAuthNavigation('/signup')}>Sign Up</MenuItem>
                     <MenuItem onClick={() => handleAuthNavigation('/contact')}>Contact Us</MenuItem>
                 </Menu>
             )}

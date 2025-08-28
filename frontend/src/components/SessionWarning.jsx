@@ -70,7 +70,7 @@ const SessionWarning = ({ open, onExtend, onLogout, timeRemaining }) => {
             </DialogContent>
             <DialogActions>
                 <Button onClick={onLogout} color="error">
-                    Logout Now
+                    Log Out Now
                 </Button>
                 <Button onClick={onExtend} variant="contained" color="primary">
                     Extend Session

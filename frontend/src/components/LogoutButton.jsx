@@ -19,7 +19,7 @@ function LogoutButton() {
       style={styles.button}
       type="button"
     >
-      Logout
+      Log Out
     </button>
   );
 }
