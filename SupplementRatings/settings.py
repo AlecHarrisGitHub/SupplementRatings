@@ -246,17 +246,17 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email Configuration - Using production settings for all environments
+# Email Configuration - Default to Amazon SES SMTP (override via .env as needed)
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.namebrightmail.com')
+EMAIL_HOST = config('EMAIL_HOST', default='email-smtp.us-east-2.amazonaws.com')  # SES SMTP endpoint (Ohio)
 EMAIL_PORT = config('EMAIL_PORT', cast=int, default=587)
 APP_EMAIL_USE_SSL = config('APP_EMAIL_USE_SSL', cast=bool, default=False)
 APP_EMAIL_USE_TLS = config('APP_EMAIL_USE_TLS', cast=bool, default=True)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER # Ensure from email matches authenticated user
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # SES SMTP username
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')  # SES SMTP password
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='support@supplementratings.com')
 
-# Renaming EMAIL_USE_SSL and EMAIL_USE_TLS to avoid conflicts with shell environment variables
+# Map to Django expected flags (avoid shell var conflicts)
 EMAIL_USE_SSL = APP_EMAIL_USE_SSL
 EMAIL_USE_TLS = APP_EMAIL_USE_TLS
 

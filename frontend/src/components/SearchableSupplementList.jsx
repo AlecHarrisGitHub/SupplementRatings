@@ -127,21 +127,6 @@ const FilterDrawer = ({
                     Filter Supplements
                 </Typography>
                 
-                <Autocomplete
-                    multiple
-                    options={conditions}
-                    getOptionLabel={(option) => option.name}
-                    value={selectedFilterConditions}
-                    onChange={(_, newValue) => setSelectedFilterConditions(newValue)}
-                    renderInput={(params) => (
-                        <TextField
-                            {...params}
-                            label="Intended Purpose"
-                            margin="normal"
-                        />
-                    )}
-                    sx={{ mb: 2 }}
-                />
                 
                 <Autocomplete
                     multiple
@@ -186,6 +171,22 @@ const FilterDrawer = ({
                 </Box>
 
                 <Collapse in={showAdvanced}>
+                    <Autocomplete
+                        multiple
+                        options={conditions}
+                        getOptionLabel={(option) => option.name}
+                        value={selectedFilterConditions}
+                        onChange={(_, newValue) => setSelectedFilterConditions(newValue)}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                label="Intended Purpose"
+                                margin="normal"
+                            />
+                        )}
+                        sx={{ mb: 2 }}
+                    />
+
                     <Autocomplete
                         multiple
                         options={conditions}
