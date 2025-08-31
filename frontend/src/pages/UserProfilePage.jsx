@@ -16,8 +16,9 @@ import {
 } from '@mui/material';
 import { getUserPublicProfile } from '../services/api'; // We will create this API call
 import { toast } from 'react-toastify';
+import { DEFAULT_PROFILE_IMAGE_URL } from '../config';
 
-const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
+const defaultProfileImage = DEFAULT_PROFILE_IMAGE_URL;
 
 // Helper to format date (MM/DD/YYYY)
 const formatDate = (dateString) => {

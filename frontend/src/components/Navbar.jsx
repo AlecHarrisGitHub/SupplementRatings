@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box, Container, IconButton, Avatar, Menu, MenuItem } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_PROFILE_IMAGE_URL } from '../config';
 import { toast } from 'react-hot-toast';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import MenuIcon from '@mui/icons-material/Menu';
 
-const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
+const defaultProfileImage = DEFAULT_PROFILE_IMAGE_URL;
 
 function Navbar() {
     const { isAuthenticated, isAdmin, user, logout } = useAuth();

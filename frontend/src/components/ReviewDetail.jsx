@@ -19,8 +19,9 @@ import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import ImageUpload from './ImageUpload';
 import ImageModal from './ImageModal';
+import { DEFAULT_PROFILE_IMAGE_URL } from '../config';
 
-const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
+const defaultProfileImage = DEFAULT_PROFILE_IMAGE_URL;
 
 // Function to format the date (can be shared if moved to a utils file)
 const formatDate = (dateString) => {

@@ -39,6 +39,7 @@ import StarIcon from '@mui/icons-material/Star';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import { useAutoSave } from '../hooks/useAutoSave';
 import { useBanner } from '../context/BannerContext';
+import { DEFAULT_PROFILE_IMAGE_URL } from '../config';
 
 const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
 
@@ -297,7 +298,7 @@ const FilterDrawer = ({
 
 const SupplementRatingItem = React.forwardRef(({ rating, user, handleEditRating, handleUpvoteRating, handleReviewClick, id }, ref) => {
     // Fallback for default image, ensure it's accessible
-    const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg'; 
+    const defaultProfileImage = DEFAULT_PROFILE_IMAGE_URL; 
 
     // Function to format the date
     const formatDate = (dateString) => {
@@ -1011,6 +1012,13 @@ function SearchableSupplementList() {
             e.preventDefault();
         }
         setRatingDialogAttemptedSubmit(true);
+
+        // Require authentication before submitting a rating
+        if (!isAuthenticated) {
+            toast.error('Please log in to submit a rating.');
+            navigate('/login');
+            return;
+        }
 
         const actualConditionsToSubmit = selectedConditions.filter(c => c.id !== SPECIAL_CHRONIC_CONDITIONS_ID);
 

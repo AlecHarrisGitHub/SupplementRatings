@@ -35,8 +35,9 @@ import { IconButton } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'react-toastify';
 import { useBanner } from '../context/BannerContext';
+import { DEFAULT_PROFILE_IMAGE_URL } from '../config';
 
-const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
+const defaultProfileImage = DEFAULT_PROFILE_IMAGE_URL;
 const SPECIAL_CHRONIC_CONDITIONS_ID = '__MY_CHRONIC_CONDITIONS__';
 
 // Format date helper
@@ -388,6 +389,12 @@ function SupplementDetailPage() {
     const handleRatingSubmit = useCallback(async (e) => {
         if (e) {
             e.preventDefault();
+        }
+
+        if (!isAuthenticated) {
+            toast.error('Please log in to submit a rating.');
+            navigate('/login');
+            return;
         }
 
         if (!ratingScore) {

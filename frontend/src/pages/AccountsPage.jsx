@@ -31,13 +31,14 @@ import { format } from 'date-fns';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import API, { updateProfileImage as updateProfileImageAPI, getAllConditions, updateUserChronicConditions as updateUserChronicConditionsAPI, deleteMyRating, updateComment as updateCommentAPI, deleteComment as deleteCommentAPI } from '../services/api';
 import { styled } from '@mui/material/styles';
+import { DEFAULT_PROFILE_IMAGE_URL } from '../config';
 import { toast } from 'react-toastify';
 
 const Input = styled('input')({
     display: 'none',
 });
 
-const defaultProfileImage = 'http://localhost:8000/media/profile_pics/default.jpg';
+const defaultProfileImage = DEFAULT_PROFILE_IMAGE_URL;
 
 function AccountsPage() {
     const { user, updateUser } = useAuth();
