@@ -226,6 +226,7 @@ API.interceptors.request.use((config) => {
         'supplements/categories/',
         'brands/',
         'conditions/',
+        'verify-email/',
     ];
 
     const isGet = (config.method || 'get').toLowerCase() === 'get';

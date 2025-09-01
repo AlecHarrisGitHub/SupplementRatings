@@ -793,6 +793,7 @@ def register_user(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+@authentication_classes([])
 def verify_email(request, token):
     try:
         verification = EmailVerificationToken.objects.get(token=token)
