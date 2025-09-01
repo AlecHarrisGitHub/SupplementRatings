@@ -22,7 +22,7 @@ function Signup() {
       await registerUser({ username, email, password });
       toast.success(
         <span>
-          Registration successful! Please check your email to verify your account. <strong>Also check your spam/junk folder.</strong>
+          Registration successful! <strong>Please check your email to verify your account.</strong>
         </span>
       );
       navigate('/login');
